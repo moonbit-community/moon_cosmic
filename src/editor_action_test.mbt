@@ -250,3 +250,60 @@ test "Buffer.cursor_motion Home/End operate on visual line when wrapped" {
     }
   }
 }
+
+///|
+test "Buffer.cursor_motion PreviousWord/NextWord cross lines" {
+  let attrs = AttrsList::new(Attrs::new())
+  let buffer = Buffer::new(Metrics::new(12.0F, 12.0F))
+    .set_text("foo\nbar", attrs, Advanced)
+    .set_size(Some(1000.0F), None)
+  match buffer.cursor_motion(Cursor::new(1, 0), None, Motion::PreviousWord) {
+    None => abort("expected motion")
+    Some((c, _x)) => {
+      inspect(c.line, content="0")
+      inspect(c.index, content="3")
+    }
+  }
+  match buffer.cursor_motion(Cursor::new(0, 3), None, Motion::NextWord) {
+    None => abort("expected motion")
+    Some((c, _x)) => {
+      inspect(c.line, content="1")
+      inspect(c.index, content="0")
+    }
+  }
+}
+
+///|
+test "Buffer.cursor_motion ParagraphStart/ParagraphEnd" {
+  let attrs = AttrsList::new(Attrs::new())
+  let buffer = Buffer::new(Metrics::new(12.0F, 12.0F))
+    .set_text("foo", attrs, Advanced)
+    .set_size(Some(1000.0F), None)
+  match buffer.cursor_motion(Cursor::new(0, 2), None, Motion::ParagraphStart) {
+    None => abort("expected motion")
+    Some((c, _x)) => inspect(c.index, content="0")
+  }
+  match buffer.cursor_motion(Cursor::new(0, 1), None, Motion::ParagraphEnd) {
+    None => abort("expected motion")
+    Some((c, _x)) => inspect(c.index, content="3")
+  }
+}
+
+///|
+test "Buffer.cursor_motion GotoLine uses LayoutCursor mapping" {
+  let attrs = AttrsList::new(Attrs::new())
+  let buffer = Buffer::new(Metrics::new(12.0F, 12.0F))
+    .set_text("abc\ndefg\nhi", attrs, Advanced)
+    .set_size(Some(1000.0F), None)
+  match buffer.cursor_motion(Cursor::new(0, 2), None, Motion::GotoLine(1)) {
+    None => abort("expected motion")
+    Some((c, _x)) => {
+      inspect(c.line, content="1")
+      inspect(c.index, content="2")
+    }
+  }
+  match buffer.cursor_motion(Cursor::new(0, 0), None, Motion::GotoLine(99)) {
+    None => ()
+    Some((_c, _x)) => abort("expected None for out-of-range")
+  }
+}

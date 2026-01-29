@@ -594,12 +594,44 @@ pub fn Buffer::cursor_motion(
   let delta_opt : Int? = match motion {
     Up => Some(-1)
     Down => Some(1)
-    Vertical(n) => Some(n)
-    PageUp => Some(-10)
-    PageDown => Some(10)
+    Vertical(px) => {
+      let lh = int_from_float(buffer.metrics.line_height)
+      if lh == 0 {
+        None
+      } else {
+        Some(px / lh)
+      }
+    }
+    PageUp =>
+      match buffer.height_opt {
+        None => None
+        Some(h) => {
+          let lh = int_from_float(buffer.metrics.line_height)
+          if lh == 0 {
+            None
+          } else {
+            Some(-int_from_float(h) / lh)
+          }
+        }
+      }
+    PageDown =>
+      match buffer.height_opt {
+        None => None
+        Some(h) => {
+          let lh = int_from_float(buffer.metrics.line_height)
+          if lh == 0 {
+            None
+          } else {
+            Some(int_from_float(h) / lh)
+          }
+        }
+      }
     _ => None
   }
   if delta_opt is Some(delta0) {
+    if delta0 == 0 {
+      return Some((cursor, cursor_x_opt))
+    }
     let cur_run_idx_opt = find_run_idx(cursor)
     if cur_run_idx_opt is None {
       return None
@@ -663,34 +695,47 @@ pub fn Buffer::cursor_motion(
     }
     PreviousWord | LeftWord => {
       let text = buffer.lines()[c.line].text()
-      let ranges = word_indices_uax29(text)
-      let mut found = 0
-      let mut i = ranges.length() - 1
-      while i >= 0 {
-        let (ws, _we) = ranges[i]
-        if ws < c.index {
-          found = ws
-          break
+      if c.index > 0 {
+        let ranges = word_indices_uax29(text)
+        let mut found = 0
+        let mut i = ranges.length() - 1
+        while i >= 0 {
+          let (ws, _we) = ranges[i]
+          if ws < c.index {
+            found = ws
+            break
+          }
+          if i == 0 {
+            break
+          }
+          i = i - 1
         }
-        if i == 0 {
-          break
-        }
-        i = i - 1
+        c = Cursor::new_with_affinity(c.line, found, c.affinity)
+      } else if c.line > 0 {
+        let prev = c.line - 1
+        c = Cursor::new_with_affinity(
+          prev,
+          buffer.lines()[prev].text().length(),
+          c.affinity,
+        )
       }
-      c = Cursor::new_with_affinity(c.line, found, c.affinity)
     }
     NextWord | RightWord => {
       let text = buffer.lines()[c.line].text()
-      let ranges = word_indices_uax29(text)
-      let mut found = text.length()
-      for pair in ranges {
-        let we = pair.1
-        if we > c.index {
-          found = we
-          break
+      if c.index < text.length() {
+        let ranges = word_indices_uax29(text)
+        let mut found = text.length()
+        for pair in ranges {
+          let we = pair.1
+          if we > c.index {
+            found = we
+            break
+          }
         }
+        c = Cursor::new_with_affinity(c.line, found, c.affinity)
+      } else if c.line + 1 < buffer.lines().length() {
+        c = Cursor::new_with_affinity(c.line + 1, 0, c.affinity)
       }
-      c = Cursor::new_with_affinity(c.line, found, c.affinity)
     }
     Home =>
       match find_run_idx(c) {
@@ -756,6 +801,59 @@ pub fn Buffer::cursor_motion(
         buffer.lines()[last].text().length(),
         c.affinity,
       )
+    }
+    ParagraphStart => c = Cursor::new_with_affinity(c.line, 0, c.affinity)
+    ParagraphEnd =>
+      c = Cursor::new_with_affinity(
+        c.line,
+        buffer.lines()[c.line].text().length(),
+        c.affinity,
+      )
+    GotoLine(line_i) => {
+      if line_i < 0 || line_i >= buffer.lines().length() {
+        return None
+      }
+      match find_run_idx(c) {
+        None => c = Cursor::new_with_affinity(line_i, 0, c.affinity)
+        Some(run_idx) => {
+          // Find current line-local visual layout and glyph indices.
+          let mut layout = 0
+          for i in 0..<run_idx {
+            if runs[i].line_i == c.line {
+              layout = layout + 1
+            }
+          }
+          let run = runs[run_idx]
+          let mut glyph = 0
+          if run.glyphs.length() > 0 {
+            let mut found = false
+            for gi in 0..<run.glyphs.length() {
+              if run.glyphs[gi].start == c.index {
+                glyph = gi
+                found = true
+                break
+              }
+            }
+            if !found {
+              let mut max_end = run.glyphs[0].end
+              for g in run.glyphs {
+                if g.end > max_end {
+                  max_end = g.end
+                }
+              }
+              if c.index == max_end {
+                glyph = run.glyphs.length()
+              }
+            }
+          }
+          let lc = LayoutCursor::new(line_i, layout, glyph)
+          match
+            buffer.cursor_motion(c, cursor_x_opt, Motion::LayoutCursor(lc)) {
+            None => return None
+            Some((nc, nx)) => return Some((nc, nx))
+          }
+        }
+      }
     }
     _ => ()
   }
