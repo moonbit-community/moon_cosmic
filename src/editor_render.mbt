@@ -31,6 +31,14 @@ fn uint_from_int(v : Int) -> UInt {
 }
 
 ///|
+fn width_int(width_opt : Float?) -> Int {
+  match width_opt {
+    None => 0
+    Some(w) => int_from_float(w)
+  }
+}
+
+///|
 fn x_for_index(run : LayoutRun, index : Int) -> Float {
   let glyphs = run.glyphs
   if glyphs.length() == 0 {
@@ -119,35 +127,82 @@ pub fn[R : Renderer] Editor::render(
   let buffer = self.buffer.layout_all()
   let width_opt = buffer.size().0
   for run in buffer.layout_runs() {
-    // Highlight selection (MVP: per-layout-run x range).
+    // Highlight selection.
     match selection_bounds {
       None => ()
       Some((start, end)) =>
         if run.line_i >= start.line && run.line_i <= end.line {
-          let text_len = run.text.length()
-          let start_idx = if run.line_i == start.line { start.index } else { 0 }
-          let end_idx = if run.line_i == end.line {
-            end.index
-          } else {
-            text_len
+          let mut range_opt : (Int, Int)? = None
+          for glyph in run.glyphs {
+            // Split the glyph's cluster into grapheme-sized subcells (upstream behavior).
+            let cluster = slice_string(run.text, glyph.start, glyph.end)
+            let graphemes = grapheme_indices_uax29(cluster)
+            let total = graphemes.length()
+            if total == 0 {
+              continue
+            }
+            let c_w = glyph.w / Float::from_double(total.to_double())
+            let mut c_x = glyph.x
+            for r in graphemes {
+              let c_start = glyph.start + r.0
+              let c_end = glyph.start + r.1
+              if (start.line != run.line_i || c_end > start.index) &&
+                (end.line != run.line_i || c_start < end.index) {
+                let x0 = int_from_float(c_x)
+                let x1 = int_from_float(c_x + c_w)
+                match range_opt {
+                  None => range_opt = Some((x0, x1))
+                  Some((min0, max0)) => {
+                    let min1 = if x0 < min0 { x0 } else { min0 }
+                    let max1 = if x1 > max0 { x1 } else { max0 }
+                    range_opt = Some((min1, max1))
+                  }
+                }
+              } else {
+                match range_opt {
+                  None => ()
+                  Some((min0, max0)) => {
+                    renderer.rectangle(
+                      min0,
+                      int_from_float(run.line_top),
+                      uint_from_int(max0 - min0),
+                      uint_from_int(int_from_float(run.line_height)),
+                      selection_color,
+                    )
+                    range_opt = None
+                  }
+                }
+              }
+              c_x = c_x + c_w
+            }
           }
-          let mut x0 = x_for_index(run, start_idx)
-          let mut x1 = x_for_index(run, end_idx)
-          if run.line_i != start.line {
-            x0 = 0.0F
+          if run.glyphs.length() == 0 && end.line > run.line_i {
+            // Highlight internal empty lines.
+            range_opt = Some((0, width_int(width_opt)))
           }
-          if run.line_i != end.line {
-            x1 = if width_opt is Some(w) { w } else { run.line_w }
+          match range_opt {
+            None => ()
+            Some((min0, max0)) => {
+              let mut min = min0
+              let mut max = max0
+              if end.line > run.line_i {
+                // Draw to end of line.
+                let w = width_int(width_opt)
+                if run.rtl {
+                  min = 0
+                } else {
+                  max = w
+                }
+              }
+              renderer.rectangle(
+                min,
+                int_from_float(run.line_top),
+                uint_from_int(max - min),
+                uint_from_int(int_from_float(run.line_height)),
+                selection_color,
+              )
+            }
           }
-          let min_x = if x0 < x1 { x0 } else { x1 }
-          let max_x = if x0 > x1 { x0 } else { x1 }
-          renderer.rectangle(
-            int_from_float(min_x),
-            int_from_float(run.line_top),
-            uint_from_int(int_from_float(max_x - min_x)),
-            uint_from_int(int_from_float(run.line_height)),
-            selection_color,
-          )
         }
     }
 

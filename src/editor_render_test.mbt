@@ -70,3 +70,37 @@ test "Editor.cursor_position + Editor.render (smoke)" {
   )
   inspect(rects2.length() >= 2, content="true")
 }
+
+///|
+test "Editor.render highlights internal empty lines in selection" {
+  let attrs = AttrsList::new(Attrs::new())
+  let buffer = Buffer::new(Metrics::new(12.0F, 12.0F))
+    .set_text("a\n\nb", attrs, Advanced)
+    .set_size(Some(1000.0F), None)
+    .layout_all()
+  let rects : Array[(Int, Int, UInt, UInt, UInt)] = []
+  let glyph_pos : Array[(Int, Int)] = []
+  let renderer = TestRenderer::{ rects, glyph_pos }
+  let selection_color = Color::rgb(0, 0, 255)
+  let editor = Editor::new(buffer)
+    .set_cursor(Cursor::new(2, 1))
+    .set_selection(Selection::Normal(Cursor::new(0, 0)))
+  editor.render(
+    renderer,
+    Color::rgb(0, 0, 0),
+    Color::rgb(255, 0, 0),
+    selection_color,
+    Color::rgb(0, 255, 0),
+  )
+  let mut has_empty_line_sel = false
+  for r in rects {
+    if r.0 == 0 &&
+      r.1 == 12 &&
+      r.2 == 1000U &&
+      r.3 == 12U &&
+      r.4 == selection_color.value {
+      has_empty_line_sel = true
+    }
+  }
+  inspect(has_empty_line_sel, content="true")
+}
