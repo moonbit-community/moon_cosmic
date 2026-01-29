@@ -104,3 +104,29 @@ test "Editor.render highlights internal empty lines in selection" {
   }
   inspect(has_empty_line_sel, content="true")
 }
+
+///|
+test "Editor.cursor_position on RTL line" {
+  let attrs = AttrsList::new(Attrs::new())
+  let s = "\u{05D0}\u{05D1}\u{05D2}"
+  let buffer = Buffer::new(Metrics::new(12.0F, 12.0F))
+    .set_text(s, attrs, Advanced)
+    .set_size(Some(1000.0F), None)
+    .layout_all()
+  let editor0 = Editor::new(buffer).set_cursor(Cursor::new(0, 0))
+  match editor0.cursor_position() {
+    None => abort("expected cursor position")
+    Some((x, y)) => {
+      inspect(x, content="36")
+      inspect(y, content="0")
+    }
+  }
+  let editor1 = Editor::new(buffer).set_cursor(Cursor::new(0, 3))
+  match editor1.cursor_position() {
+    None => abort("expected cursor position")
+    Some((x, y)) => {
+      inspect(x, content="0")
+      inspect(y, content="0")
+    }
+  }
+}

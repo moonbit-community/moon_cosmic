@@ -520,26 +520,49 @@ pub fn Buffer::cursor_motion(
     if glyphs.length() == 0 {
       return 0.0F
     }
-    let mut last_x = 0.0F
-    let mut last_end = 0
+    // Order-independent mapping (glyphs may be in visual order, not start-index order).
+    let mut min_start = glyphs[0].start
+    let mut min_start_x0 = glyphs[0].x
+    let mut min_start_x1 = glyphs[0].x + glyphs[0].w
+    let mut max_end = glyphs[0].end
+    let mut max_end_x0 = glyphs[0].x
+    let mut max_end_x1 = glyphs[0].x + glyphs[0].w
     for g in glyphs {
-      last_x = g.x + g.w
-      last_end = g.end
-      if index <= g.start {
-        return g.x
+      if g.start < min_start {
+        min_start = g.start
+        min_start_x0 = g.x
+        min_start_x1 = g.x + g.w
+      }
+      if g.end > max_end {
+        max_end = g.end
+        max_end_x0 = g.x
+        max_end_x1 = g.x + g.w
+      }
+      if index == g.start {
+        return if run.rtl { g.x + g.w } else { g.x }
+      }
+      if index == g.end {
+        return if run.rtl { g.x } else { g.x + g.w }
       }
       if index > g.start && index < g.end {
         let span = g.end - g.start
         let off = index - g.start
         let t = Float::from_double(off.to_double() / span.to_double())
-        return g.x + g.w * t
-      }
-      if index == g.end {
-        return g.x + g.w
+        return if run.rtl { g.x + g.w - g.w * t } else { g.x + g.w * t }
       }
     }
-    if index >= last_end {
-      last_x
+    if index <= min_start {
+      if run.rtl {
+        min_start_x1
+      } else {
+        min_start_x0
+      }
+    } else if index >= max_end {
+      if run.rtl {
+        max_end_x0
+      } else {
+        max_end_x1
+      }
     } else {
       0.0F
     }
@@ -550,23 +573,41 @@ pub fn Buffer::cursor_motion(
       return 0
     }
     let glyphs = run.glyphs
-    if x <= glyphs[0].x {
-      return glyphs[0].start
+    // Clamp to the visual extents.
+    let mut min_x = glyphs[0].x
+    let mut min_x_start = glyphs[0].start
+    let mut max_x = glyphs[0].x + glyphs[0].w
+    let mut max_x_end = glyphs[0].end
+    for g in glyphs {
+      if g.x < min_x {
+        min_x = g.x
+        min_x_start = g.start
+      }
+      if g.x + g.w > max_x {
+        max_x = g.x + g.w
+        max_x_end = g.end
+      }
     }
-    let last_g = glyphs[glyphs.length() - 1]
-    if x >= last_g.x + last_g.w {
-      return last_g.end
+    if x <= min_x {
+      return if run.rtl { max_x_end } else { min_x_start }
+    }
+    if x >= max_x {
+      return if run.rtl { min_x_start } else { max_x_end }
     }
     for g in glyphs {
       let mid = g.x + g.w / 2.0F
       if x < mid {
-        return g.start
+        return if run.rtl { g.end } else { g.start }
       }
       if x < g.x + g.w {
-        return g.end
+        return if run.rtl { g.start } else { g.end }
       }
     }
-    last_g.end
+    if run.rtl {
+      min_x_start
+    } else {
+      max_x_end
+    }
   }
 
   fn int_from_float(v : Float) -> Int {
