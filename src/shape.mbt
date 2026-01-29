@@ -124,17 +124,8 @@ fn detect_base_rtl(text : String) -> Bool {
 }
 
 ///|
-fn primary_script(text : String) -> @moon_swash.Script {
-  for ch in text {
-    let props = @moon_swash.CharInfo::from_char(ch).properties()
-    let script = props.script()
-    match script {
-      Common | Inherited | Unknown => ()
-      _ => return script
-    }
-  }
-  // Reasonable fallback for "all common/inherited/unknown".
-  @moon_swash.Script::Latin
+fn script_eq(a : @moon_swash.Script, b : @moon_swash.Script) -> Bool {
+  a.to_opentype() == b.to_opentype()
 }
 
 ///|
@@ -228,7 +219,6 @@ pub fn ShapeLine::build_with_font_system(
   // size=1.0 so the returned advances/offsets are in "em" units (like upstream),
   // which are later multiplied by `font_size` during layout.
   let rtl = detect_base_rtl(text)
-  let script = primary_script(text)
   let direction = if rtl {
     @shape.Direction::RightToLeft
   } else {
@@ -237,62 +227,87 @@ pub fn ShapeLine::build_with_font_system(
   let cx = @shape.ShapeContext::new()
   let empty_features : Array[@moon_swash.Setting[UInt16]] = []
   let empty_variations : Array[@moon_swash.Setting[Double]] = []
-  let shaper = cx
-    .builder(font)
-    .script(script)
-    .direction(direction)
-    .language(None)
-    .size(1.0)
-    .features(empty_features.iter())
-    .variations(empty_variations.iter())
-    .build()
   let cmap = @moon_swash.Charmap::from_font(font)
-  let tokens : Array[@moon_swash.Token] = []
+  let runs : Array[(@moon_swash.Script, Array[@moon_swash.Token])] = []
   let mut off = 0U
+  let mut cur_script = @moon_swash.Script::Latin
+  let mut cur_tokens : Array[@moon_swash.Token] = []
   for ch0 in text {
+    let script0 = @moon_swash.CharInfo::from_char(ch0).properties().script()
     let len_u = utf16_len_of_char(ch0).reinterpret_as_uint()
     let i = off.reinterpret_as_int()
     let attrs = attrs_list.get_span(i)
     // Tabs are shaped as spaces (upstream behavior).
     let ch = if ch0 == '\t' { ' ' } else { ch0 }
     let info = @moon_swash.CharInfo::from_char(ch)
-    tokens.push(
-      @moon_swash.Token::new(
-        ch,
-        off,
-        len_u,
-        info,
-        attrs.metadata().reinterpret_as_uint(),
-      ),
+    let tok = @moon_swash.Token::new(
+      ch,
+      off,
+      len_u,
+      info,
+      attrs.metadata().reinterpret_as_uint(),
     )
+    let effective = match script0 {
+      Common | Inherited | Unknown =>
+        if cur_tokens.length() == 0 {
+          @moon_swash.Script::Latin
+        } else {
+          cur_script
+        }
+      _ => script0
+    }
+    if cur_tokens.length() == 0 {
+      cur_script = effective
+    } else if !script_eq(effective, cur_script) {
+      runs.push((cur_script, cur_tokens))
+      cur_tokens = []
+      cur_script = effective
+    }
+    cur_tokens.push(tok)
     off = off + len_u
   }
-  let parser = @moon_swash.Parser::new(script, tokens.iter())
-  let cluster = @moon_swash.CharCluster::new()
-  while parser.next(cluster) {
-    cluster.map(fn(ch) { cmap.map(ch.to_int().reinterpret_as_uint()) })
-    |> ignore
-    shaper.add_cluster(cluster)
-  }
   let glyphs : Array[ShapeGlyph] = []
-  shaper.shape_with(fn(gc) {
-    let start = gc.source().start().reinterpret_as_int()
-    let end = gc.source().end().reinterpret_as_int()
-    let meta = gc.data().reinterpret_as_int()
-    for g in gc.glyphs() {
-      glyphs.push(ShapeGlyph::{
-        start,
-        end,
-        x_advance: Float::from_double(g.advance()),
-        y_advance: 0.0F,
-        x_offset: Float::from_double(g.x()),
-        y_offset: Float::from_double(g.y()),
-        font_id,
-        glyph_id: g.id().to_int(),
-        metadata: meta,
-      })
+  if cur_tokens.length() != 0 {
+    runs.push((cur_script, cur_tokens))
+  }
+  let cluster = @moon_swash.CharCluster::new()
+  for run in runs {
+    let script = run.0
+    let run_tokens = run.1
+    let shaper = cx
+      .builder(font)
+      .script(script)
+      .direction(direction)
+      .language(None)
+      .size(1.0)
+      .features(empty_features.iter())
+      .variations(empty_variations.iter())
+      .build()
+    let parser = @moon_swash.Parser::new(script, run_tokens.iter())
+    while parser.next(cluster) {
+      cluster.map(fn(ch) { cmap.map(ch.to_int().reinterpret_as_uint()) })
+      |> ignore
+      shaper.add_cluster(cluster)
     }
-  })
+    shaper.shape_with(fn(gc) {
+      let start = gc.source().start().reinterpret_as_int()
+      let end = gc.source().end().reinterpret_as_int()
+      let meta = gc.data().reinterpret_as_int()
+      for g in gc.glyphs() {
+        glyphs.push(ShapeGlyph::{
+          start,
+          end,
+          x_advance: Float::from_double(g.advance()),
+          y_advance: 0.0F,
+          x_offset: Float::from_double(g.x()),
+          y_offset: Float::from_double(g.y()),
+          font_id,
+          glyph_id: g.id().to_int(),
+          metadata: meta,
+        })
+      }
+    })
+  }
 
   // If shaping produces no glyphs, fall back to the simple shaper to keep layout stable.
   if glyphs.length() == 0 {
@@ -306,7 +321,7 @@ pub fn ShapeLine::build_with_font_system(
   }
 
   // Apply tab stops by snapping to the next multiple of (space_advance * tab_width).
-  let gm = font.glyph_metrics(shaper.normalized_coords())
+  let gm = font.glyph_metrics([])
   let upem = gm.units_per_em().to_int().to_double()
   let space_gid = cmap.map(32U)
   let space_adv = if upem == 0.0 {
