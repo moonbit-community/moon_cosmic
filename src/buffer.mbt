@@ -742,82 +742,143 @@ pub fn Buffer::cursor_motion(
 
   // Fallback: text-index motion (same as Editor's MVP cursor_motion).
   let mut c = cursor
+  fn move_prev_grapheme(buffer : Buffer, c0 : Cursor) -> Cursor {
+    let mut c = c0
+    if c.index > 0 {
+      let text = buffer.lines()[c.line].text()
+      let ranges = grapheme_indices_uax29(text)
+      let mut found = 0
+      for r in ranges {
+        if c.index > r.0 && c.index <= r.1 {
+          found = r.0
+        }
+      }
+      c = Cursor::new_with_affinity(c.line, found, Affinity::After)
+    } else if c.line > 0 {
+      let prev = c.line - 1
+      let prev_len = buffer.lines()[prev].text().length()
+      c = Cursor::new_with_affinity(prev, prev_len, Affinity::After)
+    }
+    c
+  }
+
+  fn move_next_grapheme(buffer : Buffer, c0 : Cursor) -> Cursor {
+    let mut c = c0
+    let len = buffer.lines()[c.line].text().length()
+    if c.index < len {
+      let text = buffer.lines()[c.line].text()
+      let ranges = grapheme_indices_uax29(text)
+      let mut found = len
+      for r in ranges {
+        if c.index >= r.0 && c.index < r.1 {
+          found = r.1
+          break
+        }
+      }
+      c = Cursor::new_with_affinity(c.line, found, Affinity::Before)
+    } else if c.line + 1 < buffer.lines().length() {
+      c = Cursor::new_with_affinity(c.line + 1, 0, Affinity::Before)
+    }
+    c
+  }
+
+  fn move_prev_word(buffer : Buffer, c0 : Cursor) -> Cursor {
+    let mut c = c0
+    let text = buffer.lines()[c.line].text()
+    if c.index > 0 {
+      let ranges = word_indices_uax29(text)
+      let mut found = 0
+      let mut i = ranges.length() - 1
+      while i >= 0 {
+        let (ws, _we) = ranges[i]
+        if ws < c.index {
+          found = ws
+          break
+        }
+        if i == 0 {
+          break
+        }
+        i = i - 1
+      }
+      c = Cursor::new_with_affinity(c.line, found, c.affinity)
+    } else if c.line > 0 {
+      let prev = c.line - 1
+      c = Cursor::new_with_affinity(
+        prev,
+        buffer.lines()[prev].text().length(),
+        c.affinity,
+      )
+    }
+    c
+  }
+
+  fn move_next_word(buffer : Buffer, c0 : Cursor) -> Cursor {
+    let mut c = c0
+    let text = buffer.lines()[c.line].text()
+    if c.index < text.length() {
+      let ranges = word_indices_uax29(text)
+      let mut found = text.length()
+      for pair in ranges {
+        let we = pair.1
+        if we > c.index {
+          found = we
+          break
+        }
+      }
+      c = Cursor::new_with_affinity(c.line, found, c.affinity)
+    } else if c.line + 1 < buffer.lines().length() {
+      c = Cursor::new_with_affinity(c.line + 1, 0, c.affinity)
+    }
+    c
+  }
+
   match motion {
-    Left | Previous =>
-      if c.index > 0 {
-        let text = buffer.lines()[c.line].text()
-        let ranges = grapheme_indices_uax29(text)
-        let mut found = 0
-        for r in ranges {
-          if c.index > r.0 && c.index <= r.1 {
-            found = r.0
-          }
-        }
-        c = Cursor::new_with_affinity(c.line, found, Affinity::After)
-      } else if c.line > 0 {
-        let prev = c.line - 1
-        let prev_len = buffer.lines()[prev].text().length()
-        c = Cursor::new_with_affinity(prev, prev_len, Affinity::After)
+    Previous => c = move_prev_grapheme(buffer, c)
+    Next => c = move_next_grapheme(buffer, c)
+    Left => {
+      let rtl = match buffer.lines()[c.line].shape_opt() {
+        None => false
+        Some(s) => s.rtl
       }
-    Right | Next => {
-      let len = buffer.lines()[c.line].text().length()
-      if c.index < len {
-        let text = buffer.lines()[c.line].text()
-        let ranges = grapheme_indices_uax29(text)
-        let mut found = len
-        for r in ranges {
-          if c.index >= r.0 && c.index < r.1 {
-            found = r.1
-            break
-          }
-        }
-        c = Cursor::new_with_affinity(c.line, found, Affinity::Before)
-      } else if c.line + 1 < buffer.lines().length() {
-        c = Cursor::new_with_affinity(c.line + 1, 0, Affinity::Before)
+      c = if rtl {
+        move_next_grapheme(buffer, c)
+      } else {
+        move_prev_grapheme(buffer, c)
       }
     }
-    PreviousWord | LeftWord => {
-      let text = buffer.lines()[c.line].text()
-      if c.index > 0 {
-        let ranges = word_indices_uax29(text)
-        let mut found = 0
-        let mut i = ranges.length() - 1
-        while i >= 0 {
-          let (ws, _we) = ranges[i]
-          if ws < c.index {
-            found = ws
-            break
-          }
-          if i == 0 {
-            break
-          }
-          i = i - 1
-        }
-        c = Cursor::new_with_affinity(c.line, found, c.affinity)
-      } else if c.line > 0 {
-        let prev = c.line - 1
-        c = Cursor::new_with_affinity(
-          prev,
-          buffer.lines()[prev].text().length(),
-          c.affinity,
-        )
+    Right => {
+      let rtl = match buffer.lines()[c.line].shape_opt() {
+        None => false
+        Some(s) => s.rtl
+      }
+      c = if rtl {
+        move_prev_grapheme(buffer, c)
+      } else {
+        move_next_grapheme(buffer, c)
       }
     }
-    NextWord | RightWord => {
-      let text = buffer.lines()[c.line].text()
-      if c.index < text.length() {
-        let ranges = word_indices_uax29(text)
-        let mut found = text.length()
-        for pair in ranges {
-          let we = pair.1
-          if we > c.index {
-            found = we
-            break
-          }
-        }
-        c = Cursor::new_with_affinity(c.line, found, c.affinity)
-      } else if c.line + 1 < buffer.lines().length() {
-        c = Cursor::new_with_affinity(c.line + 1, 0, c.affinity)
+    PreviousWord => c = move_prev_word(buffer, c)
+    NextWord => c = move_next_word(buffer, c)
+    LeftWord => {
+      let rtl = match buffer.lines()[c.line].shape_opt() {
+        None => false
+        Some(s) => s.rtl
+      }
+      c = if rtl {
+        move_next_word(buffer, c)
+      } else {
+        move_prev_word(buffer, c)
+      }
+    }
+    RightWord => {
+      let rtl = match buffer.lines()[c.line].shape_opt() {
+        None => false
+        Some(s) => s.rtl
+      }
+      c = if rtl {
+        move_prev_word(buffer, c)
+      } else {
+        move_next_word(buffer, c)
       }
     }
     Home =>

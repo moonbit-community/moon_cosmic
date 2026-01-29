@@ -307,3 +307,38 @@ test "Buffer.cursor_motion GotoLine uses LayoutCursor mapping" {
     Some((_c, _x)) => abort("expected None for out-of-range")
   }
 }
+
+///|
+test "Buffer.cursor_motion Left/Right respect base RTL lines" {
+  let attrs = AttrsList::new(Attrs::new())
+  let s = "\u{05D0}\u{05D1}\u{05D2}"
+  let buffer = Buffer::new(Metrics::new(12.0F, 12.0F))
+    .set_text(s, attrs, Advanced)
+    .set_size(Some(1000.0F), None)
+  match buffer.cursor_motion(Cursor::new(0, 0), None, Motion::Left) {
+    None => abort("expected motion")
+    Some((c, _x)) => {
+      inspect(c.index, content="1")
+      inspect(
+        match c.affinity {
+          Before => true
+          _ => false
+        },
+        content="true",
+      )
+    }
+  }
+  match buffer.cursor_motion(Cursor::new(0, 1), None, Motion::Right) {
+    None => abort("expected motion")
+    Some((c, _x)) => {
+      inspect(c.index, content="0")
+      inspect(
+        match c.affinity {
+          After => true
+          _ => false
+        },
+        content="true",
+      )
+    }
+  }
+}
