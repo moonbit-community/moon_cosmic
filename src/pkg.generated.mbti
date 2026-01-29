@@ -239,6 +239,7 @@ pub fn Color::g(Self) -> Byte
 pub fn Color::r(Self) -> Byte
 pub fn Color::rgb(Byte, Byte, Byte) -> Self
 pub fn Color::rgba(Byte, Byte, Byte, Byte) -> Self
+pub impl Eq for Color
 
 pub struct Cursor {
   line : Int
@@ -264,12 +265,14 @@ pub fn Editor::auto_indent(Self) -> Bool
 pub fn Editor::buffer(Self) -> Buffer
 pub fn Editor::copy_selection(Self) -> String?
 pub fn Editor::cursor(Self) -> Cursor
+pub fn Editor::cursor_position(Self) -> (Int, Int)?
 pub fn Editor::delete_range(Self, Cursor, Cursor) -> Self
 pub fn Editor::delete_selection(Self) -> (Self, Bool)
 pub fn Editor::finish_change(Self) -> (Self, Change?)
 pub fn Editor::insert_at(Self, Cursor, String, AttrsList?) -> (Self, Cursor)
 pub fn Editor::insert_string(Self, String, AttrsList?) -> Self
 pub fn Editor::new(Buffer) -> Self
+pub fn[R : Renderer] Editor::render(Self, R, Color, Color, Color, Color) -> Unit
 pub fn Editor::selection(Self) -> Selection
 pub fn Editor::selection_bounds(Self) -> (Cursor, Cursor)?
 pub fn Editor::set_auto_indent(Self, Bool) -> Self
@@ -365,6 +368,9 @@ pub struct LayoutLine {
 
 pub struct LayoutRun {
   line_i : Int
+  line_y : Float
+  line_top : Float
+  line_height : Float
   text : String
   rtl : Bool
   glyphs : Array[LayoutGlyph]

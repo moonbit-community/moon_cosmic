@@ -26,6 +26,11 @@ pub struct Color {
 }
 
 ///|
+pub impl Eq for Color with equal(self, other) {
+  self.value == other.value
+}
+
+///|
 pub fn Color::rgba(r : Byte, g : Byte, b : Byte, a : Byte) -> Color {
   let av = a.to_int().reinterpret_as_uint()
   let rv = r.to_int().reinterpret_as_uint()

@@ -296,6 +296,9 @@ pub fn Buffer::layout_all(self : Buffer) -> Buffer {
 /// A line of visible text for rendering (MVP subset).
 pub struct LayoutRun {
   line_i : Int
+  line_y : Float
+  line_top : Float
+  line_height : Float
   text : String
   rtl : Bool
   glyphs : Array[LayoutGlyph]
@@ -305,22 +308,54 @@ pub struct LayoutRun {
 ///|
 pub fn Buffer::layout_runs(self : Buffer) -> Iter[LayoutRun] {
   let runs : Array[LayoutRun] = []
+  let line_height = self.metrics.line_height
+  let mut y = 0.0F
   let n = self.lines.length()
   for i in 0..<n {
     let line = self.lines[i]
     let shape_opt = line.shape_opt()
     let rtl = if shape_opt is Some(s) { s.rtl } else { false }
     match line.layout_opt() {
-      None => ()
+      None => {
+        runs.push(LayoutRun::{
+          line_i: i,
+          line_y: y,
+          line_top: y,
+          line_height,
+          text: line.text(),
+          rtl,
+          glyphs: [],
+          line_w: 0.0F,
+        })
+        y = y + line_height
+      }
       Some(layout_lines) =>
-        for l in layout_lines {
+        if layout_lines.length() == 0 {
           runs.push(LayoutRun::{
             line_i: i,
+            line_y: y,
+            line_top: y,
+            line_height,
             text: line.text(),
             rtl,
-            glyphs: l.glyphs,
-            line_w: l.w,
+            glyphs: [],
+            line_w: 0.0F,
           })
+          y = y + line_height
+        } else {
+          for l in layout_lines {
+            runs.push(LayoutRun::{
+              line_i: i,
+              line_y: y,
+              line_top: y,
+              line_height,
+              text: line.text(),
+              rtl,
+              glyphs: l.glyphs,
+              line_w: l.w,
+            })
+            y = y + line_height
+          }
         }
     }
   }
