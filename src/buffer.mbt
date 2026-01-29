@@ -490,43 +490,6 @@ pub fn Buffer::cursor_motion(
     v.to_double().to_int()
   }
 
-  // Find current visual run.
-  let mut cur_run_idx : Int? = None
-  for i in 0..<runs.length() {
-    let run = runs[i]
-    if run.line_i != cursor.line {
-      continue
-    }
-    if run.glyphs.length() == 0 {
-      if cursor.index == 0 {
-        cur_run_idx = Some(i)
-        break
-      }
-    } else {
-      let min_start = run.glyphs[0].start
-      let mut max_end = run.glyphs[0].end
-      for g in run.glyphs {
-        if g.end > max_end {
-          max_end = g.end
-        }
-      }
-      if cursor.index >= min_start && cursor.index <= max_end {
-        cur_run_idx = Some(i)
-        break
-      }
-    }
-  }
-  if cur_run_idx is None {
-    return None
-  }
-  let cur_idx = if cur_run_idx is Some(v) { v } else { 0 }
-  let cur_run = runs[cur_idx]
-  let cur_x = x_for_index(cur_run, cursor.index)
-  let desired_x = match cursor_x_opt {
-    None => cur_x
-    Some(xi) => Float::from_double(xi.to_double())
-  }
-
   // Vertical movement uses visual runs.
   let delta_opt : Int? = match motion {
     Up => Some(-1)
@@ -537,6 +500,51 @@ pub fn Buffer::cursor_motion(
     _ => None
   }
   if delta_opt is Some(delta0) {
+    // Find current visual run (required for x preservation).
+    let mut cur_run_idx : Int? = None
+    for i in 0..<runs.length() {
+      let run = runs[i]
+      if run.line_i != cursor.line {
+        continue
+      }
+      if run.glyphs.length() == 0 {
+        if cursor.index == 0 {
+          cur_run_idx = Some(i)
+          break
+        }
+      } else {
+        let min_start = run.glyphs[0].start
+        let mut max_end = run.glyphs[0].end
+        for g in run.glyphs {
+          if g.end > max_end {
+            max_end = g.end
+          }
+        }
+        if cursor.index >= min_start && cursor.index <= max_end {
+          cur_run_idx = Some(i)
+          break
+        }
+      }
+    }
+    // If we can't map index -> run (e.g. stale cursor), fall back to first run on the line.
+    if cur_run_idx is None {
+      for i in 0..<runs.length() {
+        if runs[i].line_i == cursor.line {
+          cur_run_idx = Some(i)
+          break
+        }
+      }
+    }
+    if cur_run_idx is None {
+      return None
+    }
+    let cur_idx = if cur_run_idx is Some(v) { v } else { 0 }
+    let cur_run = runs[cur_idx]
+    let cur_x = x_for_index(cur_run, cursor.index)
+    let desired_x = match cursor_x_opt {
+      None => cur_x
+      Some(xi) => Float::from_double(xi.to_double())
+    }
     let target = cur_idx + delta0
     if target < 0 || target >= runs.length() {
       return None
@@ -608,7 +616,20 @@ pub fn Buffer::cursor_motion(
         buffer.lines()[c.line].text().length(),
         c.affinity,
       )
-    SoftHome => c = Cursor::new_with_affinity(c.line, 0, c.affinity)
+    SoftHome => {
+      let text = buffer.lines()[c.line].text()
+      let mut after_ws = text.length()
+      for p in text.iter2() {
+        let idx = p.0
+        let ch = p.1
+        if !ch.is_whitespace() {
+          after_ws = idx
+          break
+        }
+      }
+      let target = if c.index == after_ws { 0 } else { after_ws }
+      c = Cursor::new_with_affinity(c.line, target, c.affinity)
+    }
     BufferStart => c = Cursor::new_with_affinity(0, 0, c.affinity)
     BufferEnd => {
       let last = buffer.lines().length() - 1

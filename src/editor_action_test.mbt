@@ -136,3 +136,19 @@ test "Editor.action Backspace/Delete are grapheme-aware (combining mark)" {
   let editor3 = editor2.action(Action::Delete)
   inspect(editor3.buffer().lines()[0].text(), content="")
 }
+
+///|
+test "Buffer.cursor_motion SoftHome toggles after_whitespace" {
+  let attrs = AttrsList::new(Attrs::new())
+  let buffer = Buffer::new(Metrics::new(12.0F, 12.0F))
+    .set_text("  foo", attrs, Advanced)
+    .set_size(Some(1000.0F), None)
+  match buffer.cursor_motion(Cursor::new(0, 0), None, Motion::SoftHome) {
+    None => abort("expected motion")
+    Some((c, _x)) => inspect(c.index, content="2")
+  }
+  match buffer.cursor_motion(Cursor::new(0, 2), None, Motion::SoftHome) {
+    None => abort("expected motion")
+    Some((c, _x)) => inspect(c.index, content="0")
+  }
+}

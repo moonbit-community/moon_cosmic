@@ -41,19 +41,16 @@ fn clamp(v : Int, lo : Int, hi : Int) -> Int {
 }
 
 ///|
-fn is_ws_u16(c : UInt16) -> Bool {
-  // MVP: space + tab for indentation logic.
-  c == 32 || c == 9
-}
-
-///|
 fn leading_whitespace(s : String) -> String {
-  let len = s.length()
-  let mut i = 0
-  while i < len && is_ws_u16(s.code_unit_at(i)) {
-    i = i + 1
+  let sb = StringBuilder::new(size_hint=32)
+  for ch in s {
+    if ch.is_whitespace() {
+      sb.write_char(ch)
+    } else {
+      break
+    }
   }
-  slice_string(s, 0, i)
+  sb.to_string()
 }
 
 ///|
