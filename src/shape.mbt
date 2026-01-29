@@ -146,7 +146,7 @@ pub fn ShapeLine::build_with_font_system(
   text : String,
   attrs_list : AttrsList,
   shaping : Shaping,
-  _tab_width : Int,
+  tab_width : Int,
 ) -> ShapeLine {
   if shaping is Basic {
     return ShapeLine::build(
@@ -154,7 +154,7 @@ pub fn ShapeLine::build_with_font_system(
       text,
       attrs_list,
       shaping,
-      _tab_width,
+      tab_width,
     )
   }
   let rtl = detect_base_rtl(text)
@@ -166,7 +166,7 @@ pub fn ShapeLine::build_with_font_system(
         text,
         attrs_list,
         shaping,
-        _tab_width,
+        tab_width,
       )
     Some(id) => id
   }
@@ -178,7 +178,7 @@ pub fn ShapeLine::build_with_font_system(
         text,
         attrs_list,
         shaping,
-        _tab_width,
+        tab_width,
       )
     Some(f) => f
   }
@@ -189,14 +189,23 @@ pub fn ShapeLine::build_with_font_system(
   // Tabs are shaped as spaces (upstream behavior).
   let space_gid = cmap.map(32U)
   let space_adv = glyph_advance_em(font, space_gid, upem)
+  let tab_step = space_adv * Float::from_int(tab_width)
   let glyphs : Array[ShapeGlyph] = []
   let len = text.length()
+  let mut x = 0.0F
   for i in 0..<len {
     let cu = text.code_unit_at(i)
     let code = cu.to_int()
     let attrs = attrs_list.get_span(i)
     let (glyph_id, x_advance) = if is_tab(code) {
-      (space_gid, space_adv)
+      if tab_step == 0.0F {
+        (space_gid, space_adv)
+      } else {
+        let xd = x.to_double()
+        let stepd = tab_step.to_double()
+        let next = ((xd / stepd).floor() + 1.0) * stepd
+        (space_gid, Float::from_double(next - xd))
+      }
     } else {
       let gid = cmap.map(code_unit_to_uint(cu))
       let adv = glyph_advance_em(font, gid, upem)
@@ -211,6 +220,7 @@ pub fn ShapeLine::build_with_font_system(
       glyph_id: glyph_id.to_int(),
       metadata: attrs.metadata(),
     })
+    x = x + x_advance
   }
   ShapeLine::{ rtl, glyphs }
 }
