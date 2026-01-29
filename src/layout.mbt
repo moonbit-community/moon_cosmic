@@ -117,11 +117,6 @@ pub struct PhysicalGlyph {
 }
 
 ///|
-fn truncf(v : Float) -> Float {
-  Float::from_int(v.to_int())
-}
-
-///|
 pub fn LayoutGlyph::physical(
   self : LayoutGlyph,
   offset : (Float, Float),

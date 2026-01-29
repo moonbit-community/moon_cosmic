@@ -19,6 +19,8 @@ pub fn apply_align(String, Array[LayoutLine], Float, Align) -> Array[LayoutLine]
 
 pub fn cosmic_text_version() -> String
 
+pub fn floorf(Float) -> Float
+
 pub fn justify_to_align(Justify) -> Align
 
 pub fn layout_ascii(String, Float, Float?, Wrap) -> Array[LayoutLine]
@@ -26,6 +28,10 @@ pub fn layout_ascii(String, Float, Float?, Wrap) -> Array[LayoutLine]
 pub fn layout_from_shape(String, ShapeLine, Float, Float, Float?, Wrap) -> Array[LayoutLine]
 
 pub fn line_break_to_wrap(LineBreak) -> Wrap
+
+pub fn roundf(Float) -> Float
+
+pub fn truncf(Float) -> Float
 
 pub fn word_indices_whitespace(String) -> Array[(Int, Int)]
 
@@ -62,6 +68,7 @@ pub fn Attrs::weight(Self, Weight) -> Self
 pub fn Attrs::weight_value(Self) -> Weight
 pub fn Attrs::with_metadata(Int) -> Self
 pub impl Eq for Attrs
+pub impl Hash for Attrs
 
 pub struct AttrsList {
   defaults : Attrs
@@ -74,12 +81,16 @@ pub fn AttrsList::get_span(Self, Int) -> Attrs
 pub fn AttrsList::new(Attrs) -> Self
 pub fn AttrsList::spans_iter(Self) -> Array[AttrsSpan]
 pub fn AttrsList::split_off(Self, Int) -> (Self, Self)
+pub impl Eq for AttrsList
+pub impl Hash for AttrsList
 
 pub struct AttrsSpan {
   start : Int
   end : Int
   attrs : Attrs
 }
+pub impl Eq for AttrsSpan
+pub impl Hash for AttrsSpan
 
 pub struct BidiParagraphs {
   text : String
@@ -213,6 +224,7 @@ pub(all) enum Family {
   Monospace
 }
 pub impl Eq for Family
+pub impl Hash for Family
 pub impl Show for Family
 
 pub struct FontEntry {
@@ -394,6 +406,26 @@ pub fn ShapeLine::build_with_font_system(Self, FontSystem, String, AttrsList, Sh
 pub fn ShapeLine::empty() -> Self
 pub fn ShapeLine::new(Bool, Array[ShapeGlyph]) -> Self
 
+pub struct ShapeRunCache {
+  mut age : UInt64
+  cache : @hashmap.HashMap[ShapeRunKey, (UInt64, Array[ShapeGlyph])]
+}
+pub fn ShapeRunCache::get(Self, ShapeRunKey) -> Array[ShapeGlyph]?
+pub fn ShapeRunCache::insert(Self, ShapeRunKey, Array[ShapeGlyph]) -> Unit
+pub fn ShapeRunCache::new() -> Self
+pub fn ShapeRunCache::peek(Self, ShapeRunKey) -> Array[ShapeGlyph]?
+pub fn ShapeRunCache::trim(Self, UInt64) -> Unit
+pub impl Show for ShapeRunCache
+
+pub struct ShapeRunKey {
+  text : String
+  default_attrs : Attrs
+  attrs_spans : Array[(Int, Int, Attrs)]
+}
+pub fn ShapeRunKey::new(String, AttrsList) -> Self
+pub impl Eq for ShapeRunKey
+pub impl Hash for ShapeRunKey
+
 pub(all) enum Shaping {
   Basic
   Advanced
@@ -431,6 +463,7 @@ pub fn Weight::new(Int) -> Self
 pub fn Weight::normal() -> Self
 pub fn Weight::value(Self) -> Int
 pub impl Eq for Weight
+pub impl Hash for Weight
 pub impl Show for Weight
 
 pub(all) enum Wrap {

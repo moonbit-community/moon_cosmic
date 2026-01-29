@@ -89,6 +89,21 @@ pub impl Eq for Family with equal(self, other) {
 }
 
 ///|
+pub impl Hash for Family with hash_combine(self, hasher) {
+  match self {
+    Name(name) => {
+      hasher.combine_int(0)
+      hasher.combine_string(name)
+    }
+    Serif => hasher.combine_int(1)
+    SansSerif => hasher.combine_int(2)
+    Cursive => hasher.combine_int(3)
+    Fantasy => hasher.combine_int(4)
+    Monospace => hasher.combine_int(5)
+  }
+}
+
+///|
 pub impl Show for Family with output(self, logger) {
   match self {
     Name(name) => {
@@ -133,6 +148,11 @@ pub fn Weight::value(self : Weight) -> Int {
 ///|
 pub impl Eq for Weight with equal(self, other) {
   self.value == other.value
+}
+
+///|
+pub impl Hash for Weight with hash_combine(self, hasher) {
+  hasher.combine_int(self.value)
 }
 
 ///|
@@ -190,10 +210,31 @@ pub impl Eq for Attrs with equal(self, other) {
 }
 
 ///|
+pub impl Hash for Attrs with hash_combine(self, hasher) {
+  hasher.combine_int(self.metadata)
+  self.family.hash_combine(hasher)
+  self.weight.hash_combine(hasher)
+}
+
+///|
 pub struct AttrsSpan {
   start : Int
   end : Int
   attrs : Attrs
+}
+
+///|
+pub impl Eq for AttrsSpan with equal(self, other) {
+  self.start == other.start &&
+  self.end == other.end &&
+  self.attrs == other.attrs
+}
+
+///|
+pub impl Hash for AttrsSpan with hash_combine(self, hasher) {
+  hasher.combine_int(self.start)
+  hasher.combine_int(self.end)
+  self.attrs.hash_combine(hasher)
 }
 
 ///|
@@ -215,6 +256,29 @@ pub fn AttrsList::defaults(self : AttrsList) -> Attrs {
 ///|
 pub fn AttrsList::spans_iter(self : AttrsList) -> Array[AttrsSpan] {
   self.spans
+}
+
+///|
+pub impl Eq for AttrsList with equal(self, other) {
+  if self.defaults != other.defaults ||
+    self.spans.length() != other.spans.length() {
+    return false
+  }
+  for i in 0..<self.spans.length() {
+    if self.spans[i] != other.spans[i] {
+      return false
+    }
+  }
+  true
+}
+
+///|
+pub impl Hash for AttrsList with hash_combine(self, hasher) {
+  self.defaults.hash_combine(hasher)
+  hasher.combine_int(self.spans.length())
+  for s in self.spans {
+    s.hash_combine(hasher)
+  }
 }
 
 ///|
