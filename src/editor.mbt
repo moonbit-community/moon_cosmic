@@ -57,6 +57,113 @@ fn leading_whitespace(s : String) -> String {
 }
 
 ///|
+fn indent_scan(text : String, tab_width : Int) -> (Int, Int, Int) {
+  // Returns (last_indent_index, after_whitespace_index, whitespace_char_count).
+  let mut last_indent = 0
+  let mut after_ws = text.length()
+  let mut count = 0
+  for p in text.iter2() {
+    let idx = p.0
+    let c = p.1
+    if !c.is_whitespace() {
+      after_ws = idx
+      break
+    }
+    if tab_width > 0 && count % tab_width == 0 {
+      last_indent = idx
+    }
+    count = count + 1
+  }
+  (last_indent, after_ws, count)
+}
+
+///|
+fn selection_shift_ge(
+  sel : Selection,
+  line_i : Int,
+  threshold : Int,
+  delta : Int,
+) -> Selection {
+  match sel {
+    None => None
+    Normal(c) =>
+      if c.line == line_i && c.index >= threshold {
+        Normal(Cursor::new_with_affinity(c.line, c.index + delta, c.affinity))
+      } else {
+        sel
+      }
+    Line(c) =>
+      if c.line == line_i && c.index >= threshold {
+        Line(Cursor::new_with_affinity(c.line, c.index + delta, c.affinity))
+      } else {
+        sel
+      }
+    Word(c) =>
+      if c.line == line_i && c.index >= threshold {
+        Word(Cursor::new_with_affinity(c.line, c.index + delta, c.affinity))
+      } else {
+        sel
+      }
+  }
+}
+
+///|
+fn selection_shift_gt_clamp(
+  sel : Selection,
+  line_i : Int,
+  threshold : Int,
+  delta : Int,
+) -> Selection {
+  fn clamp_ge(v : Int, min : Int) -> Int {
+    if v < min {
+      min
+    } else {
+      v
+    }
+  }
+
+  match sel {
+    None => None
+    Normal(c) =>
+      if c.line == line_i && c.index > threshold {
+        Normal(
+          Cursor::new_with_affinity(
+            c.line,
+            clamp_ge(c.index - delta, threshold),
+            c.affinity,
+          ),
+        )
+      } else {
+        sel
+      }
+    Line(c) =>
+      if c.line == line_i && c.index > threshold {
+        Line(
+          Cursor::new_with_affinity(
+            c.line,
+            clamp_ge(c.index - delta, threshold),
+            c.affinity,
+          ),
+        )
+      } else {
+        sel
+      }
+    Word(c) =>
+      if c.line == line_i && c.index > threshold {
+        Word(
+          Cursor::new_with_affinity(
+            c.line,
+            clamp_ge(c.index - delta, threshold),
+            c.affinity,
+          ),
+        )
+      } else {
+        sel
+      }
+  }
+}
+
+///|
 fn line_items_for_insert(data : String) -> Array[(Int, Int, LineEnding)] {
   let items : Array[(Int, Int, LineEnding)] = []
   let mut iter = LineIter::new(data)
@@ -589,59 +696,6 @@ pub fn Editor::apply_change(self : Editor, change : Change) -> (Editor, Bool) {
 }
 
 ///|
-fn adjust_selection_index(
-  sel : Selection,
-  line_i : Int,
-  delta : Int,
-) -> Selection {
-  fn clamp_nonneg(v : Int) -> Int {
-    if v < 0 {
-      0
-    } else {
-      v
-    }
-  }
-
-  match sel {
-    None => None
-    Normal(c) =>
-      if c.line == line_i {
-        Normal(
-          Cursor::new_with_affinity(
-            c.line,
-            clamp_nonneg(c.index + delta),
-            c.affinity,
-          ),
-        )
-      } else {
-        sel
-      }
-    Line(c) =>
-      if c.line == line_i {
-        Line(
-          Cursor::new_with_affinity(
-            c.line,
-            clamp_nonneg(c.index + delta),
-            c.affinity,
-          ),
-        )
-      } else {
-        sel
-      }
-    Word(c) =>
-      if c.line == line_i {
-        Word(
-          Cursor::new_with_affinity(
-            c.line,
-            clamp_nonneg(c.index + delta),
-            c.affinity,
-          ),
-        )
-      } else {
-        sel
-      }
-  }
-}
 
 ///|
 /// Perform an action on the editor (MVP: cursor motion is text-index based, no hit-testing yet).
@@ -737,31 +791,39 @@ pub fn Editor::action(self : Editor, action : Action) -> Editor {
     }
     Indent => {
       let tab_width = editor.tab_width()
-      let indent = String::make(tab_width, ' ')
       let (start, end) = match editor.selection_bounds() {
         Some(some) => some
         None => (editor.cursor, editor.cursor)
       }
-      let indent_len = indent.length()
       for line_i in start.line..<=end.line {
-        let (e, _c) = editor.insert_at(Cursor::new(line_i, 0), indent, None)
+        let text = editor.buffer.lines()[line_i].text()
+        let (_last_indent, after_ws, count) = indent_scan(text, tab_width)
+        let required = tab_width - count % tab_width
+        let indent = String::make(required, ' ')
+        let (e, _c) = editor.insert_at(
+          Cursor::new(line_i, after_ws),
+          indent,
+          None,
+        )
         editor = e
-        if old_cursor.line == line_i {
+        if editor.cursor.line == line_i && editor.cursor.index >= after_ws {
           editor = editor.set_cursor(
             Cursor::new_with_affinity(
-              old_cursor.line,
-              old_cursor.index + indent_len,
-              old_cursor.affinity,
+              editor.cursor.line,
+              editor.cursor.index + required,
+              editor.cursor.affinity,
             ),
           )
         }
         editor = Editor::{
           ..editor,
-          selection: adjust_selection_index(
+          selection: selection_shift_ge(
             editor.selection,
             line_i,
-            indent_len,
+            after_ws,
+            required,
           ),
+          buffer: editor.buffer.set_redraw(true),
         }
       }
     }
@@ -773,33 +835,41 @@ pub fn Editor::action(self : Editor, action : Action) -> Editor {
       }
       for line_i in start.line..<=end.line {
         let text = editor.buffer.lines()[line_i].text()
-        let mut n = 0
-        while n < text.length() && n < tab_width && text.code_unit_at(n) == 32 {
-          n = n + 1
+        let (last_indent, after_ws, _count) = indent_scan(text, tab_width)
+
+        // No de-indent required.
+        if last_indent == after_ws {
+          continue
         }
-        if n > 0 {
-          editor = editor.delete_range(
-            Cursor::new(line_i, 0),
-            Cursor::new(line_i, n),
+        let delta = after_ws - last_indent
+        editor = editor.delete_range(
+          Cursor::new(line_i, last_indent),
+          Cursor::new(line_i, after_ws),
+        )
+        if editor.cursor.line == line_i && editor.cursor.index > last_indent {
+          let shifted = editor.cursor.index - delta
+          let new_idx = if shifted < last_indent {
+            last_indent
+          } else {
+            shifted
+          }
+          editor = editor.set_cursor(
+            Cursor::new_with_affinity(
+              editor.cursor.line,
+              new_idx,
+              editor.cursor.affinity,
+            ),
           )
-          if old_cursor.line == line_i {
-            let new_idx = if old_cursor.index - n < 0 {
-              0
-            } else {
-              old_cursor.index - n
-            }
-            editor = editor.set_cursor(
-              Cursor::new_with_affinity(
-                old_cursor.line,
-                new_idx,
-                old_cursor.affinity,
-              ),
-            )
-          }
-          editor = Editor::{
-            ..editor,
-            selection: adjust_selection_index(editor.selection, line_i, -n),
-          }
+        }
+        editor = Editor::{
+          ..editor,
+          selection: selection_shift_gt_clamp(
+            editor.selection,
+            line_i,
+            last_indent,
+            delta,
+          ),
+          buffer: editor.buffer.set_redraw(true),
         }
       }
     }
