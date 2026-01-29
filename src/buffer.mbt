@@ -570,6 +570,37 @@ pub fn Buffer::cursor_motion(
         c = Cursor::new_with_affinity(c.line + 1, 0, c.affinity)
       }
     }
+    PreviousWord | LeftWord => {
+      let text = buffer.lines()[c.line].text()
+      let ranges = word_indices_uax29(text)
+      let mut found = 0
+      let mut i = ranges.length() - 1
+      while i >= 0 {
+        let (ws, _we) = ranges[i]
+        if ws < c.index {
+          found = ws
+          break
+        }
+        if i == 0 {
+          break
+        }
+        i = i - 1
+      }
+      c = Cursor::new_with_affinity(c.line, found, c.affinity)
+    }
+    NextWord | RightWord => {
+      let text = buffer.lines()[c.line].text()
+      let ranges = word_indices_uax29(text)
+      let mut found = text.length()
+      for pair in ranges {
+        let we = pair.1
+        if we > c.index {
+          found = we
+          break
+        }
+      }
+      c = Cursor::new_with_affinity(c.line, found, c.affinity)
+    }
     Home => c = Cursor::new_with_affinity(c.line, 0, c.affinity)
     End =>
       c = Cursor::new_with_affinity(

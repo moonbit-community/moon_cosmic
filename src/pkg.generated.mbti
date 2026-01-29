@@ -33,6 +33,8 @@ pub fn roundf(Float) -> Float
 
 pub fn truncf(Float) -> Float
 
+pub fn word_indices_uax29(String) -> Array[(Int, Int)]
+
 pub fn word_indices_whitespace(String) -> Array[(Int, Int)]
 
 // Errors

@@ -224,7 +224,7 @@ pub fn Editor::selection_bounds(self : Editor) -> (Cursor, Cursor)? {
       // Move start to beginning of word (whitespace-based MVP).
       {
         let line = buffer.lines()[start.line]
-        let ranges = word_indices_whitespace(line.text())
+        let ranges = word_indices_uax29(line.text())
         let mut found = 0
         let mut i = ranges.length() - 1
         while i >= 0 {
@@ -244,7 +244,7 @@ pub fn Editor::selection_bounds(self : Editor) -> (Cursor, Cursor)? {
       // Move end to end of word (whitespace-based MVP).
       {
         let line = buffer.lines()[end.line]
-        let ranges = word_indices_whitespace(line.text())
+        let ranges = word_indices_uax29(line.text())
         let mut found = line.text().length()
         for pair in ranges {
           let we = pair.1

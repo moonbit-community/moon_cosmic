@@ -42,3 +42,37 @@ pub fn word_indices_whitespace(s : String) -> Array[(Int, Int)] {
   }
   ranges
 }
+
+///|
+/// Word boundary ranges based on swash Unicode analysis (UAX#29-ish).
+///
+/// Returns segments separated by `Boundary::Word`/`Line`/`Mandatory`.
+pub fn word_indices_uax29(s : String) -> Array[(Int, Int)] {
+  let chars = s.to_array()
+  let analyze = @moon_swash.analyze(chars.iter())
+  analyze.set_break_strength(@moon_swash.WordBreakStrength::Normal)
+  let ranges : Array[(Int, Int)] = []
+  let mut start = 0
+  let mut pos = 0
+  for ch in chars {
+    match analyze.next() {
+      None => break
+      Some((_props, boundary)) => {
+        pos = pos + ch.utf16_len()
+        match boundary {
+          Word | Line | Mandatory => {
+            if pos > start {
+              ranges.push((start, pos))
+            }
+            start = pos
+          }
+          None => ()
+        }
+      }
+    }
+  }
+  if pos > start {
+    ranges.push((start, pos))
+  }
+  ranges
+}
