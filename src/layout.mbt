@@ -252,6 +252,37 @@ fn push_layout_line_from_shape(
 }
 
 ///|
+fn layout_glyph_wrap_range(
+  shape : ShapeLine,
+  range_start : Int,
+  range_end : Int,
+  font_size : Float,
+  cell_w : Float,
+  max_w : Float,
+) -> Array[LayoutLine] {
+  let lines : Array[LayoutLine] = []
+  if range_end <= range_start {
+    return lines
+  }
+  let max_cells_f = (max_w / cell_w).to_double()
+  let max_cells = max_int(1, max_cells_f.to_int())
+  let mut start = range_start
+  let mut x = 0
+  for i in range_start..<range_end {
+    let adv = shape.glyphs[i].x_advance
+    let adv_cells = adv.to_double().to_int()
+    if x + adv_cells > max_cells && i > start {
+      push_layout_line_from_shape(lines, shape, start, i, font_size, cell_w)
+      start = i
+      x = 0
+    }
+    x = x + adv_cells
+  }
+  push_layout_line_from_shape(lines, shape, start, range_end, font_size, cell_w)
+  lines
+}
+
+///|
 fn push_line(
   lines : Array[LayoutLine],
   text_start : Int,
@@ -469,14 +500,24 @@ pub fn layout_from_shape(
   }
   let mut line_start = words[0].0
   let mut line_end = words[0].1
+  if fallback_to_glyph && float_from_int(line_end - line_start) * cell_w > max_w {
+    // First word doesn't fit by itself: immediately fallback to glyph wrapping.
+    let word_lines = layout_glyph_wrap_range(
+      shape, line_start, line_end, font_size, cell_w, max_w,
+    )
+    for l in word_lines {
+      lines.push(l)
+    }
+    line_start = line_end
+    line_end = line_end
+  }
   for wi in 1..<words.length() {
     let word = words[wi]
     let w_start = word.0
     let w_end = word.1
-    let word_cells = w_end - w_start
-    let cur_cells = line_end - line_start
-    let would_cells = cur_cells + word_cells
-    let would_w = float_from_int(would_cells) * cell_w
+    // NOTE: `words` skips whitespace ranges, so the real width after appending
+    // includes any intervening spaces/tabs. Use the actual span `[line_start, w_end)`.
+    let would_w = float_from_int(w_end - line_start) * cell_w
     if would_w > max_w {
       // emit current
       push_layout_line_from_shape(
@@ -484,21 +525,14 @@ pub fn layout_from_shape(
       )
       line_start = w_start
       line_end = w_end
+      let word_cells = w_end - w_start
       if fallback_to_glyph && float_from_int(word_cells) * cell_w > max_w {
         // Re-layout this single word with glyph wrapping.
-        let word_lines = layout_from_shape(
-          text,
-          shape,
-          font_size,
-          cell_w,
-          width_opt,
-          Glyph,
+        let word_lines = layout_glyph_wrap_range(
+          shape, w_start, w_end, font_size, cell_w, max_w,
         )
-        // Filter the word-only lines that are within [w_start,w_end).
         for l in word_lines {
-          if l.start >= w_start && l.end <= w_end {
-            lines.push(l)
-          }
+          lines.push(l)
         }
         line_start = w_end
         line_end = w_end

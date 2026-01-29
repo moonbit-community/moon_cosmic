@@ -102,7 +102,9 @@ pub struct Buffer {
 }
 pub fn Buffer::draw_with_font_system(Self, FontSystem, SwashCache, Color, (Int, Int, UInt, UInt, Color) -> Unit) -> (Self, SwashCache)
 pub fn Buffer::hinting(Self) -> Hinting
+pub fn Buffer::layout_all(Self) -> Self
 pub fn Buffer::layout_all_with_font_system(Self, FontSystem) -> Self
+pub fn Buffer::layout_runs(Self) -> Iter[LayoutRun]
 pub fn Buffer::lines(Self) -> Array[BufferLine]
 pub fn Buffer::metrics(Self) -> Metrics
 pub fn Buffer::new(Metrics) -> Self
@@ -117,6 +119,7 @@ pub fn Buffer::set_tab_width(Self, Int) -> Self
 pub fn Buffer::set_text(Self, String, AttrsList, Shaping) -> Self
 pub fn Buffer::set_wrap(Self, Wrap) -> Self
 pub fn Buffer::shape_all_with_font_system(Self, FontSystem) -> Self
+pub fn Buffer::size(Self) -> (Float?, Float?)
 pub fn Buffer::wrap(Self) -> Wrap
 
 pub struct BufferLine {
@@ -279,6 +282,14 @@ pub struct LayoutLine {
   max_descent : Float
   line_height_opt : Float?
   glyphs : Array[LayoutGlyph]
+}
+
+pub struct LayoutRun {
+  line_i : Int
+  text : String
+  rtl : Bool
+  glyphs : Array[LayoutGlyph]
+  line_w : Float
 }
 
 pub(all) enum LineBreak {

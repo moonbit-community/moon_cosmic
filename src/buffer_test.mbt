@@ -70,3 +70,25 @@ test "Buffer setters mark redraw when value changes" {
   let buf5 = buf4.set_metrics(Metrics::new(13.0F, 15.0F))
   inspect(buf5.redraw(), content="true")
 }
+
+///|
+test "wrap_word_fallback: layout_runs never overflow width (MVP)" {
+  let metrics = Metrics::new(14.0F, 20.0F)
+  let mut buffer = Buffer::new(metrics)
+  buffer = buffer.set_wrap(Wrap::WordOrGlyph)
+  buffer = buffer.set_text(
+    "Lorem ipsum dolor sit amet, qui minim labore adipisicing minim sint cillum sint consectetur cupidatat.",
+    AttrsList::new(Attrs::new()),
+    Advanced,
+  )
+  buffer = buffer.set_size(Some(50.0F), Some(1000.0F))
+  buffer = buffer.layout_all()
+  let mut measured = 0.0F
+  for run in buffer.layout_runs() {
+    if run.line_w > measured {
+      measured = run.line_w
+    }
+  }
+  let w = if buffer.size().0 is Some(v) { v } else { 0.0F }
+  inspect(measured <= w, content="true")
+}

@@ -185,6 +185,11 @@ pub fn Buffer::set_size(
 }
 
 ///|
+pub fn Buffer::size(self : Buffer) -> (Float?, Float?) {
+  (self.width_opt, self.height_opt)
+}
+
+///|
 fn slice_string(s : String, start : Int, end : Int) -> String {
   let sb = StringBuilder::new(size_hint=(end - start) * 2)
   sb.write_view(s[:].view(start_offset=start, end_offset=end))
@@ -257,6 +262,60 @@ pub fn Buffer::layout_all_with_font_system(
     )
   }
   Buffer::{ ..self, lines, }
+}
+
+///|
+/// Layout all lines using the built-in shaping (no font system).
+pub fn Buffer::layout_all(self : Buffer) -> Buffer {
+  let lines : Array[BufferLine] = []
+  for line in self.lines {
+    lines.push(
+      line.layout(
+        self.metrics.font_size,
+        self.width_opt,
+        self.wrap,
+        self.monospace_width,
+        self.tab_width,
+        self.hinting,
+      ),
+    )
+  }
+  Buffer::{ ..self, lines, }
+}
+
+///|
+/// A line of visible text for rendering (MVP subset).
+pub struct LayoutRun {
+  line_i : Int
+  text : String
+  rtl : Bool
+  glyphs : Array[LayoutGlyph]
+  line_w : Float
+}
+
+///|
+pub fn Buffer::layout_runs(self : Buffer) -> Iter[LayoutRun] {
+  let runs : Array[LayoutRun] = []
+  let n = self.lines.length()
+  for i in 0..<n {
+    let line = self.lines[i]
+    let shape_opt = line.shape_opt()
+    let rtl = if shape_opt is Some(s) { s.rtl } else { false }
+    match line.layout_opt() {
+      None => ()
+      Some(layout_lines) =>
+        for l in layout_lines {
+          runs.push(LayoutRun::{
+            line_i: i,
+            text: line.text(),
+            rtl,
+            glyphs: l.glyphs,
+            line_w: l.w,
+          })
+        }
+    }
+  }
+  runs.iter()
 }
 
 ///|
