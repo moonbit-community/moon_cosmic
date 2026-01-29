@@ -72,6 +72,15 @@ pub fn Buffer::redraw(self : Buffer) -> Bool {
 }
 
 ///|
+pub fn Buffer::set_redraw(self : Buffer, redraw : Bool) -> Buffer {
+  if self.redraw == redraw {
+    self
+  } else {
+    Buffer::{ ..self, redraw, }
+  }
+}
+
+///|
 pub fn Buffer::scroll(self : Buffer) -> Scroll {
   self.scroll
 }

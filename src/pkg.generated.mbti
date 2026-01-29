@@ -38,6 +38,22 @@ pub fn word_indices_whitespace(String) -> Array[(Int, Int)]
 // Errors
 
 // Types and methods
+pub(all) enum Action {
+  Motion(Motion)
+  Escape
+  Insert(Char)
+  Enter
+  Backspace
+  Delete
+  Indent
+  Unindent
+  Click(Int, Int)
+  DoubleClick(Int, Int)
+  TripleClick(Int, Int)
+  Drag(Int, Int)
+  Scroll(Float)
+}
+
 pub(all) enum Affinity {
   Before
   After
@@ -46,6 +62,7 @@ pub fn Affinity::after(Self) -> Bool
 pub fn Affinity::before(Self) -> Bool
 pub fn Affinity::from_after(Bool) -> Self
 pub fn Affinity::from_before(Bool) -> Self
+pub impl Eq for Affinity
 
 pub(all) enum Align {
   Left
@@ -127,6 +144,7 @@ pub fn Buffer::scroll(Self) -> Scroll
 pub fn Buffer::set_hinting(Self, Hinting) -> Self
 pub fn Buffer::set_metrics(Self, Metrics) -> Self
 pub fn Buffer::set_monospace_width(Self, Float?) -> Self
+pub fn Buffer::set_redraw(Self, Bool) -> Self
 pub fn Buffer::set_size(Self, Float?, Float?) -> Self
 pub fn Buffer::set_tab_width(Self, Int) -> Self
 pub fn Buffer::set_text(Self, String, AttrsList, Shaping) -> Self
@@ -196,6 +214,20 @@ pub fn[T] Cached::set_used(Self[T], T) -> Self[T]
 pub fn[T] Cached::take_unused(Self[T]) -> (Self[T], T?)
 pub fn[T] Cached::take_used(Self[T]) -> (Self[T], T?)
 
+pub(all) struct Change {
+  items : Array[ChangeItem]
+}
+pub fn Change::default() -> Self
+pub fn Change::reverse(Self) -> Self
+
+pub(all) struct ChangeItem {
+  start : Cursor
+  end : Cursor
+  text : String
+  insert : Bool
+}
+pub fn ChangeItem::reverse(Self) -> Self
+
 pub struct Color {
   value : UInt
 }
@@ -214,6 +246,26 @@ pub struct Cursor {
 }
 pub fn Cursor::new(Int, Int) -> Self
 pub fn Cursor::new_with_affinity(Int, Int, Affinity) -> Self
+pub impl Eq for Cursor
+
+pub struct Editor {
+  buffer : Buffer
+  cursor : Cursor
+  cursor_x_opt : Int?
+  selection : Selection
+  cursor_moved : Bool
+  auto_indent : Bool
+  change_opt : Change?
+}
+pub fn Editor::auto_indent(Self) -> Bool
+pub fn Editor::buffer(Self) -> Buffer
+pub fn Editor::cursor(Self) -> Cursor
+pub fn Editor::new(Buffer) -> Self
+pub fn Editor::selection(Self) -> Selection
+pub fn Editor::selection_bounds(Self) -> (Cursor, Cursor)?
+pub fn Editor::set_auto_indent(Self, Bool) -> Self
+pub fn Editor::set_cursor(Self, Cursor) -> Self
+pub fn Editor::set_selection(Self, Selection) -> Self
 
 pub(all) enum Family {
   Name(String)
@@ -267,6 +319,7 @@ pub struct LayoutCursor {
   glyph : Int
 }
 pub fn LayoutCursor::new(Int, Int, Int) -> Self
+pub impl Eq for LayoutCursor
 
 pub struct LayoutGlyph {
   start : Int
@@ -369,6 +422,7 @@ pub(all) enum Motion {
   BufferEnd
   GotoLine(Int)
 }
+pub impl Eq for Motion
 
 pub struct PhysicalGlyph {
   cache_key : CacheKey
@@ -383,6 +437,14 @@ pub struct Scroll {
 }
 pub fn Scroll::default() -> Self
 pub fn Scroll::new(Int, Float, Float) -> Self
+
+pub(all) enum Selection {
+  None
+  Normal(Cursor)
+  Line(Cursor)
+  Word(Cursor)
+}
+pub impl Eq for Selection
 
 pub struct ShapeGlyph {
   start : Int

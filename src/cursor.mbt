@@ -23,6 +23,15 @@ pub(all) enum Affinity {
 }
 
 ///|
+pub impl Eq for Affinity with equal(self, other) {
+  match (self, other) {
+    (Before, Before) => true
+    (After, After) => true
+    _ => false
+  }
+}
+
+///|
 pub fn Affinity::before(self : Affinity) -> Bool {
   match self {
     Before => true
@@ -67,6 +76,13 @@ pub struct Cursor {
 }
 
 ///|
+pub impl Eq for Cursor with equal(self, other) {
+  self.line == other.line &&
+  self.index == other.index &&
+  self.affinity == other.affinity
+}
+
+///|
 pub fn Cursor::new(line : Int, index : Int) -> Cursor {
   Cursor::new_with_affinity(line, index, Before)
 }
@@ -86,6 +102,13 @@ pub struct LayoutCursor {
   line : Int
   layout : Int
   glyph : Int
+}
+
+///|
+pub impl Eq for LayoutCursor with equal(self, other) {
+  self.line == other.line &&
+  self.layout == other.layout &&
+  self.glyph == other.glyph
 }
 
 ///|
@@ -118,6 +141,35 @@ pub(all) enum Motion {
   BufferStart
   BufferEnd
   GotoLine(Int)
+}
+
+///|
+pub impl Eq for Motion with equal(self, other) {
+  match (self, other) {
+    (LayoutCursor(a), LayoutCursor(b)) => a == b
+    (Previous, Previous) => true
+    (Next, Next) => true
+    (Left, Left) => true
+    (Right, Right) => true
+    (Up, Up) => true
+    (Down, Down) => true
+    (Home, Home) => true
+    (SoftHome, SoftHome) => true
+    (End, End) => true
+    (ParagraphStart, ParagraphStart) => true
+    (ParagraphEnd, ParagraphEnd) => true
+    (PageUp, PageUp) => true
+    (PageDown, PageDown) => true
+    (Vertical(a), Vertical(b)) => a == b
+    (PreviousWord, PreviousWord) => true
+    (NextWord, NextWord) => true
+    (LeftWord, LeftWord) => true
+    (RightWord, RightWord) => true
+    (BufferStart, BufferStart) => true
+    (BufferEnd, BufferEnd) => true
+    (GotoLine(a), GotoLine(b)) => a == b
+    _ => false
+  }
 }
 
 ///|
