@@ -50,6 +50,38 @@ fn is_tab(code : Int) -> Bool {
 }
 
 ///|
+fn bidi_is_strong_rtl(b : @moon_swash.BidiClass) -> Bool {
+  match b {
+    R | AL | AN | RLE | RLO | RLI => true
+    _ => false
+  }
+}
+
+///|
+fn bidi_is_strong_ltr(b : @moon_swash.BidiClass) -> Bool {
+  match b {
+    L | LRE | LRO | LRI => true
+    _ => false
+  }
+}
+
+///|
+fn detect_base_rtl(text : String) -> Bool {
+  // Heuristic: use the first strong directional character.
+  for ch in text {
+    let props = @moon_swash.CharInfo::from_char(ch).properties()
+    let bidi = props.bidi_class()
+    if bidi_is_strong_rtl(bidi) {
+      return true
+    }
+    if bidi_is_strong_ltr(bidi) {
+      return false
+    }
+  }
+  false
+}
+
+///|
 fn code_unit_to_uint(code : UInt16) -> UInt {
   code.to_int().reinterpret_as_uint()
 }
@@ -76,9 +108,10 @@ pub fn ShapeLine::build(
   _self : ShapeLine,
   text : String,
   attrs_list : AttrsList,
-  _shaping : Shaping,
+  shaping : Shaping,
   tab_width : Int,
 ) -> ShapeLine {
+  let rtl = shaping is Advanced && detect_base_rtl(text)
   let glyphs : Array[ShapeGlyph] = []
   let len = text.length()
   for i in 0..<len {
@@ -99,7 +132,7 @@ pub fn ShapeLine::build(
       metadata: attrs.metadata(),
     })
   }
-  ShapeLine::{ rtl: false, glyphs }
+  ShapeLine::{ rtl, glyphs }
 }
 
 ///|
@@ -124,6 +157,7 @@ pub fn ShapeLine::build_with_font_system(
       _tab_width,
     )
   }
+  let rtl = detect_base_rtl(text)
   let font_id_opt = font_system.resolve(attrs_list.defaults())
   let font_id = match font_id_opt {
     None =>
@@ -178,5 +212,5 @@ pub fn ShapeLine::build_with_font_system(
       metadata: attrs.metadata(),
     })
   }
-  ShapeLine::{ rtl: false, glyphs }
+  ShapeLine::{ rtl, glyphs }
 }

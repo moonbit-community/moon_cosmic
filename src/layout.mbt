@@ -48,12 +48,52 @@ pub(all) enum Align {
 pub struct LayoutGlyph {
   start : Int
   end : Int
+  font_size : Float
+  font_id : Int
+  font_weight : Int
+  glyph_id : Int
   x : Float
   y : Float
   w : Float
+  line_height_opt : Float?
   x_offset : Float
   y_offset : Float
+  color_opt : Color?
   metadata : Int
+  cache_key_flags : CacheKeyFlags
+}
+
+///|
+/// Convenience constructor (fills optional fields with defaults).
+pub fn LayoutGlyph::new(
+  start : Int,
+  end : Int,
+  font_size : Float,
+  font_id : Int,
+  font_weight : Int,
+  glyph_id : Int,
+  x : Float,
+  y : Float,
+  w : Float,
+  metadata : Int,
+) -> LayoutGlyph {
+  LayoutGlyph::{
+    start,
+    end,
+    font_size,
+    font_id,
+    font_weight,
+    glyph_id,
+    x,
+    y,
+    w,
+    line_height_opt: None,
+    x_offset: 0.0F,
+    y_offset: 0.0F,
+    color_opt: None,
+    metadata,
+    cache_key_flags: 0U,
+  }
 }
 
 ///|
@@ -62,7 +102,45 @@ pub struct LayoutLine {
   start : Int
   end : Int
   w : Float
+  max_ascent : Float
+  max_descent : Float
+  line_height_opt : Float?
   glyphs : Array[LayoutGlyph]
+}
+
+///|
+/// A laid out glyph in physical/pixel coordinates, ready for rasterization.
+pub struct PhysicalGlyph {
+  cache_key : CacheKey
+  x : Int
+  y : Int
+}
+
+///|
+fn truncf(v : Float) -> Float {
+  Float::from_int(v.to_int())
+}
+
+///|
+pub fn LayoutGlyph::physical(
+  self : LayoutGlyph,
+  offset : (Float, Float),
+  scale : Float,
+) -> PhysicalGlyph {
+  let x_off = self.font_size * self.x_offset
+  let y_off = self.font_size * self.y_offset
+  let pos_x = (self.x + x_off) * scale + offset.0
+  // Hinting in Y axis (match upstream idea): truncate to integral.
+  let pos_y = truncf((self.y - y_off) * scale + offset.1)
+  let (cache_key, x, y) = CacheKey::new(
+    self.font_id,
+    self.glyph_id,
+    self.font_size * scale,
+    (pos_x, pos_y),
+    self.font_weight,
+    self.cache_key_flags,
+  )
+  PhysicalGlyph::{ cache_key, x, y }
 }
 
 ///|
@@ -89,27 +167,73 @@ fn build_layout_line_from_shape(
   shape : ShapeLine,
   start : Int,
   end : Int,
+  font_size : Float,
   cell_w : Float,
 ) -> LayoutLine {
   let glyphs : Array[LayoutGlyph] = []
   let mut x = 0.0F
   // MVP: glyph index == code unit index.
-  for i in start..<end {
-    let g = shape.glyphs[i]
-    let w = g.x_advance * cell_w
-    glyphs.push(LayoutGlyph::{
-      start: g.start,
-      end: g.end,
-      x,
-      y: 0.0F,
-      w,
-      x_offset: 0.0F,
-      y_offset: 0.0F,
-      metadata: g.metadata,
-    })
-    x = x + w
+  if shape.rtl {
+    let mut i = end - 1
+    while i >= start {
+      let g = shape.glyphs[i]
+      let w = g.x_advance * cell_w
+      glyphs.push(LayoutGlyph::{
+        start: g.start,
+        end: g.end,
+        font_size,
+        font_id: g.font_id,
+        font_weight: 400,
+        glyph_id: g.glyph_id,
+        x,
+        y: 0.0F,
+        w,
+        line_height_opt: None,
+        x_offset: 0.0F,
+        y_offset: 0.0F,
+        color_opt: None,
+        metadata: g.metadata,
+        cache_key_flags: 0U,
+      })
+      x = x + w
+      i = i - 1
+      if i < start {
+        break
+      }
+    }
+  } else {
+    for i in start..<end {
+      let g = shape.glyphs[i]
+      let w = g.x_advance * cell_w
+      glyphs.push(LayoutGlyph::{
+        start: g.start,
+        end: g.end,
+        font_size,
+        font_id: g.font_id,
+        font_weight: 400,
+        glyph_id: g.glyph_id,
+        x,
+        y: 0.0F,
+        w,
+        line_height_opt: None,
+        x_offset: 0.0F,
+        y_offset: 0.0F,
+        color_opt: None,
+        metadata: g.metadata,
+        cache_key_flags: 0U,
+      })
+      x = x + w
+    }
   }
-  LayoutLine::{ start, end, w: x, glyphs }
+  LayoutLine::{
+    start,
+    end,
+    w: x,
+    max_ascent: 0.0F,
+    max_descent: 0.0F,
+    line_height_opt: None,
+    glyphs,
+  }
 }
 
 ///|
@@ -118,12 +242,13 @@ fn push_layout_line_from_shape(
   shape : ShapeLine,
   start : Int,
   end : Int,
+  font_size : Float,
   cell_w : Float,
 ) -> Unit {
   if end <= start {
     return
   }
-  lines.push(build_layout_line_from_shape(shape, start, end, cell_w))
+  lines.push(build_layout_line_from_shape(shape, start, end, font_size, cell_w))
 }
 
 ///|
@@ -141,15 +266,30 @@ fn push_line(
     glyphs.push(LayoutGlyph::{
       start: text_start + i,
       end: text_start + i + 1,
+      font_size: glyph_w,
+      font_id: 0,
+      font_weight: 400,
+      glyph_id: 0,
       x: glyph_w * float_from_int(i),
       y: 0.0F,
       w: glyph_w,
+      line_height_opt: None,
       x_offset: 0.0F,
       y_offset: 0.0F,
+      color_opt: None,
       metadata: 0,
+      cache_key_flags: 0U,
     })
   }
-  lines.push(LayoutLine::{ start: text_start, end: text_end, w, glyphs })
+  lines.push(LayoutLine::{
+    start: text_start,
+    end: text_end,
+    w,
+    max_ascent: 0.0F,
+    max_descent: 0.0F,
+    line_height_opt: None,
+    glyphs,
+  })
 }
 
 ///|
@@ -273,6 +413,7 @@ pub fn layout_ascii(
 pub fn layout_from_shape(
   text : String,
   shape : ShapeLine,
+  font_size : Float,
   cell_w : Float,
   width_opt : Float?,
   wrap : Wrap,
@@ -284,13 +425,13 @@ pub fn layout_from_shape(
   }
   match wrap {
     None => {
-      push_layout_line_from_shape(lines, shape, 0, len, cell_w)
+      push_layout_line_from_shape(lines, shape, 0, len, font_size, cell_w)
       return lines
     }
     _ => ()
   }
   if width_opt is None {
-    push_layout_line_from_shape(lines, shape, 0, len, cell_w)
+    push_layout_line_from_shape(lines, shape, 0, len, font_size, cell_w)
     return lines
   }
   let max_w = if width_opt is Some(w) { w } else { 0.0F }
@@ -305,13 +446,13 @@ pub fn layout_from_shape(
         // Convert to integer-ish cells for packing. Tabs may be >1.
         let adv_cells = adv.to_double().to_int()
         if x + adv_cells > max_cells && i > start {
-          push_layout_line_from_shape(lines, shape, start, i, cell_w)
+          push_layout_line_from_shape(lines, shape, start, i, font_size, cell_w)
           start = i
           x = 0
         }
         x = x + adv_cells
       }
-      push_layout_line_from_shape(lines, shape, start, len, cell_w)
+      push_layout_line_from_shape(lines, shape, start, len, font_size, cell_w)
       return lines
     }
     _ => ()
@@ -338,7 +479,9 @@ pub fn layout_from_shape(
     let would_w = float_from_int(would_cells) * cell_w
     if would_w > max_w {
       // emit current
-      push_layout_line_from_shape(lines, shape, line_start, line_end, cell_w)
+      push_layout_line_from_shape(
+        lines, shape, line_start, line_end, font_size, cell_w,
+      )
       line_start = w_start
       line_end = w_end
       if fallback_to_glyph && float_from_int(word_cells) * cell_w > max_w {
@@ -346,6 +489,7 @@ pub fn layout_from_shape(
         let word_lines = layout_from_shape(
           text,
           shape,
+          font_size,
           cell_w,
           width_opt,
           Glyph,
@@ -363,7 +507,9 @@ pub fn layout_from_shape(
       line_end = w_end
     }
   }
-  push_layout_line_from_shape(lines, shape, line_start, line_end, cell_w)
+  push_layout_line_from_shape(
+    lines, shape, line_start, line_end, font_size, cell_w,
+  )
   lines
 }
 

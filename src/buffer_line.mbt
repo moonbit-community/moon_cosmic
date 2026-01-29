@@ -173,6 +173,7 @@ pub fn BufferLine::layout(
       let mut layout = layout_from_shape(
         line.text,
         shape,
+        font_size,
         cell_w,
         width_opt,
         wrap,
@@ -212,6 +213,7 @@ pub fn BufferLine::layout_with_font_system(
       let mut layout = layout_from_shape(
         line.text,
         shape,
+        font_size,
         cell_w,
         width_opt,
         wrap,

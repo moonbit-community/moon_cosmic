@@ -22,7 +22,7 @@ pub fn justify_to_align(Justify) -> Align
 
 pub fn layout_ascii(String, Float, Float?, Wrap) -> Array[LayoutLine]
 
-pub fn layout_from_shape(String, ShapeLine, Float, Float?, Wrap) -> Array[LayoutLine]
+pub fn layout_from_shape(String, ShapeLine, Float, Float, Float?, Wrap) -> Array[LayoutLine]
 
 pub fn line_break_to_wrap(LineBreak) -> Wrap
 
@@ -92,6 +92,7 @@ pub struct Buffer {
   tab_width : Int
   hinting : Hinting
 }
+pub fn Buffer::draw_with_font_system(Self, FontSystem, SwashCache, Color, (Int, Int, UInt, UInt, Color) -> Unit) -> (Self, SwashCache)
 pub fn Buffer::hinting(Self) -> Hinting
 pub fn Buffer::layout_all_with_font_system(Self, FontSystem) -> Self
 pub fn Buffer::lines(Self) -> Array[BufferLine]
@@ -152,6 +153,8 @@ pub fn CacheKey::has_disable_hinting(Self) -> Bool
 pub fn CacheKey::has_fake_italic(Self) -> Bool
 pub fn CacheKey::has_pixel_font(Self) -> Bool
 pub fn CacheKey::new(Int, Int, Float, (Float, Float), Int, UInt) -> (Self, Int, Int)
+pub fn CacheKey::x_bin(Self) -> SubpixelBin
+pub fn CacheKey::y_bin(Self) -> SubpixelBin
 pub impl Eq for CacheKey
 pub impl Hash for CacheKey
 pub impl Show for CacheKey
@@ -243,18 +246,30 @@ pub fn LayoutCursor::new(Int, Int, Int) -> Self
 pub struct LayoutGlyph {
   start : Int
   end : Int
+  font_size : Float
+  font_id : Int
+  font_weight : Int
+  glyph_id : Int
   x : Float
   y : Float
   w : Float
+  line_height_opt : Float?
   x_offset : Float
   y_offset : Float
+  color_opt : Color?
   metadata : Int
+  cache_key_flags : UInt
 }
+pub fn LayoutGlyph::new(Int, Int, Float, Int, Int, Int, Float, Float, Float, Int) -> Self
+pub fn LayoutGlyph::physical(Self, (Float, Float), Float) -> PhysicalGlyph
 
 pub struct LayoutLine {
   start : Int
   end : Int
   w : Float
+  max_ascent : Float
+  max_descent : Float
+  line_height_opt : Float?
   glyphs : Array[LayoutGlyph]
 }
 
@@ -312,6 +327,12 @@ pub(all) enum Motion {
   BufferStart
   BufferEnd
   GotoLine(Int)
+}
+
+pub struct PhysicalGlyph {
+  cache_key : CacheKey
+  x : Int
+  y : Int
 }
 
 pub struct Scroll {

@@ -258,3 +258,40 @@ pub fn Buffer::layout_all_with_font_system(
   }
   Buffer::{ ..self, lines, }
 }
+
+///|
+/// Draw the buffer using a `SwashCache`.
+///
+/// For compatibility with upstream's legacy renderer helper, the callback is
+/// called per pixel (`w = 1`, `h = 1`).
+pub fn Buffer::draw_with_font_system(
+  self : Buffer,
+  font_system : FontSystem,
+  swash_cache : SwashCache,
+  text_color : Color,
+  f : (Int, Int, UInt, UInt, Color) -> Unit,
+) -> (Buffer, SwashCache) {
+  let buffer = self.layout_all_with_font_system(font_system)
+  let mut y = 0.0F
+  for line in buffer.lines {
+    match line.layout_opt() {
+      None => y = y + buffer.metrics.line_height
+      Some(layout_lines) =>
+        for layout_line in layout_lines {
+          for glyph in layout_line.glyphs {
+            let physical = glyph.physical((0.0F, y), 1.0F)
+            swash_cache.with_pixels(
+              font_system,
+              physical.cache_key,
+              text_color,
+              fn(px, py, color) {
+                f(physical.x + px, physical.y + py, 1U, 1U, color)
+              },
+            )
+          }
+          y = y + buffer.metrics.line_height
+        }
+    }
+  }
+  (buffer, swash_cache)
+}

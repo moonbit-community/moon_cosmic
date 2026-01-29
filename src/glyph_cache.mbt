@@ -239,3 +239,13 @@ pub fn CacheKey::has_disable_hinting(self : CacheKey) -> Bool {
 pub fn CacheKey::has_pixel_font(self : CacheKey) -> Bool {
   has_flag(self.flags, CACHE_KEY_FLAG_PIXEL_FONT)
 }
+
+///|
+pub fn CacheKey::x_bin(self : CacheKey) -> SubpixelBin {
+  self.x_bin
+}
+
+///|
+pub fn CacheKey::y_bin(self : CacheKey) -> SubpixelBin {
+  self.y_bin
+}
