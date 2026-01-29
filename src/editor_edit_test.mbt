@@ -71,3 +71,23 @@ test "Editor.delete_range deletes within and across lines" {
   inspect(lines.length(), content="1")
   inspect(lines[0].text(), content="aF")
 }
+
+///|
+test "Editor.insert_at splits attrs_list across inserted lines" {
+  let base = Attrs::with_metadata(1)
+  let hi = Attrs::with_metadata(2)
+  let attrs_for_insert = AttrsList::new(base).add_span(0, 1, hi)
+  let buffer = Buffer::new(Metrics::new(12.0F, 14.0F))
+  let editor0 = Editor::new(buffer)
+  let (editor1, _cursor1) = editor0.insert_at(
+    Cursor::new(0, 0),
+    "A\nB",
+    Some(attrs_for_insert),
+  )
+  let lines = editor1.buffer().lines()
+  inspect(lines.length(), content="2")
+  inspect(lines[0].text(), content="A")
+  inspect(lines[1].text(), content="B")
+  inspect(lines[0].attrs_list().get_span(0).metadata(), content="2")
+  inspect(lines[1].attrs_list().get_span(0).metadata(), content="1")
+}

@@ -258,17 +258,26 @@ pub struct Editor {
   auto_indent : Bool
   change_opt : Change?
 }
+pub fn Editor::action(Self, Action) -> Self
+pub fn Editor::apply_change(Self, Change) -> (Self, Bool)
 pub fn Editor::auto_indent(Self) -> Bool
 pub fn Editor::buffer(Self) -> Buffer
+pub fn Editor::copy_selection(Self) -> String?
 pub fn Editor::cursor(Self) -> Cursor
 pub fn Editor::delete_range(Self, Cursor, Cursor) -> Self
+pub fn Editor::delete_selection(Self) -> (Self, Bool)
+pub fn Editor::finish_change(Self) -> (Self, Change?)
 pub fn Editor::insert_at(Self, Cursor, String, AttrsList?) -> (Self, Cursor)
+pub fn Editor::insert_string(Self, String, AttrsList?) -> Self
 pub fn Editor::new(Buffer) -> Self
 pub fn Editor::selection(Self) -> Selection
 pub fn Editor::selection_bounds(Self) -> (Cursor, Cursor)?
 pub fn Editor::set_auto_indent(Self, Bool) -> Self
 pub fn Editor::set_cursor(Self, Cursor) -> Self
 pub fn Editor::set_selection(Self, Selection) -> Self
+pub fn Editor::set_tab_width(Self, Int) -> Self
+pub fn Editor::start_change(Self) -> Self
+pub fn Editor::tab_width(Self) -> Int
 
 pub(all) enum Family {
   Name(String)
