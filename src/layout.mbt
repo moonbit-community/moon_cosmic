@@ -185,10 +185,10 @@ fn glyph_index_for_text_end(shape : ShapeLine, text_offset : Int) -> Int {
 }
 
 ///|
-fn prefix_range_w(prefix : Array[Double], start : Int, end : Int) -> Double {
+fn prefix_range_w(prefix : Array[Float], start : Int, end : Int) -> Float {
   let s = if start < 0 { 0 } else { start }
   let e = if end < s { s } else { end }
-  let a = if prefix.get(s) is Some(v) { v } else { 0.0 }
+  let a = if prefix.get(s) is Some(v) { v } else { 0.0F }
   let b = if prefix.get(e) is Some(v) { v } else { a }
   b - a
 }
@@ -507,9 +507,30 @@ pub fn layout_from_shape(
     }
     _ => ()
   }
-  if width_opt is None {
-    push_layout_line_from_shape(lines, shape, 0, glyph_len, font_size, cell_w)
-    return lines
+  match (width_opt, wrap) {
+    // No width constraint:
+    // - Glyph wrap: no wrapping required, keep full glyph span (includes spaces).
+    // - Word/WordOrGlyph: still trim leading/trailing whitespace by using word boundaries,
+    //   so feeding measured width back as a wrap limit stays stable.
+    (None, Glyph) => {
+      push_layout_line_from_shape(lines, shape, 0, glyph_len, font_size, cell_w)
+      return lines
+    }
+    (None, Word) | (None, WordOrGlyph) => {
+      let words = word_indices_whitespace(text)
+      if words.length() == 0 {
+        return lines
+      }
+      let first = words[0]
+      let last = words[words.length() - 1]
+      let start_g = glyph_index_for_text_start(shape, first.0)
+      let end_g = glyph_index_for_text_end(shape, last.1)
+      push_layout_line_from_shape(
+        lines, shape, start_g, end_g, font_size, cell_w,
+      )
+      return lines
+    }
+    _ => ()
   }
   let max_w = if width_opt is Some(w) { w } else { 0.0F }
   match wrap {
@@ -538,11 +559,11 @@ pub fn layout_from_shape(
   }
 
   // Prefix sums of pixel advances for quick range width queries.
-  let prefix : Array[Double] = []
-  let mut acc = 0.0
+  let prefix : Array[Float] = []
+  let mut acc = 0.0F
   prefix.push(acc)
   for i in 0..<glyph_len {
-    acc = acc + (shape.glyphs[i].x_advance * cell_w).to_double()
+    acc = acc + shape.glyphs[i].x_advance * cell_w
     prefix.push(acc)
   }
 
@@ -556,7 +577,7 @@ pub fn layout_from_shape(
   let mut line_start_g = glyph_index_for_text_start(shape, line_start_text)
   let mut line_end_g = glyph_index_for_text_end(shape, line_end_text)
   if fallback_to_glyph &&
-    prefix_range_w(prefix, line_start_g, line_end_g) > max_w.to_double() {
+    prefix_range_w(prefix, line_start_g, line_end_g) > max_w {
     // First word doesn't fit by itself: immediately fallback to glyph wrapping.
     let word_lines = layout_glyph_wrap_range(
       shape, line_start_g, line_end_g, font_size, cell_w, max_w,
@@ -574,7 +595,7 @@ pub fn layout_from_shape(
     let w_start = word.0
     let w_end = word.1
     let would_end_g = glyph_index_for_text_end(shape, w_end)
-    if prefix_range_w(prefix, line_start_g, would_end_g) > max_w.to_double() {
+    if prefix_range_w(prefix, line_start_g, would_end_g) > max_w {
       // Emit current line.
       push_layout_line_from_shape(
         lines, shape, line_start_g, line_end_g, font_size, cell_w,
@@ -584,7 +605,7 @@ pub fn layout_from_shape(
       line_start_g = glyph_index_for_text_start(shape, w_start)
       line_end_g = glyph_index_for_text_end(shape, w_end)
       if fallback_to_glyph &&
-        prefix_range_w(prefix, line_start_g, line_end_g) > max_w.to_double() {
+        prefix_range_w(prefix, line_start_g, line_end_g) > max_w {
         // Re-layout this single word with glyph wrapping.
         let word_lines = layout_glyph_wrap_range(
           shape, line_start_g, line_end_g, font_size, cell_w, max_w,

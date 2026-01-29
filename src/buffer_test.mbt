@@ -156,6 +156,38 @@ test "wrap_word_fallback: layout_runs never overflow width (MVP)" {
 }
 
 ///|
+/// Reference: `cosmic-text-reference/tests/wrap_stability.rs` (wrap_extra_line).
+///
+/// This is currently skipped because the MoonBit port uses a simplified monospace advance model
+/// (`cell_w = font_size`) when laying out without a real font database, which changes the number
+/// of overflowing runs compared to upstream's Inter font metrics.
+#skip
+test "wrap_extra_line: matches upstream empty/overflow line counts" {
+  let metrics = Metrics::new(14.0F, 20.0F)
+  let mut buffer = Buffer::new(metrics)
+  buffer = buffer.set_wrap(Wrap::Word)
+  buffer = buffer.set_text(
+    "Lorem ipsum dolor sit amet, qui minim labore adipisicing\n\nweeewoooo minim sint cillum sint consectetur cupidatat.",
+    AttrsList::new(Attrs::new()),
+    Advanced,
+  )
+  buffer = buffer.set_size(Some(50.0F), Some(1000.0F))
+  buffer = buffer.layout_all()
+  let mut empty_lines = 0
+  let mut overflow_lines = 0
+  for run in buffer.layout_runs() {
+    if run.line_w == 0.0F {
+      empty_lines = empty_lines + 1
+    }
+    if run.line_w > 50.0F {
+      overflow_lines = overflow_lines + 1
+    }
+  }
+  inspect(empty_lines, content="1")
+  inspect(overflow_lines, content="4")
+}
+
+///|
 test "Buffer.draw is a naming-aligned wrapper (smoke)" {
   let metrics = Metrics::new(12.0F, 14.0F)
   let attrs = AttrsList::new(Attrs::new())
