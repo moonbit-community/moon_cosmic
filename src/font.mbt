@@ -21,6 +21,9 @@ pub struct FontEntry {
   id : Int
   family_name : String
   font : @moon_swash.FontRef
+  charmap_proxy : @moon_swash.CharmapProxy
+  attributes : @moon_swash.Attributes
+  is_monospace : Bool
 }
 
 ///|
@@ -36,6 +39,21 @@ pub fn FontEntry::family_name(self : FontEntry) -> String {
 ///|
 pub fn FontEntry::font(self : FontEntry) -> @moon_swash.FontRef {
   self.font
+}
+
+///|
+pub fn FontEntry::charmap_proxy(self : FontEntry) -> @moon_swash.CharmapProxy {
+  self.charmap_proxy
+}
+
+///|
+pub fn FontEntry::attributes(self : FontEntry) -> @moon_swash.Attributes {
+  self.attributes
+}
+
+///|
+pub fn FontEntry::is_monospace(self : FontEntry) -> Bool {
+  self.is_monospace
 }
 
 ///|
@@ -93,7 +111,15 @@ pub fn FontSystem::load_font_data(
       for f in data_ref.fonts() {
         let id = fonts.length()
         let family_name = font_family_name(f, locale)
-        fonts.push(FontEntry::{ id, family_name, font: f })
+        let metrics = f.metrics([])
+        fonts.push(FontEntry::{
+          id,
+          family_name,
+          font: f,
+          charmap_proxy: @moon_swash.CharmapProxy::from_font(f),
+          attributes: f.attributes(),
+          is_monospace: metrics.is_monospace,
+        })
       }
       FontSystem::{ ..self, fonts, }
     }
@@ -114,14 +140,92 @@ pub fn FontSystem::select_family(self : FontSystem, family : Family) -> Int? {
     }
     Monospace => {
       for f in self.fonts {
-        let metrics = f.font.metrics([])
-        if metrics.is_monospace {
+        if f.is_monospace {
           return Some(f.id)
         }
       }
       None
     }
     _ => None
+  }
+}
+
+///|
+fn abs_int(v : Int) -> Int {
+  if v < 0 {
+    0 - v
+  } else {
+    v
+  }
+}
+
+///|
+fn family_matches(entry : FontEntry, family : Family) -> Bool {
+  match family {
+    Name(name) => entry.family_name == name
+    Monospace => entry.is_monospace
+    _ => false
+  }
+}
+
+///|
+fn entry_maps_codepoint(entry : FontEntry, codepoint : UInt) -> Bool {
+  let cm = entry.charmap_proxy.materialize(entry.font)
+  cm.map(codepoint) != 0
+}
+
+///|
+fn entry_weight_diff(entry : FontEntry, req_weight : Weight) -> Int {
+  let a = entry.attributes.weight().value.to_int()
+  abs_int(a - req_weight.value)
+}
+
+///|
+/// Resolve a font ID for a specific codepoint (best-effort).
+///
+/// This prefers the requested family (when present) and then minimizes weight
+/// difference, falling back to any loaded font that supports the codepoint.
+pub fn FontSystem::resolve_for_codepoint(
+  self : FontSystem,
+  attrs : Attrs,
+  codepoint : UInt,
+) -> Int? {
+  let family = attrs.family_value()
+  let req_weight = attrs.weight_value()
+  let mut best_id : Int? = None
+  let mut best_family = false
+  let mut best_weight_diff = 0
+  for e in self.fonts {
+    if !entry_maps_codepoint(e, codepoint) {
+      continue
+    }
+    let fam_ok = family_matches(e, family)
+    let wdiff = entry_weight_diff(e, req_weight)
+    match best_id {
+      None => {
+        best_id = Some(e.id)
+        best_family = fam_ok
+        best_weight_diff = wdiff
+      }
+      Some(best0) =>
+        // Prefer family matches; then prefer closer weight; then stable by ID.
+        if fam_ok && !best_family {
+          best_id = Some(e.id)
+          best_family = true
+          best_weight_diff = wdiff
+        } else if fam_ok == best_family {
+          if wdiff < best_weight_diff {
+            best_id = Some(e.id)
+            best_weight_diff = wdiff
+          } else if wdiff == best_weight_diff && e.id < best0 {
+            best_id = Some(e.id)
+          }
+        }
+    }
+  }
+  match best_id {
+    Some(id) => Some(id)
+    None => self.resolve(attrs)
   }
 }
 

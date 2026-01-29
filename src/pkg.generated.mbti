@@ -307,10 +307,16 @@ pub struct FontEntry {
   id : Int
   family_name : String
   font : @moon_swash.FontRef
+  charmap_proxy : @moon_swash.CharmapProxy
+  attributes : @moon_swash.Attributes
+  is_monospace : Bool
 }
+pub fn FontEntry::attributes(Self) -> @moon_swash.Attributes
+pub fn FontEntry::charmap_proxy(Self) -> @moon_swash.CharmapProxy
 pub fn FontEntry::family_name(Self) -> String
 pub fn FontEntry::font(Self) -> @moon_swash.FontRef
 pub fn FontEntry::id(Self) -> Int
+pub fn FontEntry::is_monospace(Self) -> Bool
 
 pub struct FontSystem {
   locale : String
@@ -323,6 +329,7 @@ pub fn FontSystem::locale(Self) -> String
 pub fn FontSystem::new() -> Self
 pub fn FontSystem::new_with_locale(String) -> Self
 pub fn FontSystem::resolve(Self, Attrs) -> Int?
+pub fn FontSystem::resolve_for_codepoint(Self, Attrs, UInt) -> Int?
 pub fn FontSystem::select_family(Self, Family) -> Int?
 
 pub(all) enum Hinting {

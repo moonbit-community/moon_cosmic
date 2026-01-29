@@ -190,8 +190,8 @@ pub fn ShapeLine::build_with_font_system(
       tab_width,
     )
   }
-  let font_id_opt = font_system.resolve(attrs_list.defaults())
-  let font_id = match font_id_opt {
+  let default_font_id_opt = font_system.resolve(attrs_list.defaults())
+  let default_font_id = match default_font_id_opt {
     None =>
       return ShapeLine::build(
         ShapeLine::empty(),
@@ -202,8 +202,8 @@ pub fn ShapeLine::build_with_font_system(
       )
     Some(id) => id
   }
-  let font_opt = font_system.get_font(font_id)
-  let font = match font_opt {
+  let default_font_opt = font_system.get_font(default_font_id)
+  let default_font = match default_font_opt {
     None =>
       return ShapeLine::build(
         ShapeLine::empty(),
@@ -227,10 +227,11 @@ pub fn ShapeLine::build_with_font_system(
   let cx = @shape.ShapeContext::new()
   let empty_features : Array[@moon_swash.Setting[UInt16]] = []
   let empty_variations : Array[@moon_swash.Setting[Double]] = []
-  let cmap = @moon_swash.Charmap::from_font(font)
-  let runs : Array[(@moon_swash.Script, Array[@moon_swash.Token])] = []
+  let default_cmap = @moon_swash.Charmap::from_font(default_font)
+  let runs : Array[(Int, @moon_swash.Script, Array[@moon_swash.Token])] = []
   let mut off = 0U
   let mut cur_script = @moon_swash.Script::Latin
+  let mut cur_font_id = default_font_id
   let mut cur_tokens : Array[@moon_swash.Token] = []
   for ch0 in text {
     let script0 = @moon_swash.CharInfo::from_char(ch0).properties().script()
@@ -239,6 +240,11 @@ pub fn ShapeLine::build_with_font_system(
     let attrs = attrs_list.get_span(i)
     // Tabs are shaped as spaces (upstream behavior).
     let ch = if ch0 == '\t' { ' ' } else { ch0 }
+    let cp = ch.to_int().reinterpret_as_uint()
+    let font_id = match font_system.resolve_for_codepoint(attrs, cp) {
+      None => default_font_id
+      Some(id) => id
+    }
     let info = @moon_swash.CharInfo::from_char(ch)
     let tok = @moon_swash.Token::new(
       ch,
@@ -258,22 +264,31 @@ pub fn ShapeLine::build_with_font_system(
     }
     if cur_tokens.length() == 0 {
       cur_script = effective
-    } else if !script_eq(effective, cur_script) {
-      runs.push((cur_script, cur_tokens))
+      cur_font_id = font_id
+    } else if !script_eq(effective, cur_script) || font_id != cur_font_id {
+      runs.push((cur_font_id, cur_script, cur_tokens))
       cur_tokens = []
       cur_script = effective
+      cur_font_id = font_id
     }
     cur_tokens.push(tok)
     off = off + len_u
   }
   let glyphs : Array[ShapeGlyph] = []
   if cur_tokens.length() != 0 {
-    runs.push((cur_script, cur_tokens))
+    runs.push((cur_font_id, cur_script, cur_tokens))
   }
   let cluster = @moon_swash.CharCluster::new()
   for run in runs {
-    let script = run.0
-    let run_tokens = run.1
+    let font_id = run.0
+    let script = run.1
+    let run_tokens = run.2
+    let font_opt = font_system.get_font(font_id)
+    let font = match font_opt {
+      None => continue
+      Some(f) => f
+    }
+    let cmap = @moon_swash.Charmap::from_font(font)
     let shaper = cx
       .builder(font)
       .script(script)
@@ -321,9 +336,9 @@ pub fn ShapeLine::build_with_font_system(
   }
 
   // Apply tab stops by snapping to the next multiple of (space_advance * tab_width).
-  let gm = font.glyph_metrics([])
+  let gm = default_font.glyph_metrics([])
   let upem = gm.units_per_em().to_int().to_double()
-  let space_gid = cmap.map(32U)
+  let space_gid = default_cmap.map(32U)
   let space_adv = if upem == 0.0 {
     0.0
   } else {
