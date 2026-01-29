@@ -242,6 +242,18 @@ pub fn Buffer::set_text(
       break
     }
   }
+  // Upstream behavior: ensure there is a trailing line with `LineEnding::None`.
+  let need_trailing = if new_lines.length() == 0 {
+    true
+  } else {
+    match new_lines[new_lines.length() - 1].ending() {
+      None => false
+      _ => true
+    }
+  }
+  if need_trailing {
+    new_lines.push(BufferLine::new("", LineEnding::None, attrs_list, shaping))
+  }
   Buffer::{ ..self, lines: new_lines, redraw: true }
 }
 

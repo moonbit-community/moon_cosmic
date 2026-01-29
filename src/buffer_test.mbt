@@ -28,6 +28,30 @@ test "Buffer.set_text splits lines using LineIter endings" {
 }
 
 ///|
+test "Buffer.set_text ensures a trailing LineEnding::None line (upstream behavior)" {
+  let buf0 = Buffer::new(Metrics::new(12.0F, 14.0F))
+  let attrs = AttrsList::new(Attrs::new())
+  let buf1 = buf0.set_text("A\n", attrs, Advanced)
+  let lines = buf1.lines()
+  inspect(lines.length(), content="2")
+  inspect(lines[0].text(), content="A")
+  inspect(lines[0].ending().as_str(), content="\n")
+  inspect(lines[1].text(), content="")
+  inspect(lines[1].ending().as_str(), content="")
+}
+
+///|
+test "Buffer.set_text empty text produces one empty LineEnding::None line" {
+  let buf0 = Buffer::new(Metrics::new(12.0F, 14.0F))
+  let attrs = AttrsList::new(Attrs::new())
+  let buf1 = buf0.set_text("", attrs, Advanced)
+  let lines = buf1.lines()
+  inspect(lines.length(), content="1")
+  inspect(lines[0].text(), content="")
+  inspect(lines[0].ending().as_str(), content="")
+}
+
+///|
 test "Buffer.set_rich_text builds per-line AttrsList spans and uses default line ending" {
   let bold = Attrs::new().weight(Weight::bold())
   let spans : Array[(String, Attrs)] = [
