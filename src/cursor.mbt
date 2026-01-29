@@ -15,6 +15,7 @@
 ///|
 /// Ported from `cosmic-text/src/cursor.rs` (cosmic-text is dual-licensed MIT OR Apache-2.0).
 
+///|
 /// Whether to associate cursors placed at a boundary between runs with the run before or after it.
 pub(all) enum Affinity {
   Before
@@ -39,14 +40,23 @@ pub fn Affinity::after(self : Affinity) -> Bool {
 
 ///|
 pub fn Affinity::from_before(before : Bool) -> Affinity {
-  if before { Before } else { After }
+  if before {
+    Before
+  } else {
+    After
+  }
 }
 
 ///|
 pub fn Affinity::from_after(after : Bool) -> Affinity {
-  if after { After } else { Before }
+  if after {
+    After
+  } else {
+    Before
+  }
 }
 
+///|
 /// Current cursor location
 pub struct Cursor {
   /// Index of BufferLine in Buffer::lines
@@ -70,6 +80,7 @@ pub fn Cursor::new_with_affinity(
   Cursor::{ line, index, affinity }
 }
 
+///|
 /// The position of a cursor within a Buffer.
 pub struct LayoutCursor {
   line : Int
@@ -82,6 +93,7 @@ pub fn LayoutCursor::new(line : Int, layout : Int, glyph : Int) -> LayoutCursor 
   LayoutCursor::{ line, layout, glyph }
 }
 
+///|
 /// A motion to perform on a Cursor
 pub(all) enum Motion {
   LayoutCursor(LayoutCursor)
@@ -108,6 +120,7 @@ pub(all) enum Motion {
   GotoLine(Int)
 }
 
+///|
 /// Scroll position in Buffer
 pub struct Scroll {
   line : Int
@@ -124,4 +137,3 @@ pub fn Scroll::default() -> Scroll {
 pub fn Scroll::new(line : Int, vertical : Float, horizontal : Float) -> Scroll {
   Scroll::{ line, vertical, horizontal }
 }
-

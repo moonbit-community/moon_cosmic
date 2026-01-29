@@ -12,24 +12,51 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+///|
 test "Affinity helpers" {
   inspect(Affinity::Before.before(), content="true")
   inspect(Affinity::Before.after(), content="false")
   inspect(Affinity::After.before(), content="false")
   inspect(Affinity::After.after(), content="true")
-  inspect(match Affinity::from_before(true) { Before => true; _ => false }, content="true")
-  inspect(match Affinity::from_after(true) { After => true; _ => false }, content="true")
+  inspect(
+    match Affinity::from_before(true) {
+      Before => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match Affinity::from_after(true) {
+      After => true
+      _ => false
+    },
+    content="true",
+  )
 }
 
+///|
 test "Cursor constructors" {
   let c0 = Cursor::new(1, 2)
   inspect(c0.line, content="1")
   inspect(c0.index, content="2")
-  inspect(match c0.affinity { Before => true; _ => false }, content="true")
+  inspect(
+    match c0.affinity {
+      Before => true
+      _ => false
+    },
+    content="true",
+  )
   let c1 = Cursor::new_with_affinity(3, 4, Affinity::After)
-  inspect(match c1.affinity { After => true; _ => false }, content="true")
+  inspect(
+    match c1.affinity {
+      After => true
+      _ => false
+    },
+    content="true",
+  )
 }
 
+///|
 test "Scroll default/new" {
   let s0 = Scroll::default()
   inspect(s0.line, content="0")

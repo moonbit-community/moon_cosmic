@@ -16,7 +16,6 @@
 /// Minimal `Buffer` port scaffold from `cosmic-text/src/buffer.rs`.
 ///
 /// This MVP focuses on line splitting, cache invalidation and redraw semantics.
-
 pub struct Buffer {
   lines : Array[BufferLine]
   metrics : Metrics
@@ -58,23 +57,36 @@ pub fn Buffer::new_empty(metrics : Metrics) -> Buffer {
 }
 
 ///|
-pub fn Buffer::metrics(self : Buffer) -> Metrics { self.metrics }
+pub fn Buffer::metrics(self : Buffer) -> Metrics {
+  self.metrics
+}
 
 ///|
-pub fn Buffer::lines(self : Buffer) -> Array[BufferLine] { self.lines }
+pub fn Buffer::lines(self : Buffer) -> Array[BufferLine] {
+  self.lines
+}
 
 ///|
-pub fn Buffer::redraw(self : Buffer) -> Bool { self.redraw }
+pub fn Buffer::redraw(self : Buffer) -> Bool {
+  self.redraw
+}
 
 ///|
-pub fn Buffer::scroll(self : Buffer) -> Scroll { self.scroll }
+pub fn Buffer::scroll(self : Buffer) -> Scroll {
+  self.scroll
+}
 
 ///|
-pub fn Buffer::wrap(self : Buffer) -> Wrap { self.wrap }
+pub fn Buffer::wrap(self : Buffer) -> Wrap {
+  self.wrap
+}
 
 ///|
-pub fn Buffer::hinting(self : Buffer) -> Hinting { self.hinting }
+pub fn Buffer::hinting(self : Buffer) -> Hinting {
+  self.hinting
+}
 
+///|
 fn wrap_eq(a : Wrap, b : Wrap) -> Bool {
   match (a, b) {
     (None, None) => true
@@ -85,6 +97,7 @@ fn wrap_eq(a : Wrap, b : Wrap) -> Bool {
   }
 }
 
+///|
 fn hinting_eq(a : Hinting, b : Hinting) -> Bool {
   match (a, b) {
     (Disabled, Disabled) => true
@@ -95,28 +108,37 @@ fn hinting_eq(a : Hinting, b : Hinting) -> Bool {
 
 ///|
 pub fn Buffer::set_wrap(self : Buffer, wrap : Wrap) -> Buffer {
-  if wrap_eq(self.wrap, wrap) { self } else { Buffer::{ ..self, wrap, redraw: true } }
+  if wrap_eq(self.wrap, wrap) {
+    self
+  } else {
+    Buffer::{ ..self, wrap, redraw: true }
+  }
 }
 
 ///|
 pub fn Buffer::set_tab_width(self : Buffer, tab_width : Int) -> Buffer {
-  if self.tab_width == tab_width { self } else {
+  if self.tab_width == tab_width {
+    self
+  } else {
     Buffer::{ ..self, tab_width, redraw: true }
   }
 }
 
 ///|
 pub fn Buffer::set_hinting(self : Buffer, hinting : Hinting) -> Buffer {
-  if hinting_eq(self.hinting, hinting) { self } else {
+  if hinting_eq(self.hinting, hinting) {
+    self
+  } else {
     Buffer::{ ..self, hinting, redraw: true }
   }
 }
 
 ///|
-pub fn Buffer::set_monospace_width(self : Buffer, monospace_width : Float?) -> Buffer {
-  if self.monospace_width is Some(w0) &&
-    monospace_width is Some(w1) &&
-    w0 == w1 {
+pub fn Buffer::set_monospace_width(
+  self : Buffer,
+  monospace_width : Float?,
+) -> Buffer {
+  if self.monospace_width is Some(w0) && monospace_width is Some(w1) && w0 == w1 {
     self
   } else if self.monospace_width is None && monospace_width is None {
     self
@@ -139,7 +161,11 @@ pub fn Buffer::set_metrics(self : Buffer, metrics : Metrics) -> Buffer {
 }
 
 ///|
-pub fn Buffer::set_size(self : Buffer, width_opt : Float?, height_opt : Float?) -> Buffer {
+pub fn Buffer::set_size(
+  self : Buffer,
+  width_opt : Float?,
+  height_opt : Float?,
+) -> Buffer {
   // MVP: any size change triggers redraw.
   if self.width_opt is Some(w0) &&
     width_opt is Some(w1) &&
@@ -148,7 +174,9 @@ pub fn Buffer::set_size(self : Buffer, width_opt : Float?, height_opt : Float?) 
     height_opt is Some(h1) &&
     h0 == h1 {
     self
-  } else if self.width_opt is None && width_opt is None && self.height_opt is None &&
+  } else if self.width_opt is None &&
+    width_opt is None &&
+    self.height_opt is None &&
     height_opt is None {
     self
   } else {
@@ -156,6 +184,7 @@ pub fn Buffer::set_size(self : Buffer, width_opt : Float?, height_opt : Float?) 
   }
 }
 
+///|
 fn slice_string(s : String, start : Int, end : Int) -> String {
   let sb = StringBuilder::new(size_hint=(end - start) * 2)
   sb.write_view(s[:].view(start_offset=start, end_offset=end))
@@ -189,4 +218,43 @@ pub fn Buffer::set_text(
     }
   }
   Buffer::{ ..self, lines: new_lines, redraw: true }
+}
+
+///|
+/// Shape all lines using a provided FontSystem (best-effort).
+///
+/// This is a coarse-grained helper for clients that do not want to manage
+/// per-line shaping manually yet.
+pub fn Buffer::shape_all_with_font_system(
+  self : Buffer,
+  font_system : FontSystem,
+) -> Buffer {
+  let lines : Array[BufferLine] = []
+  for line in self.lines {
+    lines.push(line.shape_with_font_system(font_system, self.tab_width))
+  }
+  Buffer::{ ..self, lines, }
+}
+
+///|
+/// Layout all lines using a provided FontSystem (best-effort).
+pub fn Buffer::layout_all_with_font_system(
+  self : Buffer,
+  font_system : FontSystem,
+) -> Buffer {
+  let lines : Array[BufferLine] = []
+  for line in self.lines {
+    lines.push(
+      line.layout_with_font_system(
+        font_system,
+        self.metrics.font_size,
+        self.width_opt,
+        self.wrap,
+        self.monospace_width,
+        self.tab_width,
+        self.hinting,
+      ),
+    )
+  }
+  Buffer::{ ..self, lines, }
 }

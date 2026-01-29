@@ -17,12 +17,14 @@
 ///
 /// NOTE: This is an MVP focused on wrap/layout tests; shaping/font fallback will be added later.
 
+///|
 /// Metrics hinting strategy
 pub(all) enum Hinting {
   Disabled
   Enabled
 }
 
+///|
 /// Wrapping mode
 pub(all) enum Wrap {
   None
@@ -31,6 +33,7 @@ pub(all) enum Wrap {
   WordOrGlyph
 }
 
+///|
 /// Align or justify
 pub(all) enum Align {
   Left
@@ -40,6 +43,7 @@ pub(all) enum Align {
   End
 }
 
+///|
 /// A laid out glyph (MVP subset)
 pub struct LayoutGlyph {
   start : Int
@@ -52,6 +56,7 @@ pub struct LayoutGlyph {
   metadata : Int
 }
 
+///|
 /// A line of laid out glyphs (MVP subset)
 pub struct LayoutLine {
   start : Int
@@ -60,18 +65,26 @@ pub struct LayoutLine {
   glyphs : Array[LayoutGlyph]
 }
 
+///|
 fn float_from_int(v : Int) -> Float {
   Float::from_double(v.to_double())
 }
 
+///|
 fn is_space_u16(c : UInt16) -> Bool {
   c == 32
 }
 
+///|
 fn max_int(a : Int, b : Int) -> Int {
-  if a > b { a } else { b }
+  if a > b {
+    a
+  } else {
+    b
+  }
 }
 
+///|
 fn build_layout_line_from_shape(
   shape : ShapeLine,
   start : Int,
@@ -99,6 +112,7 @@ fn build_layout_line_from_shape(
   LayoutLine::{ start, end, w: x, glyphs }
 }
 
+///|
 fn push_layout_line_from_shape(
   lines : Array[LayoutLine],
   shape : ShapeLine,
@@ -112,7 +126,13 @@ fn push_layout_line_from_shape(
   lines.push(build_layout_line_from_shape(shape, start, end, cell_w))
 }
 
-fn push_line(lines : Array[LayoutLine], text_start : Int, text_end : Int, glyph_w : Float) -> Unit {
+///|
+fn push_line(
+  lines : Array[LayoutLine],
+  text_start : Int,
+  text_end : Int,
+  glyph_w : Float,
+) -> Unit {
   let len = text_end - text_start
   let w = glyph_w * float_from_int(len)
   // MVP: 1 glyph per code unit, with x computed from glyph width.
@@ -132,6 +152,7 @@ fn push_line(lines : Array[LayoutLine], text_start : Int, text_end : Int, glyph_
   lines.push(LayoutLine::{ start: text_start, end: text_end, w, glyphs })
 }
 
+///|
 fn push_line_glyph_chunks(
   lines : Array[LayoutLine],
   text_start : Int,
@@ -155,13 +176,17 @@ fn push_line_glyph_chunks(
 /// Semantics:
 /// - Treat each code unit as one glyph.
 /// - `glyph_w` is a monospace advance in pixels.
-pub fn layout_ascii(text : String, glyph_w : Float, width_opt : Float?, wrap : Wrap) -> Array[LayoutLine] {
+pub fn layout_ascii(
+  text : String,
+  glyph_w : Float,
+  width_opt : Float?,
+  wrap : Wrap,
+) -> Array[LayoutLine] {
   let len = text.length()
   let lines : Array[LayoutLine] = []
   if len == 0 {
     return lines
   }
-
   match wrap {
     None => {
       push_line(lines, 0, len, glyph_w)
@@ -174,12 +199,10 @@ pub fn layout_ascii(text : String, glyph_w : Float, width_opt : Float?, wrap : W
     }
     _ => ()
   }
-
   if width_opt is None {
     push_line(lines, 0, len, glyph_w)
     return lines
   }
-
   let max_w = if width_opt is Some(w) { w } else { 0.0F }
   let fallback_to_glyph = match wrap {
     WordOrGlyph => true
@@ -209,11 +232,9 @@ pub fn layout_ascii(text : String, glyph_w : Float, width_opt : Float?, wrap : W
       i = i + 1
     }
     let word_end = i
-
     let word_w = glyph_w * float_from_int(word_end - word_start)
     let cur_w = glyph_w * float_from_int(line_end - line_start)
     let would_w = cur_w + word_w
-
     if line_end == line_start {
       // Empty line: word must be placed here.
       if word_w > max_w && fallback_to_glyph {
@@ -239,11 +260,9 @@ pub fn layout_ascii(text : String, glyph_w : Float, width_opt : Float?, wrap : W
       line_end = word_end
     }
   }
-
   if line_end > line_start {
     push_line(lines, line_start, line_end, glyph_w)
   }
-
   lines
 }
 
@@ -274,9 +293,7 @@ pub fn layout_from_shape(
     push_layout_line_from_shape(lines, shape, 0, len, cell_w)
     return lines
   }
-
   let max_w = if width_opt is Some(w) { w } else { 0.0F }
-
   match wrap {
     Glyph => {
       let max_cells_f = (max_w / cell_w).to_double()
@@ -299,7 +316,6 @@ pub fn layout_from_shape(
     }
     _ => ()
   }
-
   let fallback_to_glyph = match wrap {
     WordOrGlyph => true
     _ => false
@@ -310,10 +326,8 @@ pub fn layout_from_shape(
   if words.length() == 0 {
     return lines
   }
-
   let mut line_start = words[0].0
   let mut line_end = words[0].1
-
   for wi in 1..<words.length() {
     let word = words[wi]
     let w_start = word.0
@@ -327,7 +341,6 @@ pub fn layout_from_shape(
       push_layout_line_from_shape(lines, shape, line_start, line_end, cell_w)
       line_start = w_start
       line_end = w_end
-
       if fallback_to_glyph && float_from_int(word_cells) * cell_w > max_w {
         // Re-layout this single word with glyph wrapping.
         let word_lines = layout_from_shape(
@@ -350,11 +363,11 @@ pub fn layout_from_shape(
       line_end = w_end
     }
   }
-
   push_layout_line_from_shape(lines, shape, line_start, line_end, cell_w)
   lines
 }
 
+///|
 fn apply_align_to_line(
   text : String,
   line : LayoutLine,
@@ -365,7 +378,6 @@ fn apply_align_to_line(
   if extra <= 0.0F {
     return line
   }
-
   match align {
     Left => line
     Center => {
@@ -374,7 +386,7 @@ fn apply_align_to_line(
       for g in line.glyphs {
         glyphs.push(LayoutGlyph::{ ..g, x: g.x + dx })
       }
-      LayoutLine::{ ..line, glyphs }
+      LayoutLine::{ ..line, glyphs, }
     }
     Right | End => {
       let dx = extra
@@ -382,7 +394,7 @@ fn apply_align_to_line(
       for g in line.glyphs {
         glyphs.push(LayoutGlyph::{ ..g, x: g.x + dx })
       }
-      LayoutLine::{ ..line, glyphs }
+      LayoutLine::{ ..line, glyphs, }
     }
     Justified => {
       // MVP: distribute extra width across ASCII spaces in this line.
@@ -401,7 +413,9 @@ fn apply_align_to_line(
       for g in line.glyphs {
         let mut w = g.w
         // Space glyph is identified by [start,end) covering a single code unit space.
-        if g.end - g.start == 1 && g.start >= 0 && g.start < text.length() &&
+        if g.end - g.start == 1 &&
+          g.start >= 0 &&
+          g.start < text.length() &&
           text.code_unit_at(g.start) == 32 {
           w = w + add
           glyphs.push(LayoutGlyph::{ ..g, x: g.x + dx, w })

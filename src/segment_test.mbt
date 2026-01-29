@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+///|
 test "word_indices_whitespace basic" {
   let ranges = word_indices_whitespace("  hello\tworld\nmoon  ")
   inspect(ranges.length(), content="3")
@@ -19,4 +20,3 @@ test "word_indices_whitespace basic" {
   inspect(ranges[1], content="(8, 13)")
   inspect(ranges[2], content="(14, 18)")
 }
-

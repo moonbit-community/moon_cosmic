@@ -1,5 +1,9 @@
 {
   "import": [
-    "moonbitlang/core/string"
+    "moonbitlang/core/string",
+    "moonbitlang/core/hashmap",
+    "Milky2018/moon_swash/scale",
+    "Milky2018/moon_zeno",
+    "Milky2018/moon_swash"
   ]
 }

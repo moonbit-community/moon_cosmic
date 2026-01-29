@@ -17,13 +17,13 @@
 ///
 /// Upstream cosmic-text uses `Wrap` + `Align`. Bevy exposes similar concepts as
 /// line-break and justification; we provide a small mapping layer here.
-
 pub(all) enum LineBreak {
   NoWrap
   AnyCharacter
   WordBoundary
 }
 
+///|
 pub(all) enum Justify {
   Left
   Right
@@ -49,4 +49,3 @@ pub fn justify_to_align(j : Justify) -> Align {
     Justified => Align::Justified
   }
 }
-

@@ -28,12 +28,18 @@ pub fn Metrics::new(font_size : Float, line_height : Float) -> Metrics {
 
 ///|
 /// Create metrics with given font size and calculate line height using relative scale.
-pub fn Metrics::relative(font_size : Float, line_height_scale : Float) -> Metrics {
+pub fn Metrics::relative(
+  font_size : Float,
+  line_height_scale : Float,
+) -> Metrics {
   Metrics::{ font_size, line_height: font_size * line_height_scale }
 }
 
 ///|
 /// Scale font size and line height.
 pub fn Metrics::scale(self : Metrics, scale : Float) -> Metrics {
-  Metrics::{ font_size: self.font_size * scale, line_height: self.line_height * scale }
+  Metrics::{
+    font_size: self.font_size * scale,
+    line_height: self.line_height * scale,
+  }
 }

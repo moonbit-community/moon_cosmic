@@ -64,8 +64,87 @@ pub fn Color::as_rgba(self : Color) -> (Byte, Byte, Byte, Byte) {
   (self.r(), self.g(), self.b(), self.a())
 }
 
+///|
+/// Font family selector (mirrors `fontdb::Family` in cosmic-text).
+pub(all) enum Family {
+  Name(String)
+  Serif
+  SansSerif
+  Cursive
+  Fantasy
+  Monospace
+}
+
+///|
+pub impl Eq for Family with equal(self, other) {
+  match (self, other) {
+    (Name(a), Name(b)) => a == b
+    (Serif, Serif) => true
+    (SansSerif, SansSerif) => true
+    (Cursive, Cursive) => true
+    (Fantasy, Fantasy) => true
+    (Monospace, Monospace) => true
+    _ => false
+  }
+}
+
+///|
+pub impl Show for Family with output(self, logger) {
+  match self {
+    Name(name) => {
+      logger.write_string("Name(\"")
+      logger.write_string(name)
+      logger.write_string("\")")
+    }
+    Serif => logger.write_string("Serif")
+    SansSerif => logger.write_string("SansSerif")
+    Cursive => logger.write_string("Cursive")
+    Fantasy => logger.write_string("Fantasy")
+    Monospace => logger.write_string("Monospace")
+  }
+}
+
+///|
+/// Font weight (1..=1000). This is a simplified stand-in for `fontdb::Weight`.
+pub struct Weight {
+  value : Int
+}
+
+///|
+pub fn Weight::new(value : Int) -> Weight {
+  Weight::{ value, }
+}
+
+///|
+pub fn Weight::normal() -> Weight {
+  Weight::new(400)
+}
+
+///|
+pub fn Weight::bold() -> Weight {
+  Weight::new(700)
+}
+
+///|
+pub fn Weight::value(self : Weight) -> Int {
+  self.value
+}
+
+///|
+pub impl Eq for Weight with equal(self, other) {
+  self.value == other.value
+}
+
+///|
+pub impl Show for Weight with output(self, logger) {
+  logger.write_string(self.value.to_string())
+}
+
+///|
 pub struct Attrs {
   metadata : Int
+  family : Family
+  weight : Weight
 }
 
 ///|
@@ -75,11 +154,40 @@ pub fn Attrs::new() -> Attrs {
 
 ///|
 pub fn Attrs::with_metadata(metadata : Int) -> Attrs {
-  Attrs::{ metadata }
+  Attrs::{ metadata, family: Family::SansSerif, weight: Weight::normal() }
 }
 
 ///|
-pub fn Attrs::metadata(self : Attrs) -> Int { self.metadata }
+pub fn Attrs::metadata(self : Attrs) -> Int {
+  self.metadata
+}
+
+///|
+pub fn Attrs::family(self : Attrs, family : Family) -> Attrs {
+  Attrs::{ ..self, family, }
+}
+
+///|
+pub fn Attrs::weight(self : Attrs, weight : Weight) -> Attrs {
+  Attrs::{ ..self, weight, }
+}
+
+///|
+pub fn Attrs::family_value(self : Attrs) -> Family {
+  self.family
+}
+
+///|
+pub fn Attrs::weight_value(self : Attrs) -> Weight {
+  self.weight
+}
+
+///|
+pub impl Eq for Attrs with equal(self, other) {
+  self.metadata == other.metadata &&
+  self.family == other.family &&
+  self.weight == other.weight
+}
 
 ///|
 pub struct AttrsSpan {
@@ -132,7 +240,7 @@ pub fn AttrsList::add_span(
   if !inserted {
     spans.push(AttrsSpan::{ start, end, attrs })
   }
-  AttrsList::{ ..self, spans }
+  AttrsList::{ ..self, spans, }
 }
 
 ///|
@@ -143,18 +251,31 @@ pub fn AttrsList::get_span(self : AttrsList, pos : Int) -> Attrs {
       found = Some(span.attrs)
     }
   }
-  if found is Some(attrs) { attrs } else { self.defaults }
+  if found is Some(attrs) {
+    attrs
+  } else {
+    self.defaults
+  }
 }
 
-fn clamp_nonneg(v : Int) -> Int { if v < 0 { 0 } else { v } }
+///|
+fn clamp_nonneg(v : Int) -> Int {
+  if v < 0 {
+    0
+  } else {
+    v
+  }
+}
 
 ///|
 /// Splits spans at `index` and returns (left, right).
-pub fn AttrsList::split_off(self : AttrsList, index : Int) -> (AttrsList, AttrsList) {
+pub fn AttrsList::split_off(
+  self : AttrsList,
+  index : Int,
+) -> (AttrsList, AttrsList) {
   let index = clamp_nonneg(index)
   let left : Array[AttrsSpan] = []
   let right : Array[AttrsSpan] = []
-
   for span in self.spans {
     if span.end <= index {
       left.push(span)
@@ -166,11 +287,7 @@ pub fn AttrsList::split_off(self : AttrsList, index : Int) -> (AttrsList, AttrsL
       })
     } else {
       // Span crosses the split point.
-      left.push(AttrsSpan::{
-        start: span.start,
-        end: index,
-        attrs: span.attrs,
-      })
+      left.push(AttrsSpan::{ start: span.start, end: index, attrs: span.attrs })
       right.push(AttrsSpan::{
         start: 0,
         end: span.end - index,
@@ -178,7 +295,6 @@ pub fn AttrsList::split_off(self : AttrsList, index : Int) -> (AttrsList, AttrsL
       })
     }
   }
-
   (
     AttrsList::{ defaults: self.defaults, spans: left },
     AttrsList::{ defaults: self.defaults, spans: right },
@@ -187,7 +303,7 @@ pub fn AttrsList::split_off(self : AttrsList, index : Int) -> (AttrsList, AttrsL
 
 ///|
 pub fn AttrsList::eq(self : AttrsList, other : AttrsList) -> Bool {
-  if self.defaults.metadata() != other.defaults.metadata() {
+  if !self.defaults.equal(other.defaults) {
     return false
   }
   if self.spans.length() != other.spans.length() {
@@ -197,7 +313,7 @@ pub fn AttrsList::eq(self : AttrsList, other : AttrsList) -> Bool {
   for i in 0..<n {
     let a = self.spans[i]
     let b = other.spans[i]
-    if a.start != b.start || a.end != b.end || a.attrs.metadata() != b.attrs.metadata() {
+    if a.start != b.start || a.end != b.end || !a.attrs.equal(b.attrs) {
       return false
     }
   }

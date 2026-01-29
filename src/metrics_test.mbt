@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+///|
 test "Metrics.relative/scale" {
   let m0 = Metrics::relative(10.0F, 1.5F)
   inspect(m0.font_size, content="10")
@@ -20,4 +21,3 @@ test "Metrics.relative/scale" {
   inspect(m1.font_size, content="20")
   inspect(m1.line_height, content="30")
 }
-

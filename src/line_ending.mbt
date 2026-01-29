@@ -45,8 +45,15 @@ pub fn LineIter::new(string : String) -> LineIter {
   LineIter::{ string, start: 0, end: string.length() }
 }
 
-fn is_cr(code : Int) -> Bool { code == 13 }
-fn is_lf(code : Int) -> Bool { code == 10 }
+///|
+fn is_cr(code : Int) -> Bool {
+  code == 13
+}
+
+///|
+fn is_lf(code : Int) -> Bool {
+  code == 10
+}
 
 ///|
 /// Returns (start, end, ending) where [start,end) is the line content range.
@@ -59,8 +66,11 @@ pub fn LineIter::next(self : LineIter) -> (LineIter, (Int, Int, LineEnding)?) {
     if is_cr(code) || is_lf(code) {
       let end = i
       let after0 = code
-      let after1 =
-        if i + 1 < len { self.string.code_unit_at(i + 1).to_int() } else { -1 }
+      let after1 = if i + 1 < len {
+        self.string.code_unit_at(i + 1).to_int()
+      } else {
+        -1
+      }
       let ending = if is_cr(after0) && is_lf(after1) {
         CrLf
       } else if is_lf(after0) && is_cr(after1) {
@@ -78,7 +88,6 @@ pub fn LineIter::next(self : LineIter) -> (LineIter, (Int, Int, LineEnding)?) {
     }
     i = i + 1
   }
-
   if start < len {
     let iter = LineIter::{ ..self, start: len }
     (iter, Some((start, len, None)))

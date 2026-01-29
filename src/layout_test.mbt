@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+///|
 test "layout_ascii: Wrap::Word splits on spaces" {
   let text = "hello world"
   let lines = layout_ascii(text, 10.0F, Some(60.0F), Wrap::Word)
@@ -24,6 +25,7 @@ test "layout_ascii: Wrap::Word splits on spaces" {
   inspect(lines[1].w, content="50")
 }
 
+///|
 test "layout_ascii: Wrap::WordOrGlyph falls back for long words" {
   let text = "abcdefghij" // 10 glyphs
   let lines = layout_ascii(text, 10.0F, Some(30.0F), Wrap::WordOrGlyph)

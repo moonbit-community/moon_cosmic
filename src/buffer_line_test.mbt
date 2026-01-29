@@ -12,20 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+///|
 test "BufferLine.set_text returns changed flag" {
   let defaults = Attrs::new()
   let attrs = AttrsList::new(defaults)
   let line0 = BufferLine::new("abc", Lf, attrs, Advanced)
-
   let (line1, changed1) = line0.set_text("abc", Lf, attrs)
   inspect(changed1, content="false")
   inspect(line1.text(), content="abc")
-
   let (line2, changed2) = line1.set_text("abcd", Lf, attrs)
   inspect(changed2, content="true")
   inspect(line2.text(), content="abcd")
 }
 
+///|
 test "BufferLine.split_off follows upstream ending/align rules" {
   let attrs = AttrsList::new(Attrs::new())
   let line0 = BufferLine::new("hello", CrLf, attrs, Advanced)
@@ -36,9 +36,14 @@ test "BufferLine.split_off follows upstream ending/align rules" {
   inspect(right.ending().as_str(), content="\r\n")
 }
 
+///|
 test "BufferLine.append concatenates text and shifts spans" {
   let a0 = AttrsList::new(Attrs::new()).add_span(0, 1, Attrs::with_metadata(1))
-  let b0 = AttrsList::new(Attrs::with_metadata(9)).add_span(0, 1, Attrs::with_metadata(2))
+  let b0 = AttrsList::new(Attrs::with_metadata(9)).add_span(
+    0,
+    1,
+    Attrs::with_metadata(2),
+  )
   let line0 = BufferLine::new("A", Lf, a0, Advanced)
   let line1 = BufferLine::new("B", None, b0, Advanced)
   let out = line0.append(line1)
@@ -48,6 +53,7 @@ test "BufferLine.append concatenates text and shifts spans" {
   inspect(out.attrs_list().get_span(1).metadata(), content="2")
 }
 
+///|
 test "BufferLine.shape builds 1 glyph per code unit (tab uses tab_width cells)" {
   let attrs = AttrsList::new(Attrs::new())
   let line0 = BufferLine::new("a\tb", Lf, attrs, Advanced)
@@ -62,6 +68,7 @@ test "BufferLine.shape builds 1 glyph per code unit (tab uses tab_width cells)" 
   }
 }
 
+///|
 test "BufferLine.layout wraps words using whitespace segmentation (MVP)" {
   let attrs = AttrsList::new(Attrs::new())
   let line0 = BufferLine::new("hello world", Lf, attrs, Advanced)
