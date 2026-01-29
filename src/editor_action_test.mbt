@@ -138,6 +138,42 @@ test "Editor.action Backspace/Delete are grapheme-aware (combining mark)" {
 }
 
 ///|
+test "Buffer.cursor_motion Previous/Next are grapheme-aware (combining mark)" {
+  let attrs = AttrsList::new(Attrs::new())
+  // "e" + COMBINING ACUTE ACCENT (U+0301) => one grapheme cluster, two UTF-16 code units.
+  let s = "e\u{0301}"
+  let buffer = Buffer::new(Metrics::new(12.0F, 12.0F))
+    .set_text(s, attrs, Advanced)
+    .set_size(Some(1000.0F), None)
+  match buffer.cursor_motion(Cursor::new(0, 2), None, Motion::Previous) {
+    None => abort("expected motion")
+    Some((c, _x)) => {
+      inspect(c.index, content="0")
+      inspect(
+        match c.affinity {
+          After => true
+          _ => false
+        },
+        content="true",
+      )
+    }
+  }
+  match buffer.cursor_motion(Cursor::new(0, 0), None, Motion::Next) {
+    None => abort("expected motion")
+    Some((c, _x)) => {
+      inspect(c.index, content="2")
+      inspect(
+        match c.affinity {
+          Before => true
+          _ => false
+        },
+        content="true",
+      )
+    }
+  }
+}
+
+///|
 test "Buffer.cursor_motion SoftHome jumps to first non-whitespace" {
   let attrs = AttrsList::new(Attrs::new())
   let buffer = Buffer::new(Metrics::new(12.0F, 12.0F))

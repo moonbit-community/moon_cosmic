@@ -564,18 +564,35 @@ pub fn Buffer::cursor_motion(
   match motion {
     Left | Previous =>
       if c.index > 0 {
-        c = Cursor::new_with_affinity(c.line, c.index - 1, c.affinity)
+        let text = buffer.lines()[c.line].text()
+        let ranges = grapheme_indices_uax29(text)
+        let mut found = 0
+        for r in ranges {
+          if c.index > r.0 && c.index <= r.1 {
+            found = r.0
+          }
+        }
+        c = Cursor::new_with_affinity(c.line, found, Affinity::After)
       } else if c.line > 0 {
         let prev = c.line - 1
         let prev_len = buffer.lines()[prev].text().length()
-        c = Cursor::new_with_affinity(prev, prev_len, c.affinity)
+        c = Cursor::new_with_affinity(prev, prev_len, Affinity::After)
       }
     Right | Next => {
       let len = buffer.lines()[c.line].text().length()
       if c.index < len {
-        c = Cursor::new_with_affinity(c.line, c.index + 1, c.affinity)
+        let text = buffer.lines()[c.line].text()
+        let ranges = grapheme_indices_uax29(text)
+        let mut found = len
+        for r in ranges {
+          if c.index >= r.0 && c.index < r.1 {
+            found = r.1
+            break
+          }
+        }
+        c = Cursor::new_with_affinity(c.line, found, Affinity::Before)
       } else if c.line + 1 < buffer.lines().length() {
-        c = Cursor::new_with_affinity(c.line + 1, 0, c.affinity)
+        c = Cursor::new_with_affinity(c.line + 1, 0, Affinity::Before)
       }
     }
     PreviousWord | LeftWord => {
