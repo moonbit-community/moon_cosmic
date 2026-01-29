@@ -175,6 +175,7 @@ pub fn BufferLine::reset(Self) -> Self
 pub fn BufferLine::reset_layout(Self) -> Self
 pub fn BufferLine::reset_shaping(Self) -> Self
 pub fn BufferLine::set_align(Self, Align?) -> (Self, Bool)
+pub fn BufferLine::set_ending(Self, LineEnding) -> Self
 pub fn BufferLine::set_text(Self, String, LineEnding, AttrsList) -> (Self, Bool)
 pub fn BufferLine::shape(Self, Int) -> Self
 pub fn BufferLine::shape_opt(Self) -> ShapeLine?
@@ -260,6 +261,8 @@ pub struct Editor {
 pub fn Editor::auto_indent(Self) -> Bool
 pub fn Editor::buffer(Self) -> Buffer
 pub fn Editor::cursor(Self) -> Cursor
+pub fn Editor::delete_range(Self, Cursor, Cursor) -> Self
+pub fn Editor::insert_at(Self, Cursor, String, AttrsList?) -> (Self, Cursor)
 pub fn Editor::new(Buffer) -> Self
 pub fn Editor::selection(Self) -> Selection
 pub fn Editor::selection_bounds(Self) -> (Cursor, Cursor)?
@@ -381,6 +384,7 @@ pub(all) enum LineEnding {
   None
 }
 pub fn LineEnding::as_str(Self) -> String
+pub fn LineEnding::default() -> Self
 
 pub struct LineIter {
   string : String

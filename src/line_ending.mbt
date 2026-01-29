@@ -34,6 +34,12 @@ pub fn LineEnding::as_str(self : LineEnding) -> String {
 }
 
 ///|
+/// Default line ending (matches upstream: LF).
+pub fn LineEnding::default() -> LineEnding {
+  Lf
+}
+
+///|
 pub struct LineIter {
   string : String
   start : Int

@@ -74,6 +74,18 @@ pub fn BufferLine::ending(self : BufferLine) -> LineEnding {
 }
 
 ///|
+pub fn BufferLine::set_ending(
+  self : BufferLine,
+  ending : LineEnding,
+) -> BufferLine {
+  if ending.as_str() == self.ending.as_str() {
+    self
+  } else {
+    BufferLine::{ ..self, ending, }.reset_layout()
+  }
+}
+
+///|
 pub fn BufferLine::attrs_list(self : BufferLine) -> AttrsList {
   self.attrs_list
 }
