@@ -200,3 +200,53 @@ test "Buffer.cursor_motion SoftHome on all-whitespace line returns 0" {
     Some((c, _x)) => inspect(c.index, content="0")
   }
 }
+
+///|
+test "Buffer.cursor_motion Home/End operate on visual line when wrapped" {
+  let attrs = AttrsList::new(Attrs::new())
+  let text = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  let buffer = Buffer::new(Metrics::new(12.0F, 12.0F))
+    .set_text(text, attrs, Advanced)
+    .set_size(Some(40.0F), None)
+    .layout_all()
+  let runs : Array[LayoutRun] = []
+  for r in buffer.layout_runs() {
+    runs.push(r)
+  }
+  if runs.length() < 2 {
+    abort("expected wrapped runs")
+  }
+  let run1 = runs[1]
+  if run1.glyphs.length() == 0 {
+    abort("expected glyphs")
+  }
+  let home_expected = run1.glyphs[0].start
+  let end_expected = run1.glyphs[run1.glyphs.length() - 1].end
+  let mid_idx = run1.glyphs[0].end
+  match buffer.cursor_motion(Cursor::new(0, mid_idx), None, Motion::Home) {
+    None => abort("expected motion")
+    Some((c, _x)) => {
+      inspect(c.index == home_expected, content="true")
+      inspect(
+        match c.affinity {
+          After => true
+          _ => false
+        },
+        content="true",
+      )
+    }
+  }
+  match buffer.cursor_motion(Cursor::new(0, home_expected), None, Motion::End) {
+    None => abort("expected motion")
+    Some((c, _x)) => {
+      inspect(c.index == end_expected, content="true")
+      inspect(
+        match c.affinity {
+          Before => true
+          _ => false
+        },
+        content="true",
+      )
+    }
+  }
+}

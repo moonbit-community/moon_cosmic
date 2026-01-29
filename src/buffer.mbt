@@ -490,17 +490,7 @@ pub fn Buffer::cursor_motion(
     v.to_double().to_int()
   }
 
-  // Vertical movement uses visual runs.
-  let delta_opt : Int? = match motion {
-    Up => Some(-1)
-    Down => Some(1)
-    Vertical(n) => Some(n)
-    PageUp => Some(-10)
-    PageDown => Some(10)
-    _ => None
-  }
-  if delta_opt is Some(delta0) {
-    // Find current visual run (required for x preservation).
+  fn find_run_idx(cursor : Cursor) -> Int? {
     let mut cur_run_idx : Int? = None
     for i in 0..<runs.length() {
       let run = runs[i]
@@ -513,16 +503,28 @@ pub fn Buffer::cursor_motion(
           break
         }
       } else {
-        let min_start = run.glyphs[0].start
+        let mut min_start = run.glyphs[0].start
         let mut max_end = run.glyphs[0].end
         for g in run.glyphs {
+          if g.start < min_start {
+            min_start = g.start
+          }
           if g.end > max_end {
             max_end = g.end
           }
         }
-        if cursor.index >= min_start && cursor.index <= max_end {
-          cur_run_idx = Some(i)
-          break
+        if cursor.index >= min_start {
+          if cursor.index < max_end {
+            cur_run_idx = Some(i)
+            break
+          }
+          if cursor.index == max_end {
+            // Prefer the next run if this is a wrap boundary.
+            if i + 1 >= runs.length() || runs[i + 1].line_i != cursor.line {
+              cur_run_idx = Some(i)
+              break
+            }
+          }
         }
       }
     }
@@ -535,10 +537,74 @@ pub fn Buffer::cursor_motion(
         }
       }
     }
-    if cur_run_idx is None {
+    cur_run_idx
+  }
+
+  match motion {
+    LayoutCursor(layout_cursor) => {
+      let line_run_idxs : Array[Int] = []
+      for i in 0..<runs.length() {
+        if runs[i].line_i == layout_cursor.line {
+          line_run_idxs.push(i)
+        }
+      }
+      if line_run_idxs.length() == 0 {
+        return None
+      }
+      let mut layout = layout_cursor.layout
+      if layout < 0 {
+        layout = 0
+      }
+      if layout >= line_run_idxs.length() {
+        layout = line_run_idxs.length() - 1
+      }
+      let run = runs[line_run_idxs[layout]]
+      if run.glyphs.length() == 0 {
+        return Some(
+          (Cursor::new_with_affinity(run.line_i, 0, After), cursor_x_opt),
+        )
+      }
+      let mut glyph_i = layout_cursor.glyph
+      if glyph_i < 0 {
+        glyph_i = 0
+      }
+      if glyph_i < run.glyphs.length() {
+        let glyph = run.glyphs[glyph_i]
+        return Some(
+          (
+            Cursor::new_with_affinity(run.line_i, glyph.start, After),
+            cursor_x_opt,
+          ),
+        )
+      }
+      let mut max_end = run.glyphs[0].end
+      for g in run.glyphs {
+        if g.end > max_end {
+          max_end = g.end
+        }
+      }
+      return Some(
+        (Cursor::new_with_affinity(run.line_i, max_end, Before), cursor_x_opt),
+      )
+    }
+    _ => ()
+  }
+
+  // Vertical movement uses visual runs.
+  let delta_opt : Int? = match motion {
+    Up => Some(-1)
+    Down => Some(1)
+    Vertical(n) => Some(n)
+    PageUp => Some(-10)
+    PageDown => Some(10)
+    _ => None
+  }
+  if delta_opt is Some(delta0) {
+    let cur_run_idx_opt = find_run_idx(cursor)
+    if cur_run_idx_opt is None {
       return None
     }
-    let cur_idx = if cur_run_idx is Some(v) { v } else { 0 }
+    let cur_idx = if cur_run_idx_opt is Some(v) { v } else { 0 }
     let cur_run = runs[cur_idx]
     let cur_x = x_for_index(cur_run, cursor.index)
     let desired_x = match cursor_x_opt {
@@ -626,13 +692,47 @@ pub fn Buffer::cursor_motion(
       }
       c = Cursor::new_with_affinity(c.line, found, c.affinity)
     }
-    Home => c = Cursor::new_with_affinity(c.line, 0, c.affinity)
+    Home =>
+      match find_run_idx(c) {
+        None => c = Cursor::new_with_affinity(c.line, 0, After)
+        Some(idx) => {
+          let run = runs[idx]
+          if run.glyphs.length() == 0 {
+            c = Cursor::new_with_affinity(c.line, 0, After)
+          } else {
+            let mut min_start = run.glyphs[0].start
+            for g in run.glyphs {
+              if g.start < min_start {
+                min_start = g.start
+              }
+            }
+            c = Cursor::new_with_affinity(c.line, min_start, After)
+          }
+        }
+      }
     End =>
-      c = Cursor::new_with_affinity(
-        c.line,
-        buffer.lines()[c.line].text().length(),
-        c.affinity,
-      )
+      match find_run_idx(c) {
+        None =>
+          c = Cursor::new_with_affinity(
+            c.line,
+            buffer.lines()[c.line].text().length(),
+            Before,
+          )
+        Some(idx) => {
+          let run = runs[idx]
+          if run.glyphs.length() == 0 {
+            c = Cursor::new_with_affinity(c.line, 0, Before)
+          } else {
+            let mut max_end = run.glyphs[0].end
+            for g in run.glyphs {
+              if g.end > max_end {
+                max_end = g.end
+              }
+            }
+            c = Cursor::new_with_affinity(c.line, max_end, Before)
+          }
+        }
+      }
     SoftHome => {
       let text = buffer.lines()[c.line].text()
       // Upstream `cosmic-text` behavior: always jump to the first non-whitespace
