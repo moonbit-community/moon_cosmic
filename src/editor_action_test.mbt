@@ -90,3 +90,31 @@ test "Editor.action: backspace/delete/enter and motion" {
   inspect(editor4.cursor().line, content="1")
   inspect(editor4.cursor().index, content="1")
 }
+
+///|
+test "Buffer.hit + Editor.action click/drag" {
+  let attrs = AttrsList::new(Attrs::new())
+  let buffer = Buffer::new(Metrics::new(12.0F, 12.0F))
+    .set_text("abc", attrs, Advanced)
+    .set_size(Some(1000.0F), None)
+  match buffer.hit(1.0F, 0.0F) {
+    None => abort("expected hit")
+    Some(c) => inspect(c.index, content="0")
+  }
+  match buffer.hit(7.0F, 0.0F) {
+    None => abort("expected hit")
+    Some(c) => inspect(c.index, content="1")
+  }
+  let editor0 = Editor::new(buffer).set_cursor(Cursor::new(0, 0))
+  let editor1 = editor0.action(Action::Click(7, 0))
+  inspect(editor1.cursor().index, content="1")
+  let editor2 = editor0.action(Action::Drag(7, 0))
+  inspect(editor2.cursor().index, content="1")
+  inspect(
+    match editor2.selection {
+      Normal(_) => true
+      _ => false
+    },
+    content="true",
+  )
+}

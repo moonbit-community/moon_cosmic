@@ -940,11 +940,49 @@ pub fn Editor::action(self : Editor, action : Action) -> Editor {
         }
       }
     }
-    Click(_, _)
-    | DoubleClick(_, _)
-    | TripleClick(_, _)
-    | Drag(_, _)
-    | Scroll(_) => ()
+    Click(x, y) => {
+      editor = editor.set_selection(Selection::None)
+      match
+        editor.buffer.hit(
+          Float::from_double(x.to_double()),
+          Float::from_double(y.to_double()),
+        ) {
+        None => ()
+        Some(new_cursor) => editor = editor.set_cursor(new_cursor)
+      }
+    }
+    DoubleClick(x, y) => {
+      editor = editor.action(Click(x, y))
+      editor = editor.set_selection(Selection::Word(editor.cursor))
+      editor = Editor::{ ..editor, buffer: editor.buffer.set_redraw(true) }
+    }
+    TripleClick(x, y) => {
+      editor = editor.action(Click(x, y))
+      editor = editor.set_selection(Selection::Line(editor.cursor))
+      editor = Editor::{ ..editor, buffer: editor.buffer.set_redraw(true) }
+    }
+    Drag(x, y) => {
+      match editor.selection {
+        Selection::None => {
+          editor = editor.set_selection(Selection::Normal(editor.cursor))
+          editor = Editor::{ ..editor, buffer: editor.buffer.set_redraw(true) }
+        }
+        _ => ()
+      }
+      match
+        editor.buffer.hit(
+          Float::from_double(x.to_double()),
+          Float::from_double(y.to_double()),
+        ) {
+        None => ()
+        Some(new_cursor) => editor = editor.set_cursor(new_cursor)
+      }
+    }
+    Scroll(pixels) => {
+      let scroll0 = editor.buffer.scroll()
+      let scroll = Scroll::{ ..scroll0, vertical: scroll0.vertical + pixels }
+      editor = Editor::{ ..editor, buffer: editor.buffer.set_scroll(scroll) }
+    }
   }
   if old_cursor != editor.cursor {
     editor = Editor::{

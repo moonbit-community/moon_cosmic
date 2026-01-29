@@ -132,6 +132,7 @@ pub struct Buffer {
 pub fn Buffer::draw(Self, FontSystem, SwashCache, Color, (Int, Int, UInt, UInt, Color) -> Unit) -> (Self, SwashCache)
 pub fn Buffer::draw_with_font_system(Self, FontSystem, SwashCache, Color, (Int, Int, UInt, UInt, Color) -> Unit) -> (Self, SwashCache)
 pub fn Buffer::hinting(Self) -> Hinting
+pub fn Buffer::hit(Self, Float, Float) -> Cursor?
 pub fn Buffer::layout_all(Self) -> Self
 pub fn Buffer::layout_all_with_font_system(Self, FontSystem) -> Self
 pub fn Buffer::layout_runs(Self) -> Iter[LayoutRun]
@@ -145,6 +146,7 @@ pub fn Buffer::set_hinting(Self, Hinting) -> Self
 pub fn Buffer::set_metrics(Self, Metrics) -> Self
 pub fn Buffer::set_monospace_width(Self, Float?) -> Self
 pub fn Buffer::set_redraw(Self, Bool) -> Self
+pub fn Buffer::set_scroll(Self, Scroll) -> Self
 pub fn Buffer::set_size(Self, Float?, Float?) -> Self
 pub fn Buffer::set_tab_width(Self, Int) -> Self
 pub fn Buffer::set_text(Self, String, AttrsList, Shaping) -> Self

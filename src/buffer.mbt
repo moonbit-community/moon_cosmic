@@ -86,6 +86,17 @@ pub fn Buffer::scroll(self : Buffer) -> Scroll {
 }
 
 ///|
+pub fn Buffer::set_scroll(self : Buffer, scroll : Scroll) -> Buffer {
+  if self.scroll.line == scroll.line &&
+    self.scroll.vertical == scroll.vertical &&
+    self.scroll.horizontal == scroll.horizontal {
+    self
+  } else {
+    Buffer::{ ..self, scroll, redraw: true }
+  }
+}
+
+///|
 pub fn Buffer::wrap(self : Buffer) -> Wrap {
   self.wrap
 }
@@ -360,6 +371,46 @@ pub fn Buffer::layout_runs(self : Buffer) -> Iter[LayoutRun] {
     }
   }
   runs.iter()
+}
+
+///|
+/// Hit-testing: map a physical x/y position to a cursor (MVP).
+pub fn Buffer::hit(self : Buffer, x : Float, y : Float) -> Cursor? {
+  let buffer = self.layout_all()
+  let mut last : Cursor? = None
+  for run in buffer.layout_runs() {
+    let line_cursor = if run.glyphs.length() == 0 {
+      Cursor::new(run.line_i, 0)
+    } else {
+      Cursor::new(run.line_i, run.glyphs[run.glyphs.length() - 1].end)
+    }
+    last = Some(line_cursor)
+    if y >= run.line_top && y < run.line_top + run.line_height {
+      if run.glyphs.length() == 0 {
+        return Some(Cursor::new(run.line_i, 0))
+      }
+      let glyphs = run.glyphs
+      // Clamp to glyph span.
+      if x <= glyphs[0].x {
+        return Some(Cursor::new(run.line_i, glyphs[0].start))
+      }
+      let last_g = glyphs[glyphs.length() - 1]
+      if x >= last_g.x + last_g.w {
+        return Some(Cursor::new(run.line_i, last_g.end))
+      }
+      for g in glyphs {
+        let mid = g.x + g.w / 2.0F
+        if x < mid {
+          return Some(Cursor::new(run.line_i, g.start))
+        }
+        if x < g.x + g.w {
+          return Some(Cursor::new(run.line_i, g.end))
+        }
+      }
+      return Some(line_cursor)
+    }
+  }
+  last
 }
 
 ///|
