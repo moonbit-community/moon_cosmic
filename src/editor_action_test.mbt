@@ -118,3 +118,21 @@ test "Buffer.hit + Editor.action click/drag" {
     content="true",
   )
 }
+
+///|
+test "Editor.action Backspace/Delete are grapheme-aware (combining mark)" {
+  let attrs = AttrsList::new(Attrs::new())
+  // "e" + COMBINING ACUTE ACCENT (U+0301) => one grapheme cluster, two UTF-16 code units.
+  let s = "e\u{0301}"
+  let buffer = Buffer::new(Metrics::new(12.0F, 12.0F)).set_text(
+    s,
+    attrs,
+    Advanced,
+  )
+  let editor0 = Editor::new(buffer).set_cursor(Cursor::new(0, 2))
+  let editor1 = editor0.action(Action::Backspace)
+  inspect(editor1.buffer().lines()[0].text(), content="")
+  let editor2 = Editor::new(buffer).set_cursor(Cursor::new(0, 0))
+  let editor3 = editor2.action(Action::Delete)
+  inspect(editor3.buffer().lines()[0].text(), content="")
+}

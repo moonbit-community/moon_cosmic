@@ -21,6 +21,8 @@ pub fn cosmic_text_version() -> String
 
 pub fn floorf(Float) -> Float
 
+pub fn grapheme_indices_uax29(String) -> Array[(Int, Int)]
+
 pub fn justify_to_align(Justify) -> Align
 
 pub fn layout_ascii(String, Float, Float?, Wrap) -> Array[LayoutLine]

@@ -76,3 +76,138 @@ pub fn word_indices_uax29(s : String) -> Array[(Int, Int)] {
   }
   ranges
 }
+
+///|
+/// Grapheme cluster ranges `[start,end)` in UTF-16 code units (UAX#29-ish).
+///
+/// This is sufficient for making Backspace/Delete operate on user-perceived characters.
+pub fn grapheme_indices_uax29(s : String) -> Array[(Int, Int)] {
+  let chars = s.to_array()
+  if chars.length() == 0 {
+    return []
+  }
+  let offs : Array[Int] = []
+  let lens : Array[Int] = []
+  let breaks : Array[@moon_swash.ClusterBreak] = []
+  let pict : Array[Bool] = []
+  let mut pos = 0
+  for ch in chars {
+    offs.push(pos)
+    let len = ch.utf16_len()
+    lens.push(len)
+    let info = @moon_swash.CharInfo::from_char(ch)
+    breaks.push(info.cluster_break())
+    pict.push(info.properties().is_extended_pictographic())
+    pos = pos + len
+  }
+  fn is_control(b : @moon_swash.ClusterBreak) -> Bool {
+    match b {
+      CN | CR | LF => true
+      _ => false
+    }
+  }
+
+  fn is_hangul_l(b : @moon_swash.ClusterBreak) -> Bool {
+    match b {
+      L => true
+      _ => false
+    }
+  }
+
+  fn is_hangul_v(b : @moon_swash.ClusterBreak) -> Bool {
+    match b {
+      V | LV => true
+      _ => false
+    }
+  }
+
+  fn is_hangul_t(b : @moon_swash.ClusterBreak) -> Bool {
+    match b {
+      T | LVT => true
+      _ => false
+    }
+  }
+
+  fn should_break(
+    i : Int,
+    breaks : Array[@moon_swash.ClusterBreak],
+    pict : Array[Bool],
+  ) -> Bool {
+    let prev = breaks[i - 1]
+    let cur = breaks[i]
+
+    // GB3
+    if prev is CR && cur is LF {
+      return false
+    }
+    // GB4/GB5
+    if is_control(prev) || is_control(cur) {
+      return true
+    }
+    // GB6
+    if is_hangul_l(prev) {
+      match cur {
+        L | V | LV | LVT => return false
+        _ => ()
+      }
+    }
+    // GB7
+    if is_hangul_v(prev) {
+      match cur {
+        V | T => return false
+        _ => ()
+      }
+    }
+    // GB8
+    if is_hangul_t(prev) {
+      if cur is T {
+        return false
+      }
+    }
+    // GB9/9a/9b
+    match cur {
+      EX | ZWJ | SM => return false
+      _ => ()
+    }
+    if prev is PP {
+      return false
+    }
+    // GB11 (simplified): Extended_Pictographic Extend* ZWJ x Extended_Pictographic
+    if cur is @moon_swash.ClusterBreak::XX && pict[i] && prev is ZWJ {
+      let mut k = i - 2
+      while k >= 0 && breaks[k] is EX {
+        k = k - 1
+      }
+      if k >= 0 && pict[k] {
+        return false
+      }
+    }
+    // GB12/13: RI pairs
+    if prev is RI && cur is RI {
+      let mut count = 0
+      let mut k = i - 1
+      while k >= 0 && breaks[k] is RI {
+        count = count + 1
+        if k == 0 {
+          break
+        }
+        k = k - 1
+      }
+      if count % 2 == 1 {
+        return false
+      }
+    }
+    true
+  }
+
+  let ranges : Array[(Int, Int)] = []
+  let mut start = 0
+  for i in 1..<chars.length() {
+    if should_break(i, breaks, pict) {
+      ranges.push((start, offs[i]))
+      start = offs[i]
+    }
+  }
+  ranges.push((start, offs[offs.length() - 1] + lens[lens.length() - 1]))
+  ranges
+}

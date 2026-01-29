@@ -688,11 +688,15 @@ pub fn Editor::action(self : Editor, action : Action) -> Editor {
         let end = editor.cursor
         let mut start = end
         if end.index > 0 {
-          start = Cursor::new_with_affinity(
-            end.line,
-            end.index - 1,
-            end.affinity,
-          )
+          let text = editor.buffer.lines()[end.line].text()
+          let ranges = grapheme_indices_uax29(text)
+          let mut found = 0
+          for r in ranges {
+            if end.index > r.0 && end.index <= r.1 {
+              found = r.0
+            }
+          }
+          start = Cursor::new_with_affinity(end.line, found, end.affinity)
         } else if end.line > 0 {
           let prev = end.line - 1
           start = Cursor::new_with_affinity(
@@ -714,11 +718,15 @@ pub fn Editor::action(self : Editor, action : Action) -> Editor {
         let mut end = start
         let line = editor.buffer.lines()[start.line].text()
         if start.index < line.length() {
-          end = Cursor::new_with_affinity(
-            start.line,
-            start.index + 1,
-            start.affinity,
-          )
+          let ranges = grapheme_indices_uax29(line)
+          let mut found = line.length()
+          for r in ranges {
+            if start.index >= r.0 && start.index < r.1 {
+              found = r.1
+              break
+            }
+          }
+          end = Cursor::new_with_affinity(start.line, found, start.affinity)
         } else if start.line + 1 < editor.buffer.lines().length() {
           end = Cursor::new_with_affinity(start.line + 1, 0, start.affinity)
         }
