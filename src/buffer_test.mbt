@@ -28,6 +28,44 @@ test "Buffer.set_text splits lines using LineIter endings" {
 }
 
 ///|
+test "Buffer.set_rich_text builds per-line AttrsList spans and uses default line ending" {
+  let bold = Attrs::new().weight(Weight::bold())
+  let spans : Array[(String, Attrs)] = [
+    ("a", bold),
+    ("b\nc", Attrs::new()),
+    ("d", bold),
+  ]
+  let buf = Buffer::new(Metrics::new(12.0F, 14.0F)).set_rich_text(
+    spans,
+    Attrs::new(),
+    Advanced,
+    Some(Align::Center),
+  )
+  let lines = buf.lines()
+  inspect(lines.length(), content="2")
+  inspect(lines[0].text(), content="ab")
+  inspect(lines[1].text(), content="cd")
+  // set_rich_text uses LineEnding::default() (LF) for all lines.
+  inspect(lines[0].ending().as_str(), content="\n")
+  inspect(lines[1].ending().as_str(), content="\n")
+
+  // Alignment is applied to all lines.
+  inspect(
+    match lines[0].align() {
+      Some(Center) => true
+      _ => false
+    },
+    content="true",
+  )
+
+  // Attrs spans are relative to each line.
+  inspect(lines[0].attrs_list().get_span(0) == bold, content="true")
+  inspect(lines[0].attrs_list().get_span(1) == Attrs::new(), content="true")
+  inspect(lines[1].attrs_list().get_span(0) == Attrs::new(), content="true")
+  inspect(lines[1].attrs_list().get_span(1) == bold, content="true")
+}
+
+///|
 test "Buffer.set_size marks redraw on change" {
   let buf0 = Buffer::new(Metrics::new(12.0F, 14.0F))
   let buf1 = buf0.set_size(Some(100.0F), None)

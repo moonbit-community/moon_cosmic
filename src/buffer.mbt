@@ -246,6 +246,89 @@ pub fn Buffer::set_text(
 }
 
 ///|
+/// Set rich text of buffer using styled spans (pairs of text and attrs).
+///
+/// This mirrors `cosmic-text`'s `Buffer::set_rich_text` behavior:
+/// - Concatenates spans into one string.
+/// - Splits into paragraphs using `BidiParagraphs`.
+/// - Builds per-line `AttrsList` spans relative to each line.
+/// - Uses `LineEnding::default()` for all lines.
+pub fn Buffer::set_rich_text(
+  self : Buffer,
+  spans : Array[(String, Attrs)],
+  default_attrs : Attrs,
+  shaping : Shaping,
+  alignment : Align?,
+) -> Buffer {
+  let string_sb = StringBuilder::new(size_hint=256)
+  let span_data : Array[(Attrs, Int, Int)] = []
+  let mut end = 0
+  for sp in spans {
+    let text = sp.0
+    let attrs = sp.1
+    let start = end
+    end = end + text.length()
+    string_sb.write_string(text)
+    span_data.push((attrs, start, end))
+  }
+  let string = string_sb.to_string()
+
+  // Empty text: keep one empty line.
+  if string.length() == 0 {
+    let line = BufferLine::new(
+      "",
+      LineEnding::default(),
+      AttrsList::new(default_attrs),
+      shaping,
+    )
+    let (line2, _) = line.set_align(alignment)
+    return Buffer::{
+      ..self,
+      lines: [line2],
+      scroll: Scroll::default(),
+      redraw: true,
+    }
+  }
+  let lines : Array[BufferLine] = []
+  let mut paras = BidiParagraphs::new(string)
+  while true {
+    let start = paras.pos
+    match paras.next() {
+      None => break
+      Some((next, para)) => {
+        paras = next
+        let end0 = start + para.length()
+        let mut attrs_list = AttrsList::new(default_attrs)
+        for si in 0..<span_data.length() {
+          let s = span_data[si]
+          let attrs = s.0
+          let s_start = s.1
+          let s_end = s.2
+          let isect_start = if s_start > start { s_start } else { start }
+          let isect_end = if s_end < end0 { s_end } else { end0 }
+          if isect_start < isect_end && attrs != default_attrs {
+            attrs_list = attrs_list.add_span(
+              isect_start - start,
+              isect_end - start,
+              attrs,
+            )
+          }
+        }
+        let line = BufferLine::new(
+          para,
+          LineEnding::default(),
+          attrs_list,
+          shaping,
+        )
+        let (line2, _) = line.set_align(alignment)
+        lines.push(line2)
+      }
+    }
+  }
+  Buffer::{ ..self, lines, scroll: Scroll::default(), redraw: true }
+}
+
+///|
 /// Shape all lines using a provided FontSystem (best-effort).
 ///
 /// This is a coarse-grained helper for clients that do not want to manage

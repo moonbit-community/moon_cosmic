@@ -152,6 +152,7 @@ pub fn Buffer::set_hinting(Self, Hinting) -> Self
 pub fn Buffer::set_metrics(Self, Metrics) -> Self
 pub fn Buffer::set_monospace_width(Self, Float?) -> Self
 pub fn Buffer::set_redraw(Self, Bool) -> Self
+pub fn Buffer::set_rich_text(Self, Array[(String, Attrs)], Attrs, Shaping, Align?) -> Self
 pub fn Buffer::set_scroll(Self, Scroll) -> Self
 pub fn Buffer::set_size(Self, Float?, Float?) -> Self
 pub fn Buffer::set_tab_width(Self, Int) -> Self
