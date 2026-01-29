@@ -27,16 +27,48 @@ pub struct ShapeGlyph {
   start : Int
   end : Int
   x_advance : Float
+  y_advance : Float
   x_offset : Float
+  y_offset : Float
   font_id : Int
   glyph_id : Int
   metadata : Int
 }
 
 ///|
+pub fn ShapeGlyph::new(
+  start : Int,
+  end : Int,
+  x_advance : Float,
+  y_advance : Float,
+  x_offset : Float,
+  y_offset : Float,
+  font_id : Int,
+  glyph_id : Int,
+  metadata : Int,
+) -> ShapeGlyph {
+  ShapeGlyph::{
+    start,
+    end,
+    x_advance,
+    y_advance,
+    x_offset,
+    y_offset,
+    font_id,
+    glyph_id,
+    metadata,
+  }
+}
+
+///|
 pub struct ShapeLine {
   rtl : Bool
   glyphs : Array[ShapeGlyph]
+}
+
+///|
+pub fn ShapeLine::new(rtl : Bool, glyphs : Array[ShapeGlyph]) -> ShapeLine {
+  ShapeLine::{ rtl, glyphs }
 }
 
 ///|
@@ -47,6 +79,16 @@ pub fn ShapeLine::empty() -> ShapeLine {
 ///|
 fn is_tab(code : Int) -> Bool {
   code == 9
+}
+
+///|
+fn utf16_len_of_char(ch : Char) -> Int {
+  // UTF-16: codepoints outside BMP take 2 code units.
+  if ch.to_int() <= 0xFFFF {
+    1
+  } else {
+    2
+  }
 }
 
 ///|
@@ -82,19 +124,17 @@ fn detect_base_rtl(text : String) -> Bool {
 }
 
 ///|
-fn code_unit_to_uint(code : UInt16) -> UInt {
-  code.to_int().reinterpret_as_uint()
-}
-
-///|
-fn glyph_advance_em(
-  font : @moon_swash.FontRef,
-  glyph_id : UInt16,
-  upem : Double,
-) -> Float {
-  let gm = font.glyph_metrics([])
-  let adv = gm.advance_width(glyph_id) / upem
-  Float::from_double(adv)
+fn primary_script(text : String) -> @moon_swash.Script {
+  for ch in text {
+    let props = @moon_swash.CharInfo::from_char(ch).properties()
+    let script = props.script()
+    match script {
+      Common | Inherited | Unknown => ()
+      _ => return script
+    }
+  }
+  // Reasonable fallback for "all common/inherited/unknown".
+  @moon_swash.Script::Latin
 }
 
 ///|
@@ -126,7 +166,9 @@ pub fn ShapeLine::build(
       start: i,
       end: i + 1,
       x_advance: advance,
+      y_advance: 0.0F,
       x_offset: 0.0F,
+      y_offset: 0.0F,
       font_id: 0,
       glyph_id: code,
       metadata: attrs.metadata(),
@@ -157,7 +199,6 @@ pub fn ShapeLine::build_with_font_system(
       tab_width,
     )
   }
-  let rtl = detect_base_rtl(text)
   let font_id_opt = font_system.resolve(attrs_list.defaults())
   let font_id = match font_id_opt {
     None =>
@@ -182,45 +223,116 @@ pub fn ShapeLine::build_with_font_system(
       )
     Some(f) => f
   }
-  let metrics = font.metrics([])
-  let upem = metrics.units_per_em.to_int().to_double()
-  let cmap = @moon_swash.Charmap::from_font(font)
 
-  // Tabs are shaped as spaces (upstream behavior).
-  let space_gid = cmap.map(32U)
-  let space_adv = glyph_advance_em(font, space_gid, upem)
-  let tab_step = space_adv * Float::from_int(tab_width)
-  let glyphs : Array[ShapeGlyph] = []
-  let len = text.length()
-  let mut x = 0.0F
-  for i in 0..<len {
-    let cu = text.code_unit_at(i)
-    let code = cu.to_int()
+  // Use swash's shaping engine for clusters/ligatures/marks. We intentionally use
+  // size=1.0 so the returned advances/offsets are in "em" units (like upstream),
+  // which are later multiplied by `font_size` during layout.
+  let rtl = detect_base_rtl(text)
+  let script = primary_script(text)
+  let direction = if rtl {
+    @shape.Direction::RightToLeft
+  } else {
+    @shape.Direction::LeftToRight
+  }
+  let cx = @shape.ShapeContext::new()
+  let empty_features : Array[@moon_swash.Setting[UInt16]] = []
+  let empty_variations : Array[@moon_swash.Setting[Double]] = []
+  let shaper = cx
+    .builder(font)
+    .script(script)
+    .direction(direction)
+    .language(None)
+    .size(1.0)
+    .features(empty_features.iter())
+    .variations(empty_variations.iter())
+    .build()
+  let cmap = @moon_swash.Charmap::from_font(font)
+  let tokens : Array[@moon_swash.Token] = []
+  let mut off = 0U
+  for ch0 in text {
+    let len_u = utf16_len_of_char(ch0).reinterpret_as_uint()
+    let i = off.reinterpret_as_int()
     let attrs = attrs_list.get_span(i)
-    let (glyph_id, x_advance) = if is_tab(code) {
-      if tab_step == 0.0F {
-        (space_gid, space_adv)
-      } else {
-        let xd = x.to_double()
-        let stepd = tab_step.to_double()
-        let next = ((xd / stepd).floor() + 1.0) * stepd
-        (space_gid, Float::from_double(next - xd))
-      }
-    } else {
-      let gid = cmap.map(code_unit_to_uint(cu))
-      let adv = glyph_advance_em(font, gid, upem)
-      (gid, adv)
+    // Tabs are shaped as spaces (upstream behavior).
+    let ch = if ch0 == '\t' { ' ' } else { ch0 }
+    let info = @moon_swash.CharInfo::from_char(ch)
+    tokens.push(
+      @moon_swash.Token::new(
+        ch,
+        off,
+        len_u,
+        info,
+        attrs.metadata().reinterpret_as_uint(),
+      ),
+    )
+    off = off + len_u
+  }
+  let parser = @moon_swash.Parser::new(script, tokens.iter())
+  let cluster = @moon_swash.CharCluster::new()
+  while parser.next(cluster) {
+    cluster.map(fn(ch) { cmap.map(ch.to_int().reinterpret_as_uint()) })
+    |> ignore
+    shaper.add_cluster(cluster)
+  }
+  let glyphs : Array[ShapeGlyph] = []
+  shaper.shape_with(fn(gc) {
+    let start = gc.source().start().reinterpret_as_int()
+    let end = gc.source().end().reinterpret_as_int()
+    let meta = gc.data().reinterpret_as_int()
+    for g in gc.glyphs() {
+      glyphs.push(ShapeGlyph::{
+        start,
+        end,
+        x_advance: Float::from_double(g.advance()),
+        y_advance: 0.0F,
+        x_offset: Float::from_double(g.x()),
+        y_offset: Float::from_double(g.y()),
+        font_id,
+        glyph_id: g.id().to_int(),
+        metadata: meta,
+      })
     }
-    glyphs.push(ShapeGlyph::{
-      start: i,
-      end: i + 1,
-      x_advance,
-      x_offset: 0.0F,
-      font_id,
-      glyph_id: glyph_id.to_int(),
-      metadata: attrs.metadata(),
-    })
-    x = x + x_advance
+  })
+
+  // If shaping produces no glyphs, fall back to the simple shaper to keep layout stable.
+  if glyphs.length() == 0 {
+    return ShapeLine::build(
+      ShapeLine::empty(),
+      text,
+      attrs_list,
+      shaping,
+      tab_width,
+    )
+  }
+
+  // Apply tab stops by snapping to the next multiple of (space_advance * tab_width).
+  let gm = font.glyph_metrics(shaper.normalized_coords())
+  let upem = gm.units_per_em().to_int().to_double()
+  let space_gid = cmap.map(32U)
+  let space_adv = if upem == 0.0 {
+    0.0
+  } else {
+    gm.advance_width(space_gid) / upem
+  }
+  let step = space_adv * tab_width.to_double()
+  if step != 0.0 {
+    let mut x = 0.0
+    for i in 0..<glyphs.length() {
+      let g0 = glyphs[i]
+      let is_tab_glyph = g0.end - g0.start == 1 &&
+        g0.start >= 0 &&
+        g0.start < text.length() &&
+        is_tab(text.code_unit_at(g0.start).to_int())
+      if is_tab_glyph {
+        let next = ((x / step).floor() + 1.0) * step
+        let adv = next - x
+        let g1 = ShapeGlyph::{ ..g0, x_advance: Float::from_double(adv) }
+        glyphs.set(i, g1)
+        x = next
+      } else {
+        x = x + g0.x_advance.to_double()
+      }
+    }
   }
   ShapeLine::{ rtl, glyphs }
 }

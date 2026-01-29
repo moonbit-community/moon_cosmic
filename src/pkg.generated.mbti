@@ -376,11 +376,14 @@ pub struct ShapeGlyph {
   start : Int
   end : Int
   x_advance : Float
+  y_advance : Float
   x_offset : Float
+  y_offset : Float
   font_id : Int
   glyph_id : Int
   metadata : Int
 }
+pub fn ShapeGlyph::new(Int, Int, Float, Float, Float, Float, Int, Int, Int) -> Self
 
 pub struct ShapeLine {
   rtl : Bool
@@ -389,6 +392,7 @@ pub struct ShapeLine {
 pub fn ShapeLine::build(Self, String, AttrsList, Shaping, Int) -> Self
 pub fn ShapeLine::build_with_font_system(Self, FontSystem, String, AttrsList, Shaping, Int) -> Self
 pub fn ShapeLine::empty() -> Self
+pub fn ShapeLine::new(Bool, Array[ShapeGlyph]) -> Self
 
 pub(all) enum Shaping {
   Basic
