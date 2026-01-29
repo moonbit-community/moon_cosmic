@@ -129,6 +129,7 @@ pub struct Buffer {
   tab_width : Int
   hinting : Hinting
 }
+pub fn Buffer::cursor_motion(Self, Cursor, Int?, Motion) -> (Cursor, Int?)?
 pub fn Buffer::draw(Self, FontSystem, SwashCache, Color, (Int, Int, UInt, UInt, Color) -> Unit) -> (Self, SwashCache)
 pub fn Buffer::draw_with_font_system(Self, FontSystem, SwashCache, Color, (Int, Int, UInt, UInt, Color) -> Unit) -> (Self, SwashCache)
 pub fn Buffer::hinting(Self) -> Hinting

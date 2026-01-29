@@ -589,156 +589,6 @@ pub fn Editor::apply_change(self : Editor, change : Change) -> (Editor, Bool) {
 }
 
 ///|
-fn line_len(lines : Array[BufferLine], i : Int) -> Int {
-  lines[i].text().length()
-}
-
-///|
-fn cursor_motion(buffer : Buffer, cursor : Cursor, motion : Motion) -> Cursor {
-  let lines = buffer.lines()
-  if lines.length() == 0 {
-    return cursor
-  }
-  let line_i = clamp(cursor.line, 0, lines.length() - 1)
-  let line = lines[line_i].text()
-  let idx = clamp(cursor.index, 0, line.length())
-  let cur = Cursor::new_with_affinity(line_i, idx, cursor.affinity)
-  match motion {
-    LayoutCursor(_) => cur
-    Previous | Left =>
-      if cur.index > 0 {
-        Cursor::new_with_affinity(cur.line, cur.index - 1, cur.affinity)
-      } else if cur.line > 0 {
-        let prev = cur.line - 1
-        Cursor::new_with_affinity(prev, line_len(lines, prev), cur.affinity)
-      } else {
-        cur
-      }
-    Next | Right => {
-      let len = line_len(lines, cur.line)
-      if cur.index < len {
-        Cursor::new_with_affinity(cur.line, cur.index + 1, cur.affinity)
-      } else if cur.line + 1 < lines.length() {
-        Cursor::new_with_affinity(cur.line + 1, 0, cur.affinity)
-      } else {
-        cur
-      }
-    }
-    Up =>
-      if cur.line > 0 {
-        let prev = cur.line - 1
-        Cursor::new_with_affinity(
-          prev,
-          clamp(cur.index, 0, line_len(lines, prev)),
-          cur.affinity,
-        )
-      } else {
-        cur
-      }
-    Down =>
-      if cur.line + 1 < lines.length() {
-        let next = cur.line + 1
-        Cursor::new_with_affinity(
-          next,
-          clamp(cur.index, 0, line_len(lines, next)),
-          cur.affinity,
-        )
-      } else {
-        cur
-      }
-    Home => Cursor::new_with_affinity(cur.line, 0, cur.affinity)
-    SoftHome => {
-      let text = lines[cur.line].text()
-      let mut after_ws = text.length()
-      let mut i = 0
-      while i < text.length() {
-        if !is_ws_u16(text.code_unit_at(i)) {
-          after_ws = i
-          break
-        }
-        i = i + 1
-      }
-      let target = if cur.index == after_ws { 0 } else { after_ws }
-      Cursor::new_with_affinity(cur.line, target, cur.affinity)
-    }
-    End =>
-      Cursor::new_with_affinity(
-        cur.line,
-        line_len(lines, cur.line),
-        cur.affinity,
-      )
-    BufferStart => Cursor::new_with_affinity(0, 0, cur.affinity)
-    BufferEnd => {
-      let last = lines.length() - 1
-      Cursor::new_with_affinity(last, line_len(lines, last), cur.affinity)
-    }
-    Vertical(n) => {
-      let tgt = clamp(cur.line + n, 0, lines.length() - 1)
-      Cursor::new_with_affinity(
-        tgt,
-        clamp(cur.index, 0, line_len(lines, tgt)),
-        cur.affinity,
-      )
-    }
-    PageUp => cursor_motion(buffer, cur, Vertical(-10))
-    PageDown => cursor_motion(buffer, cur, Vertical(10))
-    GotoLine(n) => {
-      let tgt = clamp(n, 0, lines.length() - 1)
-      Cursor::new_with_affinity(
-        tgt,
-        clamp(cur.index, 0, line_len(lines, tgt)),
-        cur.affinity,
-      )
-    }
-    ParagraphStart => {
-      let mut i = cur.line
-      while i > 0 && lines[i - 1].text().length() > 0 {
-        i = i - 1
-      }
-      Cursor::new_with_affinity(i, 0, cur.affinity)
-    }
-    ParagraphEnd => {
-      let mut i = cur.line
-      while i + 1 < lines.length() && lines[i + 1].text().length() > 0 {
-        i = i + 1
-      }
-      Cursor::new_with_affinity(i, line_len(lines, i), cur.affinity)
-    }
-    PreviousWord | LeftWord => {
-      let text = lines[cur.line].text()
-      let ranges = word_indices_whitespace(text)
-      let mut found = 0
-      let mut i = ranges.length() - 1
-      while i >= 0 {
-        let (ws, _we) = ranges[i]
-        if ws < cur.index {
-          found = ws
-          break
-        }
-        if i == 0 {
-          break
-        }
-        i = i - 1
-      }
-      Cursor::new_with_affinity(cur.line, found, cur.affinity)
-    }
-    NextWord | RightWord => {
-      let text = lines[cur.line].text()
-      let ranges = word_indices_whitespace(text)
-      let mut found = text.length()
-      for p in ranges {
-        let we = p.1
-        if we > cur.index {
-          found = we
-          break
-        }
-      }
-      Cursor::new_with_affinity(cur.line, found, cur.affinity)
-    }
-  }
-}
-
-///|
 fn adjust_selection_index(
   sel : Selection,
   line_i : Int,
@@ -799,10 +649,15 @@ pub fn Editor::action(self : Editor, action : Action) -> Editor {
   let old_cursor = self.cursor
   let mut editor = self
   match action {
-    Motion(motion) => {
-      let new_cursor = cursor_motion(editor.buffer, editor.cursor, motion)
-      editor = editor.set_cursor(new_cursor)
-    }
+    Motion(motion) =>
+      match
+        editor.buffer.cursor_motion(editor.cursor, editor.cursor_x_opt, motion) {
+        None => ()
+        Some((new_cursor, new_x_opt)) => {
+          editor = editor.set_cursor(new_cursor)
+          editor = Editor::{ ..editor, cursor_x_opt: new_x_opt }
+        }
+      }
     Escape => {
       match editor.selection {
         Selection::None => ()

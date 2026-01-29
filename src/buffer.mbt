@@ -414,6 +414,185 @@ pub fn Buffer::hit(self : Buffer, x : Float, y : Float) -> Cursor? {
 }
 
 ///|
+/// Cursor motion based on current layout runs (MVP).
+///
+/// This uses visual lines from `layout_runs()` for vertical movement.
+pub fn Buffer::cursor_motion(
+  self : Buffer,
+  cursor : Cursor,
+  cursor_x_opt : Int?,
+  motion : Motion,
+) -> (Cursor, Int?)? {
+  // Layout to get visual line runs.
+  let buffer = self.layout_all()
+  let runs : Array[LayoutRun] = []
+  for r in buffer.layout_runs() {
+    runs.push(r)
+  }
+  if runs.length() == 0 {
+    return None
+  }
+  fn x_for_index(run : LayoutRun, index : Int) -> Float {
+    let glyphs = run.glyphs
+    if glyphs.length() == 0 {
+      return 0.0F
+    }
+    let mut last_x = 0.0F
+    let mut last_end = 0
+    for g in glyphs {
+      last_x = g.x + g.w
+      last_end = g.end
+      if index <= g.start {
+        return g.x
+      }
+      if index > g.start && index < g.end {
+        let span = g.end - g.start
+        let off = index - g.start
+        let t = Float::from_double(off.to_double() / span.to_double())
+        return g.x + g.w * t
+      }
+      if index == g.end {
+        return g.x + g.w
+      }
+    }
+    if index >= last_end {
+      last_x
+    } else {
+      0.0F
+    }
+  }
+
+  fn index_for_x(run : LayoutRun, x : Float) -> Int {
+    if run.glyphs.length() == 0 {
+      return 0
+    }
+    let glyphs = run.glyphs
+    if x <= glyphs[0].x {
+      return glyphs[0].start
+    }
+    let last_g = glyphs[glyphs.length() - 1]
+    if x >= last_g.x + last_g.w {
+      return last_g.end
+    }
+    for g in glyphs {
+      let mid = g.x + g.w / 2.0F
+      if x < mid {
+        return g.start
+      }
+      if x < g.x + g.w {
+        return g.end
+      }
+    }
+    last_g.end
+  }
+
+  fn int_from_float(v : Float) -> Int {
+    v.to_double().to_int()
+  }
+
+  // Find current visual run.
+  let mut cur_run_idx : Int? = None
+  for i in 0..<runs.length() {
+    let run = runs[i]
+    if run.line_i != cursor.line {
+      continue
+    }
+    if run.glyphs.length() == 0 {
+      if cursor.index == 0 {
+        cur_run_idx = Some(i)
+        break
+      }
+    } else {
+      let min_start = run.glyphs[0].start
+      let mut max_end = run.glyphs[0].end
+      for g in run.glyphs {
+        if g.end > max_end {
+          max_end = g.end
+        }
+      }
+      if cursor.index >= min_start && cursor.index <= max_end {
+        cur_run_idx = Some(i)
+        break
+      }
+    }
+  }
+  if cur_run_idx is None {
+    return None
+  }
+  let cur_idx = if cur_run_idx is Some(v) { v } else { 0 }
+  let cur_run = runs[cur_idx]
+  let cur_x = x_for_index(cur_run, cursor.index)
+  let desired_x = match cursor_x_opt {
+    None => cur_x
+    Some(xi) => Float::from_double(xi.to_double())
+  }
+
+  // Vertical movement uses visual runs.
+  let delta_opt : Int? = match motion {
+    Up => Some(-1)
+    Down => Some(1)
+    Vertical(n) => Some(n)
+    PageUp => Some(-10)
+    PageDown => Some(10)
+    _ => None
+  }
+  if delta_opt is Some(delta0) {
+    let target = cur_idx + delta0
+    if target < 0 || target >= runs.length() {
+      return None
+    }
+    let run = runs[target]
+    let new_index = index_for_x(run, desired_x)
+    return Some(
+      (
+        Cursor::new_with_affinity(run.line_i, new_index, cursor.affinity),
+        Some(int_from_float(desired_x)),
+      ),
+    )
+  }
+
+  // Fallback: text-index motion (same as Editor's MVP cursor_motion).
+  let mut c = cursor
+  match motion {
+    Left | Previous =>
+      if c.index > 0 {
+        c = Cursor::new_with_affinity(c.line, c.index - 1, c.affinity)
+      } else if c.line > 0 {
+        let prev = c.line - 1
+        let prev_len = buffer.lines()[prev].text().length()
+        c = Cursor::new_with_affinity(prev, prev_len, c.affinity)
+      }
+    Right | Next => {
+      let len = buffer.lines()[c.line].text().length()
+      if c.index < len {
+        c = Cursor::new_with_affinity(c.line, c.index + 1, c.affinity)
+      } else if c.line + 1 < buffer.lines().length() {
+        c = Cursor::new_with_affinity(c.line + 1, 0, c.affinity)
+      }
+    }
+    Home => c = Cursor::new_with_affinity(c.line, 0, c.affinity)
+    End =>
+      c = Cursor::new_with_affinity(
+        c.line,
+        buffer.lines()[c.line].text().length(),
+        c.affinity,
+      )
+    SoftHome => c = Cursor::new_with_affinity(c.line, 0, c.affinity)
+    BufferStart => c = Cursor::new_with_affinity(0, 0, c.affinity)
+    BufferEnd => {
+      let last = buffer.lines().length() - 1
+      c = Cursor::new_with_affinity(
+        last,
+        buffer.lines()[last].text().length(),
+        c.affinity,
+      )
+    }
+    _ => ()
+  }
+  Some((c, None))
+}
+
+///|
 /// Draw the buffer using a `SwashCache`.
 ///
 /// For compatibility with upstream's legacy renderer helper, the callback is
