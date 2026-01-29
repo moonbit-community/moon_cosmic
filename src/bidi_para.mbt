@@ -16,31 +16,78 @@
 /// Paragraph iterator for bidi-aware text processing.
 ///
 /// Upstream `cosmic-text` uses `unicode-bidi` to find paragraph boundaries.
-/// For now (wasm-gc friendly), we approximate this by iterating `LineIter`
-/// and returning each line without the trailing line ending.
+/// This MoonBit port approximates the behavior:
+/// - Fast path for simple ASCII text: split on '\n' (does not special-case CRLF).
+/// - Otherwise: split on `BidiClass::B` (Paragraph_Separator) using swash properties.
 pub struct BidiParagraphs {
   text : String
-  iter : LineIter
+  pos : Int
+  ascii_fast : Bool
 }
 
 ///|
 pub fn BidiParagraphs::new(text : String) -> BidiParagraphs {
-  BidiParagraphs::{ text, iter: LineIter::new(text) }
+  let mut ascii_fast = true
+  for ch in text {
+    if ch.to_int() > 0x7F {
+      ascii_fast = false
+      break
+    }
+    if ch.is_control() && ch != '\n' && ch != '\r' && ch != '\t' {
+      ascii_fast = false
+      break
+    }
+  }
+  BidiParagraphs::{ text, pos: 0, ascii_fast }
 }
 
 ///|
 /// Returns (next, paragraph_text) if any.
 pub fn BidiParagraphs::next(self : BidiParagraphs) -> (BidiParagraphs, String)? {
-  let (next_iter, item_opt) = self.iter.next()
-  match item_opt {
-    None => None
-    Some(item) => {
-      let start = item.0
-      let end = item.1
-      let para = slice_string(self.text, start, end)
-      Some((BidiParagraphs::{ ..self, iter: next_iter }, para))
+  let len = self.text.length()
+  if self.pos >= len {
+    return None
+  }
+  let start = self.pos
+  if self.ascii_fast {
+    // Split on '\n' only, matching the upstream fast path.
+    let mut i = start
+    while i < len {
+      if self.text.code_unit_at(i).to_int() == 10 {
+        let para = slice_string(self.text, start, i)
+        return Some((BidiParagraphs::{ ..self, pos: i + 1 }, para))
+      }
+      i = i + 1
+    }
+    let para = slice_string(self.text, start, len)
+    return Some((BidiParagraphs::{ ..self, pos: len }, para))
+  }
+
+  // Complex text: split on Paragraph_Separator (BidiClass::B).
+  let mut sep_start = len
+  let mut sep_end = len
+  for p in self.text.iter2() {
+    let idx = p.0
+    let ch = p.1
+    if idx < start {
+      continue
+    }
+    let bc = @moon_swash.CharInfo::from_char(ch).properties().bidi_class()
+    match bc {
+      B => {
+        sep_start = idx
+        sep_end = idx + ch.utf16_len()
+        break
+      }
+      _ => ()
     }
   }
+  if sep_start == len {
+    let para = slice_string(self.text, start, len)
+    return Some((BidiParagraphs::{ ..self, pos: len }, para))
+  }
+  let para = slice_string(self.text, start, sep_start)
+  Some((BidiParagraphs::{ ..self, pos: sep_end }, para))
 }
 
 ///|

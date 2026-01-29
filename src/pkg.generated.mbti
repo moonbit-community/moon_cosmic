@@ -115,7 +115,8 @@ pub impl Hash for AttrsSpan
 
 pub struct BidiParagraphs {
   text : String
-  iter : LineIter
+  pos : Int
+  ascii_fast : Bool
 }
 pub fn BidiParagraphs::iter(Self) -> Iter[String]
 pub fn BidiParagraphs::new(String) -> Self

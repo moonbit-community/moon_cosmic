@@ -13,8 +13,15 @@
 // limitations under the License.
 
 ///|
-test "BidiParagraphs splits on LineIter boundaries" {
+test "BidiParagraphs matches upstream fast path for ASCII (splits on \\n only)" {
   let ps = BidiParagraphs::new("a\nb\r\nc")
   let out = ps.iter().to_array()
-  inspect(out, content="[\"a\", \"b\", \"c\"]")
+  inspect(out, content="[\"a\", \"b\\r\", \"c\"]")
+}
+
+///|
+test "BidiParagraphs splits on Unicode paragraph separators for non-ASCII text" {
+  let ps = BidiParagraphs::new("a\u{2029}b")
+  let out = ps.iter().to_array()
+  inspect(out, content="[\"a\", \"b\"]")
 }
