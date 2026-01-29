@@ -138,7 +138,7 @@ test "Editor.action Backspace/Delete are grapheme-aware (combining mark)" {
 }
 
 ///|
-test "Buffer.cursor_motion SoftHome toggles after_whitespace" {
+test "Buffer.cursor_motion SoftHome jumps to first non-whitespace" {
   let attrs = AttrsList::new(Attrs::new())
   let buffer = Buffer::new(Metrics::new(12.0F, 12.0F))
     .set_text("  foo", attrs, Advanced)
@@ -148,6 +148,18 @@ test "Buffer.cursor_motion SoftHome toggles after_whitespace" {
     Some((c, _x)) => inspect(c.index, content="2")
   }
   match buffer.cursor_motion(Cursor::new(0, 2), None, Motion::SoftHome) {
+    None => abort("expected motion")
+    Some((c, _x)) => inspect(c.index, content="2")
+  }
+}
+
+///|
+test "Buffer.cursor_motion SoftHome on all-whitespace line returns 0" {
+  let attrs = AttrsList::new(Attrs::new())
+  let buffer = Buffer::new(Metrics::new(12.0F, 12.0F))
+    .set_text("   ", attrs, Advanced)
+    .set_size(Some(1000.0F), None)
+  match buffer.cursor_motion(Cursor::new(0, 1), None, Motion::SoftHome) {
     None => abort("expected motion")
     Some((c, _x)) => inspect(c.index, content="0")
   }

@@ -618,16 +618,17 @@ pub fn Buffer::cursor_motion(
       )
     SoftHome => {
       let text = buffer.lines()[c.line].text()
-      let mut after_ws = text.length()
+      // Upstream `cosmic-text` behavior: always jump to the first non-whitespace
+      // character on the line, or 0 if the line is all whitespace.
+      let mut target = 0
       for p in text.iter2() {
         let idx = p.0
         let ch = p.1
         if !ch.is_whitespace() {
-          after_ws = idx
+          target = idx
           break
         }
       }
-      let target = if c.index == after_ws { 0 } else { after_ws }
       c = Cursor::new_with_affinity(c.line, target, c.affinity)
     }
     BufferStart => c = Cursor::new_with_affinity(0, 0, c.affinity)
