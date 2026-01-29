@@ -463,31 +463,60 @@ pub fn Buffer::hit(self : Buffer, x : Float, y : Float) -> Cursor? {
   let mut last : Cursor? = None
   for run in buffer.layout_runs() {
     let line_cursor = if run.glyphs.length() == 0 {
-      Cursor::new(run.line_i, 0)
+      Cursor::new_with_affinity(run.line_i, 0, After)
     } else {
-      Cursor::new(run.line_i, run.glyphs[run.glyphs.length() - 1].end)
+      Cursor::new_with_affinity(
+        run.line_i,
+        run.glyphs[run.glyphs.length() - 1].end,
+        Before,
+      )
     }
     last = Some(line_cursor)
     if y >= run.line_top && y < run.line_top + run.line_height {
       if run.glyphs.length() == 0 {
-        return Some(Cursor::new(run.line_i, 0))
+        return Some(Cursor::new_with_affinity(run.line_i, 0, After))
       }
       let glyphs = run.glyphs
-      // Clamp to glyph span.
-      if x <= glyphs[0].x {
-        return Some(Cursor::new(run.line_i, glyphs[0].start))
+      let mut min_start = glyphs[0].start
+      let mut max_end = glyphs[0].end
+      for g in glyphs {
+        if g.start < min_start {
+          min_start = g.start
+        }
+        if g.end > max_end {
+          max_end = g.end
+        }
       }
+      // Clamp to glyph span.
       let last_g = glyphs[glyphs.length() - 1]
-      if x >= last_g.x + last_g.w {
-        return Some(Cursor::new(run.line_i, last_g.end))
+      if run.rtl {
+        if x <= glyphs[0].x {
+          return Some(Cursor::new_with_affinity(run.line_i, max_end, Before))
+        }
+        if x >= last_g.x + last_g.w {
+          return Some(Cursor::new_with_affinity(run.line_i, min_start, After))
+        }
+      } else {
+        if x <= glyphs[0].x {
+          return Some(Cursor::new_with_affinity(run.line_i, min_start, After))
+        }
+        if x >= last_g.x + last_g.w {
+          return Some(Cursor::new_with_affinity(run.line_i, max_end, Before))
+        }
       }
       for g in glyphs {
         let mid = g.x + g.w / 2.0F
         if x < mid {
-          return Some(Cursor::new(run.line_i, g.start))
+          if run.rtl {
+            return Some(Cursor::new_with_affinity(run.line_i, g.end, Before))
+          }
+          return Some(Cursor::new_with_affinity(run.line_i, g.start, After))
         }
         if x < g.x + g.w {
-          return Some(Cursor::new(run.line_i, g.end))
+          if run.rtl {
+            return Some(Cursor::new_with_affinity(run.line_i, g.start, After))
+          }
+          return Some(Cursor::new_with_affinity(run.line_i, g.end, Before))
         }
       }
       return Some(line_cursor)

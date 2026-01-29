@@ -120,6 +120,42 @@ test "Buffer.hit + Editor.action click/drag" {
 }
 
 ///|
+test "Buffer.hit respects RTL line direction (clamps + half-glyph)" {
+  let attrs = AttrsList::new(Attrs::new())
+  let s = "\u{05D0}\u{05D1}\u{05D2}"
+  let buffer = Buffer::new(Metrics::new(12.0F, 12.0F))
+    .set_text(s, attrs, Advanced)
+    .set_size(Some(1000.0F), None)
+    .layout_all()
+  match buffer.hit(-1.0F, 0.0F) {
+    None => abort("expected hit")
+    Some(c) => {
+      inspect(c.index, content="3")
+      inspect(
+        match c.affinity {
+          Before => true
+          _ => false
+        },
+        content="true",
+      )
+    }
+  }
+  match buffer.hit(10000.0F, 0.0F) {
+    None => abort("expected hit")
+    Some(c) => {
+      inspect(c.index, content="0")
+      inspect(
+        match c.affinity {
+          After => true
+          _ => false
+        },
+        content="true",
+      )
+    }
+  }
+}
+
+///|
 test "Editor.action Backspace/Delete are grapheme-aware (combining mark)" {
   let attrs = AttrsList::new(Attrs::new())
   // "e" + COMBINING ACUTE ACCENT (U+0301) => one grapheme cluster, two UTF-16 code units.
