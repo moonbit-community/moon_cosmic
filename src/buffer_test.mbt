@@ -92,3 +92,26 @@ test "wrap_word_fallback: layout_runs never overflow width (MVP)" {
   let w = if buffer.size().0 is Some(v) { v } else { 0.0F }
   inspect(measured <= w, content="true")
 }
+
+///|
+test "Buffer.draw is a naming-aligned wrapper (smoke)" {
+  let metrics = Metrics::new(12.0F, 14.0F)
+  let attrs = AttrsList::new(Attrs::new())
+  let buffer0 = Buffer::new(metrics)
+    .set_text("A", attrs, Advanced)
+    .set_size(Some(100.0F), None)
+  let font_system = FontSystem::new()
+  let cache = SwashCache::new()
+  let (buffer1, _cache) = buffer0.draw(
+    font_system,
+    cache,
+    Color::rgb(0, 0, 0),
+    fn(_, _, _, _, _) { () },
+  )
+  let has_layout = if buffer1.lines()[0].layout_opt() is Some(_) {
+    true
+  } else {
+    false
+  }
+  inspect(has_layout, content="true")
+}

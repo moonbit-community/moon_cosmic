@@ -354,3 +354,17 @@ pub fn Buffer::draw_with_font_system(
   }
   (buffer, swash_cache)
 }
+
+///|
+/// Draw the buffer with a font system and swash cache.
+///
+/// This is a naming-aligned convenience wrapper (matches upstream's `Buffer::draw` intent).
+pub fn Buffer::draw(
+  self : Buffer,
+  font_system : FontSystem,
+  swash_cache : SwashCache,
+  text_color : Color,
+  f : (Int, Int, UInt, UInt, Color) -> Unit,
+) -> (Buffer, SwashCache) {
+  self.draw_with_font_system(font_system, swash_cache, text_color, f)
+}

@@ -26,6 +26,46 @@ fn f32_from_bits(bits : UInt) -> Float {
 }
 
 ///|
+fn clamp_double(v : Double, lo : Double, hi : Double) -> Double {
+  if v < lo {
+    lo
+  } else if v > hi {
+    hi
+  } else {
+    v
+  }
+}
+
+///|
+fn build_scaler(
+  context : @scale.ScaleContext,
+  font : @moon_swash.FontRef,
+  cache_key : CacheKey,
+) -> @scale.Scaler {
+  let size = f32_from_bits(cache_key.font_size_bits).to_double()
+  let mut builder = context.builder(font).size(size)
+  builder = builder.hint(!cache_key.has_disable_hinting())
+
+  // Apply variable font weight axis if present (upstream uses "wght").
+  let wght_tag = @moon_swash.tag_from_str_lossy("wght")
+  match font.variations().find_by_tag(wght_tag) {
+    None => ()
+    Some(variation) => {
+      let weight = clamp_double(
+        cache_key.font_weight.to_double(),
+        variation.min_value(),
+        variation.max_value(),
+      )
+      let settings : Array[@moon_swash.Setting[Double]] = [
+        @moon_swash.Setting::new(wght_tag, weight),
+      ]
+      builder = builder.variations(settings[:])
+    }
+  }
+  builder.build()
+}
+
+///|
 fn swash_image(
   font_system : FontSystem,
   context : @scale.ScaleContext,
@@ -37,11 +77,8 @@ fn swash_image(
     Some(f) => f
   }
 
-  // Build scaler
-  let size = f32_from_bits(cache_key.font_size_bits).to_double()
-  let mut builder = context.builder(font).size(size)
-  builder = builder.hint(!cache_key.has_disable_hinting())
-  let scaler = builder.build()
+  // Build scaler (with variable font weight axis when available).
+  let scaler = build_scaler(context, font, cache_key)
   let offset = if cache_key.has_pixel_font() {
     // Quantize to pixel grid (x + 1 matches upstream).
     @scale.Vector::new(
@@ -63,13 +100,60 @@ fn swash_image(
   ])
   .format(@scale.Format::Alpha)
   .offset(offset)
+  .transform(
+    if cache_key.has_fake_italic() {
+      Some(
+        @moon_zeno.Transform::skew(
+          @moon_zeno.Angle::from_degrees(14.0),
+          @moon_zeno.Angle::from_degrees(0.0),
+        ),
+      )
+    } else {
+      None
+    },
+  )
   .render(scaler, cache_key.glyph_id.to_uint16())
+}
+
+///|
+fn swash_outline_path(
+  font_system : FontSystem,
+  context : @scale.ScaleContext,
+  cache_key : CacheKey,
+) -> (Array[@moon_zeno.Vector], Array[@moon_zeno.Verb])? {
+  let font_opt = font_system.get_font(cache_key.font_id)
+  let font = match font_opt {
+    None => return None
+    Some(f) => f
+  }
+  let scaler = build_scaler(context, font, cache_key)
+  let outline_opt = match scaler.scale_outline(cache_key.glyph_id.to_uint16()) {
+    None => scaler.scale_color_outline(cache_key.glyph_id.to_uint16())
+    Some(o) => Some(o)
+  }
+  let outline = match outline_opt {
+    None => return None
+    Some(o) => o
+  }
+  if cache_key.has_fake_italic() {
+    outline.transform(
+      @moon_zeno.Transform::skew(
+        @moon_zeno.Angle::from_degrees(14.0),
+        @moon_zeno.Angle::from_degrees(0.0),
+      ),
+    )
+  }
+  Some(outline.path())
 }
 
 ///|
 pub struct SwashCache {
   context : @scale.ScaleContext
   image_cache : @hashmap.HashMap[CacheKey, @scale.Image?]
+  outline_path_cache : @hashmap.HashMap[
+    CacheKey,
+    (Array[@moon_zeno.Vector], Array[@moon_zeno.Verb])?,
+  ]
 }
 
 ///|
@@ -77,6 +161,7 @@ pub fn SwashCache::new() -> SwashCache {
   SwashCache::{
     context: @scale.ScaleContext::new(),
     image_cache: @hashmap.HashMap::default(),
+    outline_path_cache: @hashmap.HashMap::default(),
   }
 }
 
@@ -101,6 +186,37 @@ pub fn SwashCache::get_image(
       let img = swash_image(font_system, self.context, cache_key)
       self.image_cache.set(cache_key, img)
       img
+    }
+  }
+}
+
+///|
+/// Create outline commands (path data) from a cache key, without caching results.
+///
+/// This matches upstream `SwashCache::get_outline_commands_uncached`.
+pub fn SwashCache::get_outline_commands_uncached(
+  self : SwashCache,
+  font_system : FontSystem,
+  cache_key : CacheKey,
+) -> (Array[@moon_zeno.Vector], Array[@moon_zeno.Verb])? {
+  swash_outline_path(font_system, self.context, cache_key)
+}
+
+///|
+/// Create outline commands (path data) from a cache key, caching results.
+///
+/// This matches upstream `SwashCache::get_outline_commands`.
+pub fn SwashCache::get_outline_commands(
+  self : SwashCache,
+  font_system : FontSystem,
+  cache_key : CacheKey,
+) -> (Array[@moon_zeno.Vector], Array[@moon_zeno.Verb])? {
+  match self.outline_path_cache.get(cache_key) {
+    Some(v) => v
+    None => {
+      let path = swash_outline_path(font_system, self.context, cache_key)
+      self.outline_path_cache.set(cache_key, path)
+      path
     }
   }
 }

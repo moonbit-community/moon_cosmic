@@ -4,6 +4,7 @@ package "Milky2018/moon_cosmic"
 import {
   "Milky2018/moon_swash",
   "Milky2018/moon_swash/scale",
+  "Milky2018/moon_zeno",
   "moonbitlang/core/hashmap",
 }
 
@@ -100,6 +101,7 @@ pub struct Buffer {
   tab_width : Int
   hinting : Hinting
 }
+pub fn Buffer::draw(Self, FontSystem, SwashCache, Color, (Int, Int, UInt, UInt, Color) -> Unit) -> (Self, SwashCache)
 pub fn Buffer::draw_with_font_system(Self, FontSystem, SwashCache, Color, (Int, Int, UInt, UInt, Color) -> Unit) -> (Self, SwashCache)
 pub fn Buffer::hinting(Self) -> Hinting
 pub fn Buffer::layout_all(Self) -> Self
@@ -292,6 +294,14 @@ pub struct LayoutRun {
   line_w : Float
 }
 
+pub struct LegacyRenderer {
+  font_system : FontSystem
+  cache : SwashCache
+  callback : (Int, Int, UInt, UInt, Color) -> Unit
+}
+pub fn LegacyRenderer::new(FontSystem, SwashCache, (Int, Int, UInt, UInt, Color) -> Unit) -> Self
+pub impl Renderer for LegacyRenderer
+
 pub(all) enum LineBreak {
   NoWrap
   AnyCharacter
@@ -400,9 +410,12 @@ pub impl Show for SubpixelBin
 pub struct SwashCache {
   context : @scale.ScaleContext
   image_cache : @hashmap.HashMap[CacheKey, @scale.Image?]
+  outline_path_cache : @hashmap.HashMap[CacheKey, (Array[@moon_zeno.Vector], Array[@moon_zeno.Verb])?]
 }
 pub fn SwashCache::get_image(Self, FontSystem, CacheKey) -> @scale.Image?
 pub fn SwashCache::get_image_uncached(Self, FontSystem, CacheKey) -> @scale.Image?
+pub fn SwashCache::get_outline_commands(Self, FontSystem, CacheKey) -> (Array[@moon_zeno.Vector], Array[@moon_zeno.Verb])?
+pub fn SwashCache::get_outline_commands_uncached(Self, FontSystem, CacheKey) -> (Array[@moon_zeno.Vector], Array[@moon_zeno.Verb])?
 pub fn SwashCache::new() -> Self
 pub fn SwashCache::with_pixels(Self, FontSystem, CacheKey, Color, (Int, Int, Color) -> Unit) -> Unit
 
@@ -427,4 +440,8 @@ pub(all) enum Wrap {
 pub type CacheKeyFlags = UInt
 
 // Traits
+pub(open) trait Renderer {
+  rectangle(Self, Int, Int, UInt, UInt, Color) -> Unit
+  glyph(Self, PhysicalGlyph, Color) -> Unit
+}
 
