@@ -20,3 +20,19 @@ test "word_indices_whitespace basic" {
   inspect(ranges[1], content="(8, 13)")
   inspect(ranges[2], content="(14, 18)")
 }
+
+///|
+test "wrap_word_segments basic ASCII" {
+  inspect(
+    wrap_word_segments("hello world"),
+    content="[(0, 5, false), (5, 6, true), (6, 11, false)]",
+  )
+}
+
+///|
+test "word_indices_uax29 basic ASCII" {
+  inspect(
+    word_indices_uax29("hello world"),
+    content="[(0, 1), (1, 6), (6, 7), (7, 11)]",
+  )
+}

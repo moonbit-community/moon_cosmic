@@ -144,9 +144,6 @@ fn float_from_int(v : Int) -> Float {
 }
 
 ///|
-fn is_space_u16(c : UInt16) -> Bool {
-  c == 32
-}
 
 ///|
 fn max_int(a : Int, b : Int) -> Int {
@@ -423,59 +420,68 @@ pub fn layout_ascii(
     _ => false
   }
 
-  // Word/WordOrGlyph: treat runs of non-space as words, spaces as separators.
-  let mut line_start = 0
-  let mut line_end = 0
+  // Word/WordOrGlyph: linebreak-based segments with explicit blank tokens.
+  let segs = wrap_word_segments(text)
   let mut i = 0
-  while i < len {
-    // Skip leading spaces for the next word. We drop them at the start of a line.
-    while i < len && is_space_u16(text.code_unit_at(i)) {
+  while i < segs.length() {
+    // Skip leading blank segments.
+    while i < segs.length() && segs[i].2 {
       i = i + 1
-      if line_end == line_start {
-        line_start = i
-        line_end = i
-      }
     }
-    if i >= len {
+    if i >= segs.length() {
+      break
+    }
+    let line_start_i = i
+    let start_pos = segs[line_start_i].0
+    let mut cur_end_pos = start_pos
+    let mut last_non_blank_end_pos = start_pos
+    let mut emitted = false
+    while i < segs.length() {
+      let seg = segs[i]
+      let blank = seg.2
+      let word_w = glyph_w * float_from_int(seg.1 - seg.0)
+      let cur_w = glyph_w * float_from_int(cur_end_pos - start_pos)
+      let would_w = glyph_w * float_from_int(seg.1 - start_pos)
+      let fits = would_w <= max_w || (blank && cur_w <= max_w)
+      if fits {
+        cur_end_pos = seg.1
+        if !blank {
+          last_non_blank_end_pos = seg.1
+        }
+        i = i + 1
+        continue
+      }
+
+      // Doesn't fit.
+      if cur_end_pos == start_pos {
+        // Segment doesn't fit on an empty line.
+        if fallback_to_glyph && !blank && word_w > max_w {
+          push_line_glyph_chunks(lines, seg.0, seg.1, glyph_w, max_w)
+          i = i + 1
+          emitted = true
+          break
+        } else {
+          // Place it anyway (may overflow), then start new line.
+          push_line(lines, seg.0, seg.1, glyph_w)
+          i = i + 1
+          emitted = true
+          break
+        }
+      }
+
+      // Emit current line without trailing blanks (blank tokens are explicit).
+      if last_non_blank_end_pos > start_pos {
+        push_line(lines, start_pos, last_non_blank_end_pos, glyph_w)
+      }
+      emitted = true
+      // Start a new line at the current segment (don't consume it).
       break
     }
 
-    // Word range [word_start, word_end)
-    let word_start = i
-    while i < len && !is_space_u16(text.code_unit_at(i)) {
-      i = i + 1
+    // End-of-input: emit remaining line (trim trailing blanks).
+    if i >= segs.length() && !emitted && last_non_blank_end_pos > start_pos {
+      push_line(lines, start_pos, last_non_blank_end_pos, glyph_w)
     }
-    let word_end = i
-    let word_w = glyph_w * float_from_int(word_end - word_start)
-    let cur_w = glyph_w * float_from_int(line_end - line_start)
-    let would_w = cur_w + word_w
-    if line_end == line_start {
-      // Empty line: word must be placed here.
-      if word_w > max_w && fallback_to_glyph {
-        push_line_glyph_chunks(lines, word_start, word_end, glyph_w, max_w)
-        line_start = i
-        line_end = i
-      } else {
-        line_end = word_end
-      }
-    } else if would_w > max_w {
-      // New line before this word.
-      push_line(lines, line_start, line_end, glyph_w)
-      line_start = word_start
-      if word_w > max_w && fallback_to_glyph {
-        push_line_glyph_chunks(lines, word_start, word_end, glyph_w, max_w)
-        line_start = i
-        line_end = i
-      } else {
-        line_end = word_end
-      }
-    } else {
-      // Append word
-      line_end = word_end
-    }
-  }
-  if line_end > line_start {
-    push_line(lines, line_start, line_end, glyph_w)
   }
   lines
 }
@@ -517,7 +523,13 @@ pub fn layout_from_shape(
       return lines
     }
     (None, Word) | (None, WordOrGlyph) => {
-      let words = word_indices_whitespace(text)
+      let segs = wrap_word_segments(text)
+      let words : Array[(Int, Int)] = []
+      for seg in segs {
+        if !seg.2 {
+          words.push((seg.0, seg.1))
+        }
+      }
       if words.length() == 0 {
         return lines
       }
@@ -567,64 +579,88 @@ pub fn layout_from_shape(
     prefix.push(acc)
   }
 
-  // Word/WordOrGlyph: whitespace-based word indices for now (text offsets).
-  let words = word_indices_whitespace(text)
-  if words.length() == 0 {
+  // Word/WordOrGlyph: linebreak-based segments with explicit blank tokens.
+  let segs = wrap_word_segments(text)
+  if segs.length() == 0 {
     return lines
   }
-  let mut line_start_text = words[0].0
-  let mut line_end_text = words[0].1
-  let mut line_start_g = glyph_index_for_text_start(shape, line_start_text)
-  let mut line_end_g = glyph_index_for_text_end(shape, line_end_text)
-  if fallback_to_glyph &&
-    prefix_range_w(prefix, line_start_g, line_end_g) > max_w {
-    // First word doesn't fit by itself: immediately fallback to glyph wrapping.
-    let word_lines = layout_glyph_wrap_range(
-      shape, line_start_g, line_end_g, font_size, cell_w, max_w,
-    )
-    for l in word_lines {
-      lines.push(l)
+  let mut i = 0
+  while i < segs.length() {
+    // Skip leading blank segments.
+    while i < segs.length() && segs[i].2 {
+      i = i + 1
     }
-    line_start_text = line_end_text
-    line_start_g = line_end_g
-    line_end_text = line_end_text
-    line_end_g = line_end_g
-  }
-  for wi in 1..<words.length() {
-    let word = words[wi]
-    let w_start = word.0
-    let w_end = word.1
-    let would_end_g = glyph_index_for_text_end(shape, w_end)
-    if prefix_range_w(prefix, line_start_g, would_end_g) > max_w {
-      // Emit current line.
-      push_layout_line_from_shape(
-        lines, shape, line_start_g, line_end_g, font_size, cell_w,
-      )
-      line_start_text = w_start
-      line_end_text = w_end
-      line_start_g = glyph_index_for_text_start(shape, w_start)
-      line_end_g = glyph_index_for_text_end(shape, w_end)
-      if fallback_to_glyph &&
-        prefix_range_w(prefix, line_start_g, line_end_g) > max_w {
-        // Re-layout this single word with glyph wrapping.
-        let word_lines = layout_glyph_wrap_range(
-          shape, line_start_g, line_end_g, font_size, cell_w, max_w,
-        )
-        for l in word_lines {
-          lines.push(l)
+    if i >= segs.length() {
+      break
+    }
+    let line_start_i = i
+    let line_start_text = segs[line_start_i].0
+    let line_start_g = glyph_index_for_text_start(shape, line_start_text)
+    let mut cur_end_g = line_start_g
+    let mut last_non_blank_end_g = line_start_g
+    let mut emitted = false
+    // Track last "fitting" glyph end (including blanks), but emit trimmed.
+    while i < segs.length() {
+      let seg = segs[i]
+      let blank = seg.2
+      let would_end_g = glyph_index_for_text_end(shape, seg.1)
+      let would_w = prefix_range_w(prefix, line_start_g, would_end_g)
+      let cur_w = prefix_range_w(prefix, line_start_g, cur_end_g)
+      let fits = would_w <= max_w || (blank && cur_w <= max_w)
+      if fits {
+        cur_end_g = would_end_g
+        if !blank {
+          last_non_blank_end_g = would_end_g
         }
-        line_start_text = w_end
-        line_end_text = w_end
-        line_start_g = line_end_g
+        i = i + 1
+        continue
       }
-    } else {
-      line_end_text = w_end
-      line_end_g = would_end_g
+
+      // Doesn't fit.
+      if i == line_start_i {
+        // Segment doesn't fit on an empty line.
+        let word_start_g = glyph_index_for_text_start(shape, seg.0)
+        let word_end_g = glyph_index_for_text_end(shape, seg.1)
+        if fallback_to_glyph &&
+          !blank &&
+          prefix_range_w(prefix, word_start_g, word_end_g) > max_w {
+          let word_lines = layout_glyph_wrap_range(
+            shape, word_start_g, word_end_g, font_size, cell_w, max_w,
+          )
+          for l in word_lines {
+            lines.push(l)
+          }
+          i = i + 1
+          emitted = true
+        } else {
+          // Place the word anyway (may overflow).
+          push_layout_line_from_shape(
+            lines, shape, word_start_g, word_end_g, font_size, cell_w,
+          )
+          i = i + 1
+          emitted = true
+        }
+        break
+      }
+
+      // Emit current line trimmed of trailing blanks.
+      if last_non_blank_end_g > line_start_g {
+        push_layout_line_from_shape(
+          lines, shape, line_start_g, last_non_blank_end_g, font_size, cell_w,
+        )
+      }
+      emitted = true
+      // Start a new line at the current segment (do not consume it).
+      break
+    }
+
+    // End-of-input: emit remaining line trimmed.
+    if i >= segs.length() && !emitted && last_non_blank_end_g > line_start_g {
+      push_layout_line_from_shape(
+        lines, shape, line_start_g, last_non_blank_end_g, font_size, cell_w,
+      )
     }
   }
-  push_layout_line_from_shape(
-    lines, shape, line_start_g, line_end_g, font_size, cell_w,
-  )
   lines
 }
 

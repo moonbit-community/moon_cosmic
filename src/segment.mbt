@@ -78,6 +78,45 @@ pub fn word_indices_uax29(s : String) -> Array[(Int, Int)] {
 }
 
 ///|
+/// Word segments used for wrapping (cosmic-text-style).
+///
+/// Upstream uses `unicode_linebreak::linebreaks` to split into segments, then
+/// splits trailing whitespace into individual blank "words".
+///
+/// This helper approximates that behavior using swash boundary analysis:
+/// - Break on `Boundary::Line` or `Boundary::Mandatory` only (UAX#14-ish).
+/// - For each segment, split trailing blank code units into per-code-unit blanks.
+///
+/// Returns `(start, end, blank)` ranges in UTF-16 code units.
+pub fn wrap_word_segments(s : String) -> Array[(Int, Int, Bool)] {
+  fn is_blank_u16(c : UInt16) -> Bool {
+    // U+0020 SPACE, U+0009 TAB, U+00A0 NO-BREAK SPACE
+    c == 32 || c == 9 || c == 160
+  }
+
+  // MVP approximation of cosmic-text's `unicode_linebreak` segmentation:
+  // split on blank characters, and emit each blank as its own segment.
+  let out : Array[(Int, Int, Bool)] = []
+  let len = s.length()
+  let mut i = 0
+  while i < len {
+    let cu = s.code_unit_at(i)
+    if is_blank_u16(cu) {
+      out.push((i, i + 1, true))
+      i = i + 1
+      continue
+    }
+    let start = i
+    i = i + 1
+    while i < len && !is_blank_u16(s.code_unit_at(i)) {
+      i = i + 1
+    }
+    out.push((start, i, false))
+  }
+  out
+}
+
+///|
 /// Grapheme cluster ranges `[start,end)` in UTF-16 code units (UAX#29-ish).
 ///
 /// This is sufficient for making Backspace/Delete operate on user-perceived characters.
