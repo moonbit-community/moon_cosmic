@@ -87,7 +87,7 @@ test "apply_align centers lines" {
 }
 
 ///|
-test "apply_align justifies spaces (MVP)" {
+test "Align::Justified does not justify the last line (upstream behavior)" {
   let attrs = AttrsList::new(Attrs::new())
   let line0 = BufferLine::new("a a", Lf, attrs, Advanced)
   let (line1, _) = line0.set_align(Some(Align::Justified))
@@ -100,11 +100,10 @@ test "apply_align justifies spaces (MVP)" {
     Hinting::Disabled,
   )
   if line2.layout_opt() is Some(layout) {
-    inspect(layout[0].w, content="50")
-    // space is glyph[1], gets widened by extra 20
-    inspect(layout[0].glyphs[1].w, content="30")
-    // last glyph shifts right by extra 20: x=40
-    inspect(layout[0].glyphs[2].x, content="40")
+    // Single-line paragraph: not justified.
+    inspect(layout[0].w, content="30")
+    inspect(layout[0].glyphs[1].w, content="10")
+    inspect(layout[0].glyphs[2].x, content="20")
   } else {
     fail("expected Some(layout)")
   }

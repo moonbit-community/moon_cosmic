@@ -117,7 +117,7 @@ test "Editor.cursor_position on RTL line" {
   match editor0.cursor_position() {
     None => abort("expected cursor position")
     Some((x, y)) => {
-      inspect(x, content="36")
+      inspect(x, content="1000")
       inspect(y, content="0")
     }
   }
@@ -125,7 +125,7 @@ test "Editor.cursor_position on RTL line" {
   match editor1.cursor_position() {
     None => abort("expected cursor position")
     Some((x, y)) => {
-      inspect(x, content="0")
+      inspect(x, content="964")
       inspect(y, content="0")
     }
   }

@@ -90,3 +90,48 @@ test "BufferLine.layout wraps words using whitespace segmentation (MVP)" {
     fail("expected Some(layout)")
   }
 }
+
+///|
+test "BufferLine.layout: Align::Justified does not justify last visual line" {
+  let attrs = AttrsList::new(Attrs::new())
+  let line0 = BufferLine::new("a a a a a", Lf, attrs, Advanced)
+  let (line0, _) = line0.set_align(Some(Align::Justified))
+  let line1 = line0.layout(
+    10.0F,
+    Some(60.0F),
+    Wrap::Word,
+    None,
+    4,
+    Hinting::Disabled,
+  )
+  if line1.layout_opt() is Some(layout) {
+    inspect(layout.length(), content="2")
+    // First line: justified to full width.
+    inspect(layout[0].w, content="60")
+    // Last line: not justified.
+    inspect(layout[1].w, content="30")
+  } else {
+    fail("expected Some(layout)")
+  }
+}
+
+///|
+test "BufferLine.layout: Hinting::Enabled rounds advances" {
+  let attrs = AttrsList::new(Attrs::new())
+  let line0 = BufferLine::new("ab", Lf, attrs, Advanced)
+  let disabled = line0.layout(
+    10.5F,
+    None,
+    Wrap::None,
+    None,
+    4,
+    Hinting::Disabled,
+  )
+  let enabled = line0.layout(10.5F, None, Wrap::None, None, 4, Hinting::Enabled)
+  if disabled.layout_opt() is Some(l0) && enabled.layout_opt() is Some(l1) {
+    inspect(l0[0].w, content="21")
+    inspect(l1[0].w, content="22")
+  } else {
+    fail("expected Some(layout)")
+  }
+}
