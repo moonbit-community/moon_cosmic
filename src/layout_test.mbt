@@ -298,3 +298,62 @@ test "layout_from_shape: stable wrap when feeding measured width back as limit" 
     }
   }
 }
+
+///|
+test "layout_from_shape: bidi visual order reorders RTL runs inside LTR lines" {
+  let text = "abc \u{05D0}\u{05D1}"
+  let shape = ShapeLine::build(
+    ShapeLine::empty(),
+    text,
+    AttrsList::new(Attrs::new()),
+    Shaping::Advanced,
+    8,
+  )
+  // Base direction is LTR, but the Hebrew run should appear right-to-left visually.
+  inspect(shape.rtl, content="false")
+  let lines = layout_from_shape(text, shape, 10.0F, 10.0F, None, Wrap::None)
+  inspect(lines.length(), content="1")
+  let gs = lines[0].glyphs
+  inspect(gs.length(), content="6")
+  // "abc " => 0,1,2,3; Hebrew glyphs (levels=1) should be reversed: 5 then 4.
+  inspect(
+    (
+      gs[0].start,
+      gs[1].start,
+      gs[2].start,
+      gs[3].start,
+      gs[4].start,
+      gs[5].start,
+    ),
+    content="(0, 1, 2, 3, 5, 4)",
+  )
+}
+
+///|
+test "layout_from_shape: bidi visual order keeps embedded LTR runs LTR in RTL lines" {
+  let text = "\u{05D0}\u{05D1} abc"
+  let shape = ShapeLine::build(
+    ShapeLine::empty(),
+    text,
+    AttrsList::new(Attrs::new()),
+    Shaping::Advanced,
+    8,
+  )
+  inspect(shape.rtl, content="true")
+  let lines = layout_from_shape(text, shape, 10.0F, 10.0F, None, Wrap::None)
+  inspect(lines.length(), content="1")
+  let gs = lines[0].glyphs
+  inspect(gs.length(), content="6")
+  // Visual left-to-right order: embedded "abc" stays LTR, Hebrew stays RTL.
+  inspect(
+    (
+      gs[0].start,
+      gs[1].start,
+      gs[2].start,
+      gs[3].start,
+      gs[4].start,
+      gs[5].start,
+    ),
+    content="(3, 4, 5, 2, 1, 0)",
+  )
+}

@@ -158,6 +158,64 @@ fn max_int(a : Int, b : Int) -> Int {
 }
 
 ///|
+fn reverse_shape_glyph_slice(
+  glyphs : Array[ShapeGlyph],
+  start : Int,
+  end : Int,
+) -> Unit {
+  let mut i = start
+  let mut j = end - 1
+  while i < j {
+    let a = glyphs[i]
+    let b = glyphs[j]
+    glyphs.set(i, b)
+    glyphs.set(j, a)
+    i = i + 1
+    j = j - 1
+  }
+}
+
+///|
+/// Reorder a logical glyph sequence into visual order based on embedding levels.
+///
+/// This follows the Unicode Bidirectional Algorithm reordering procedure:
+/// for each level from max down to 1, reverse contiguous runs with level >= current.
+fn reorder_bidi_glyphs(glyphs : Array[ShapeGlyph]) -> Array[ShapeGlyph] {
+  let out : Array[ShapeGlyph] = []
+  for g in glyphs {
+    out.push(g)
+  }
+  if out.length() < 2 {
+    return out
+  }
+  let mut max_level = out[0].level
+  for g in out {
+    if g.level > max_level {
+      max_level = g.level
+    }
+  }
+  let mut level = max_level
+  while level >= 1 {
+    let mut i = 0
+    while i < out.length() {
+      while i < out.length() && out[i].level < level {
+        i = i + 1
+      }
+      let start = i
+      while i < out.length() && out[i].level >= level {
+        i = i + 1
+      }
+      let end = i
+      if end > start + 1 {
+        reverse_shape_glyph_slice(out, start, end)
+      }
+    }
+    level = level - 1
+  }
+  out
+}
+
+///|
 /// Returns the first glyph index whose covered text range intersects `text_offset`.
 ///
 /// This is used to map text indices (code units) to glyph indices for wrapping.
@@ -214,60 +272,34 @@ fn build_layout_line_from_shape(
       text_end = g.end
     }
   }
+  // Reorder glyphs into visual order (handles mixed-direction text).
+  let logical : Array[ShapeGlyph] = []
+  for i in glyph_start..<glyph_end {
+    logical.push(shape.glyphs[i])
+  }
+  let visual = reorder_bidi_glyphs(logical)
   let mut x = 0.0F
-  if shape.rtl {
-    let mut i = glyph_end - 1
-    while i >= glyph_start {
-      let g = shape.glyphs[i]
-      let w = g.x_advance * cell_w
-      glyphs.push(LayoutGlyph::{
-        start: g.start,
-        end: g.end,
-        font_size,
-        font_id: g.font_id,
-        font_weight: 400,
-        glyph_id: g.glyph_id,
-        x,
-        y: 0.0F,
-        w,
-        level: g.level,
-        line_height_opt: None,
-        x_offset: g.x_offset,
-        y_offset: g.y_offset,
-        color_opt: None,
-        metadata: g.metadata,
-        cache_key_flags: 0U,
-      })
-      x = x + w
-      i = i - 1
-      if i < glyph_start {
-        break
-      }
-    }
-  } else {
-    for i in glyph_start..<glyph_end {
-      let g = shape.glyphs[i]
-      let w = g.x_advance * cell_w
-      glyphs.push(LayoutGlyph::{
-        start: g.start,
-        end: g.end,
-        font_size,
-        font_id: g.font_id,
-        font_weight: 400,
-        glyph_id: g.glyph_id,
-        x,
-        y: 0.0F,
-        w,
-        level: g.level,
-        line_height_opt: None,
-        x_offset: g.x_offset,
-        y_offset: g.y_offset,
-        color_opt: None,
-        metadata: g.metadata,
-        cache_key_flags: 0U,
-      })
-      x = x + w
-    }
+  for g in visual {
+    let w = g.x_advance * cell_w
+    glyphs.push(LayoutGlyph::{
+      start: g.start,
+      end: g.end,
+      font_size,
+      font_id: g.font_id,
+      font_weight: g.font_weight,
+      glyph_id: g.glyph_id,
+      x,
+      y: 0.0F,
+      w,
+      level: g.level,
+      line_height_opt: None,
+      x_offset: g.x_offset,
+      y_offset: g.y_offset,
+      color_opt: None,
+      metadata: g.metadata,
+      cache_key_flags: 0U,
+    })
+    x = x + w
   }
   LayoutLine::{
     start: text_start,

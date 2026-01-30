@@ -30,6 +30,12 @@ test "wrap_word_segments basic ASCII" {
 }
 
 ///|
+test "wrap_word_segments uses UAX#14 opportunities (hyphen)" {
+  // UAX#14 generally allows a break opportunity after '-'.
+  inspect(wrap_word_segments("a-b"), content="[(0, 2, false), (2, 3, false)]")
+}
+
+///|
 test "word_indices_uax29 basic ASCII" {
   inspect(
     word_indices_uax29("hello world"),

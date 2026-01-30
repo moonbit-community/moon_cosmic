@@ -84,35 +84,119 @@ pub fn word_indices_uax29(s : String) -> Array[(Int, Int)] {
 /// splits trailing whitespace into individual blank "words".
 ///
 /// This helper approximates that behavior using swash boundary analysis:
-/// - Break on `Boundary::Line` or `Boundary::Mandatory` only (UAX#14-ish).
-/// - For each segment, split trailing blank code units into per-code-unit blanks.
+/// - Use `moon_swash.analyze` to identify UAX#14 linebreak opportunities:
+///   split on `Boundary::Line` or `Boundary::Mandatory` (ignore `Boundary::Word`).
+/// - For each segment, split trailing whitespace characters into individual blank segments
+///   (mirrors upstream's `char::is_whitespace()` scan).
 ///
 /// Returns `(start, end, blank)` ranges in UTF-16 code units.
 pub fn wrap_word_segments(s : String) -> Array[(Int, Int, Bool)] {
-  fn is_blank_u16(c : UInt16) -> Bool {
-    // U+0020 SPACE, U+0009 TAB, U+00A0 NO-BREAK SPACE
-    c == 32 || c == 9 || c == 160
+  let chars = s.to_array()
+  if chars.length() == 0 {
+    return []
   }
 
-  // MVP approximation of cosmic-text's `unicode_linebreak` segmentation:
-  // split on blank characters, and emit each blank as its own segment.
-  let out : Array[(Int, Int, Bool)] = []
-  let len = s.length()
-  let mut i = 0
-  while i < len {
-    let cu = s.code_unit_at(i)
-    if is_blank_u16(cu) {
-      out.push((i, i + 1, true))
-      i = i + 1
-      continue
-    }
-    let start = i
-    i = i + 1
-    while i < len && !is_blank_u16(s.code_unit_at(i)) {
-      i = i + 1
-    }
-    out.push((start, i, false))
+  // Precompute UTF-16 offsets for each char.
+  let offs : Array[Int] = []
+  let lens : Array[Int] = []
+  let mut pos = 0
+  for ch in chars {
+    offs.push(pos)
+    let len = ch.utf16_len()
+    lens.push(len)
+    pos = pos + len
   }
+  fn emit_segment(
+    out : Array[(Int, Int, Bool)],
+    chars : Array[Char],
+    offs : Array[Int],
+    lens : Array[Int],
+    start_char_i : Int,
+    end_char_i : Int,
+    start_word : Int,
+    end_pos : Int,
+  ) -> Unit {
+    if end_pos <= start_word || end_char_i < start_char_i {
+      return
+    }
+    // Find the start of trailing whitespace inside [start_word, end_pos).
+    let mut start_lb = end_pos
+    let mut ws_start_i : Int? = None
+    let mut k = end_char_i
+    while k >= start_char_i {
+      if chars[k].is_whitespace() {
+        start_lb = offs[k]
+        ws_start_i = Some(k)
+      } else {
+        break
+      }
+      if k == 0 {
+        break
+      }
+      k = k - 1
+    }
+
+    // Emit non-whitespace word segment.
+    if start_word < start_lb {
+      out.push((start_word, start_lb, false))
+    }
+
+    // Emit trailing whitespace as individual blank segments.
+    match ws_start_i {
+      None => ()
+      Some(i0) =>
+        for i in i0..<(end_char_i + 1) {
+          out.push((offs[i], offs[i] + lens[i], true))
+        }
+    }
+  }
+
+  // Collect linebreak boundaries from the analyzer.
+  let analyze = @moon_swash.analyze(chars.iter())
+  analyze.set_break_strength(@moon_swash.WordBreakStrength::Normal)
+  let out : Array[(Int, Int, Bool)] = []
+  let mut start_char_i = 0
+  let mut start_word = 0
+
+  // `Analyze` reports `Boundary::Line|Mandatory` at the character that begins a new segment
+  // (i.e. the break is *before* the current char). This matches UAX#14 `linebreaks()` behavior
+  // when interpreted as end positions.
+  for i in 0..<chars.length() {
+    match analyze.next() {
+      None => break
+      Some((_props, boundary)) =>
+        match boundary {
+          Line | Mandatory => {
+            let end_pos = offs[i]
+            emit_segment(
+              out,
+              chars,
+              offs,
+              lens,
+              start_char_i,
+              i - 1,
+              start_word,
+              end_pos,
+            )
+            start_char_i = i
+            start_word = end_pos
+          }
+          _ => ()
+        }
+    }
+  }
+
+  // Final segment (end-of-string).
+  emit_segment(
+    out,
+    chars,
+    offs,
+    lens,
+    start_char_i,
+    chars.length() - 1,
+    start_word,
+    s.length(),
+  )
   out
 }
 

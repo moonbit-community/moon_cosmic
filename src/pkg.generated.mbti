@@ -492,6 +492,7 @@ pub struct ShapeGlyph {
   x_offset : Float
   y_offset : Float
   font_id : Int
+  font_weight : Int
   glyph_id : Int
   metadata : Int
   level : Int

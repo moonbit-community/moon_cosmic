@@ -20,3 +20,25 @@ test "LayoutGlyph::physical computes CacheKey subpixel bins" {
   // 1.125 -> (1, One); 2.0 (truncated from 2.75) -> (2, Zero)
   inspect((p.cache_key.x_bin(), p.cache_key.y_bin()), content="(One, Zero)")
 }
+
+///|
+test "layout_from_shape propagates font_weight into CacheKey" {
+  let attrs = Attrs::new().weight(Weight::bold())
+  let attrs_list = AttrsList::new(attrs)
+  let text = "a"
+  let shape = ShapeLine::build(
+    ShapeLine::empty(),
+    text,
+    attrs_list,
+    Shaping::Basic,
+    4,
+  )
+  let lines = layout_from_shape(text, shape, 10.0F, 1.0F, None, Wrap::None)
+  let g = lines[0].glyphs[0]
+  inspect(g.font_weight, content="700")
+  let p = g.physical((0.0F, 0.0F), 1.0F)
+  inspect(
+    p.cache_key,
+    content="CacheKey{font_id=0, glyph_id=97, font_size_bits=1092616192, x_bin=Zero, y_bin=Zero, font_weight=700, flags=0}",
+  )
+}

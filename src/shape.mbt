@@ -31,6 +31,7 @@ pub struct ShapeGlyph {
   x_offset : Float
   y_offset : Float
   font_id : Int
+  font_weight : Int
   glyph_id : Int
   metadata : Int
   /// BiDi embedding level (LTR if divisible by 2).
@@ -57,6 +58,7 @@ pub fn ShapeGlyph::new(
     x_offset,
     y_offset,
     font_id,
+    font_weight: 400,
     glyph_id,
     metadata,
     level: 0,
@@ -195,6 +197,7 @@ pub fn ShapeLine::build(
       x_offset: 0.0F,
       y_offset: 0.0F,
       font_id: 0,
+      font_weight: attrs.weight_value().value(),
       glyph_id: code,
       metadata: attrs.metadata(),
       level: if levels.get(i) is Some(v) {
@@ -347,6 +350,7 @@ pub fn ShapeLine::build_with_font_system(
     shaper.shape_with(fn(gc) {
       let start = gc.source().start().reinterpret_as_int()
       let end = gc.source().end().reinterpret_as_int()
+      let attrs = attrs_list.get_span(start)
       let meta = gc.data().reinterpret_as_int()
       let lev = if levels.get(start) is Some(v) {
         v
@@ -364,6 +368,7 @@ pub fn ShapeLine::build_with_font_system(
           x_offset: Float::from_double(g.x()),
           y_offset: Float::from_double(g.y()),
           font_id,
+          font_weight: attrs.weight_value().value(),
           glyph_id: g.id().to_int(),
           metadata: meta,
           level: lev,
