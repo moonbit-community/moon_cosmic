@@ -127,6 +127,36 @@ fn detect_base_rtl(text : String) -> Bool {
 }
 
 ///|
+fn compute_bidi_levels(text : String, rtl : Bool) -> Array[Int] {
+  let base = if rtl { 1 } else { 0 }
+  let levels : Array[Int] = Array::makei(text.length(), _ => base)
+  for p in text.iter2() {
+    let idx = p.0
+    let ch = p.1
+    let props = @moon_swash.CharInfo::from_char(ch).properties()
+    let bidi = props.bidi_class()
+    let lev = if bidi_is_strong_rtl(bidi) {
+      1
+    } else if bidi_is_strong_ltr(bidi) {
+      if rtl {
+        2
+      } else {
+        0
+      }
+    } else {
+      base
+    }
+    let end = idx + ch.utf16_len()
+    let mut i = idx
+    while i < end && i < levels.length() {
+      levels.set(i, lev)
+      i = i + 1
+    }
+  }
+  levels
+}
+
+///|
 fn script_eq(a : @moon_swash.Script, b : @moon_swash.Script) -> Bool {
   a.to_opentype() == b.to_opentype()
 }
@@ -146,7 +176,7 @@ pub fn ShapeLine::build(
   tab_width : Int,
 ) -> ShapeLine {
   let rtl = shaping is Advanced && detect_base_rtl(text)
-  let level = if rtl { 1 } else { 0 }
+  let levels = compute_bidi_levels(text, rtl)
   let glyphs : Array[ShapeGlyph] = []
   let len = text.length()
   for i in 0..<len {
@@ -167,7 +197,11 @@ pub fn ShapeLine::build(
       font_id: 0,
       glyph_id: code,
       metadata: attrs.metadata(),
-      level,
+      level: if levels.get(i) is Some(v) {
+        v
+      } else {
+        0
+      },
     })
   }
   ShapeLine::{ rtl, glyphs }
@@ -224,7 +258,7 @@ pub fn ShapeLine::build_with_font_system(
   // size=1.0 so the returned advances/offsets are in "em" units (like upstream),
   // which are later multiplied by `font_size` during layout.
   let rtl = detect_base_rtl(text)
-  let level = if rtl { 1 } else { 0 }
+  let levels = compute_bidi_levels(text, rtl)
   let direction = if rtl {
     @shape.Direction::RightToLeft
   } else {
@@ -314,6 +348,13 @@ pub fn ShapeLine::build_with_font_system(
       let start = gc.source().start().reinterpret_as_int()
       let end = gc.source().end().reinterpret_as_int()
       let meta = gc.data().reinterpret_as_int()
+      let lev = if levels.get(start) is Some(v) {
+        v
+      } else if rtl {
+        1
+      } else {
+        0
+      }
       for g in gc.glyphs() {
         glyphs.push(ShapeGlyph::{
           start,
@@ -325,7 +366,7 @@ pub fn ShapeLine::build_with_font_system(
           font_id,
           glyph_id: g.id().to_int(),
           metadata: meta,
-          level,
+          level: lev,
         })
       }
     })
