@@ -33,6 +33,8 @@ pub struct ShapeGlyph {
   font_id : Int
   glyph_id : Int
   metadata : Int
+  /// BiDi embedding level (LTR if divisible by 2).
+  level : Int
 }
 
 ///|
@@ -57,6 +59,7 @@ pub fn ShapeGlyph::new(
     font_id,
     glyph_id,
     metadata,
+    level: 0,
   }
 }
 
@@ -143,6 +146,7 @@ pub fn ShapeLine::build(
   tab_width : Int,
 ) -> ShapeLine {
   let rtl = shaping is Advanced && detect_base_rtl(text)
+  let level = if rtl { 1 } else { 0 }
   let glyphs : Array[ShapeGlyph] = []
   let len = text.length()
   for i in 0..<len {
@@ -163,6 +167,7 @@ pub fn ShapeLine::build(
       font_id: 0,
       glyph_id: code,
       metadata: attrs.metadata(),
+      level,
     })
   }
   ShapeLine::{ rtl, glyphs }
@@ -219,6 +224,7 @@ pub fn ShapeLine::build_with_font_system(
   // size=1.0 so the returned advances/offsets are in "em" units (like upstream),
   // which are later multiplied by `font_size` during layout.
   let rtl = detect_base_rtl(text)
+  let level = if rtl { 1 } else { 0 }
   let direction = if rtl {
     @shape.Direction::RightToLeft
   } else {
@@ -319,6 +325,7 @@ pub fn ShapeLine::build_with_font_system(
           font_id,
           glyph_id: g.id().to_int(),
           metadata: meta,
+          level,
         })
       }
     })

@@ -494,6 +494,7 @@ pub struct ShapeGlyph {
   font_id : Int
   glyph_id : Int
   metadata : Int
+  level : Int
 }
 pub fn ShapeGlyph::new(Int, Int, Float, Float, Float, Float, Int, Int, Int) -> Self
 

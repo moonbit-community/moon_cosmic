@@ -202,7 +202,6 @@ fn build_layout_line_from_shape(
   cell_w : Float,
 ) -> LayoutLine {
   let glyphs : Array[LayoutGlyph] = []
-  let level = if shape.rtl { 1 } else { 0 }
   // Compute the source text span for this visual line from glyph coverage.
   let mut text_start = shape.glyphs[glyph_start].start
   let mut text_end = shape.glyphs[glyph_start].end
@@ -231,7 +230,7 @@ fn build_layout_line_from_shape(
         x,
         y: 0.0F,
         w,
-        level,
+        level: g.level,
         line_height_opt: None,
         x_offset: g.x_offset,
         y_offset: g.y_offset,
@@ -259,7 +258,7 @@ fn build_layout_line_from_shape(
         x,
         y: 0.0F,
         w,
-        level,
+        level: g.level,
         line_height_opt: None,
         x_offset: g.x_offset,
         y_offset: g.y_offset,
