@@ -39,6 +39,8 @@ pub fn word_indices_uax29(String) -> Array[(Int, Int)]
 
 pub fn word_indices_whitespace(String) -> Array[(Int, Int)]
 
+pub fn wrap_word_segments(String) -> Array[(Int, Int, Bool)]
+
 // Errors
 
 // Types and methods
@@ -362,6 +364,7 @@ pub struct LayoutGlyph {
   x : Float
   y : Float
   w : Float
+  level : Int
   line_height_opt : Float?
   x_offset : Float
   y_offset : Float
