@@ -433,7 +433,7 @@ pub fn BufferLine::append(self : BufferLine, other : BufferLine) -> BufferLine {
   let other_text = other.text
   let other_len = other_text.length()
   let mut attrs_list = self.attrs_list
-  if other.attrs_list.defaults().metadata != attrs_list.defaults().metadata {
+  if other.attrs_list.defaults() != attrs_list.defaults() {
     attrs_list = attrs_list.add_span(
       len,
       len + other_len,

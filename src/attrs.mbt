@@ -131,6 +131,86 @@ pub struct Weight {
 }
 
 ///|
+/// Metrics, but implementing Eq and Hash using u32 representation of f32.
+///
+/// This mirrors upstream `cosmic-text` CacheMetrics, enabling per-span metrics
+/// overrides (font size / line height) while keeping Attrs hashable.
+pub struct CacheMetrics {
+  font_size_bits : UInt
+  line_height_bits : UInt
+}
+
+///|
+fn attrs_u32_from_be_bytes(b : Bytes) -> UInt {
+  let b0 = if b.get(0) is Some(v) { v } else { 0x00 }
+  let b1 = if b.get(1) is Some(v) { v } else { 0x00 }
+  let b2 = if b.get(2) is Some(v) { v } else { 0x00 }
+  let b3 = if b.get(3) is Some(v) { v } else { 0x00 }
+  let u0 = b0.to_int().reinterpret_as_uint()
+  let u1 = b1.to_int().reinterpret_as_uint()
+  let u2 = b2.to_int().reinterpret_as_uint()
+  let u3 = b3.to_int().reinterpret_as_uint()
+  (u0 << 24) | (u1 << 16) | (u2 << 8) | u3
+}
+
+///|
+fn attrs_f32_from_bits(bits : UInt) -> Float {
+  Float::reinterpret_from_uint(bits)
+}
+
+///|
+fn float_to_bits(v : Float) -> UInt {
+  attrs_u32_from_be_bytes(Float::to_be_bytes(v))
+}
+
+///|
+pub fn CacheMetrics::from_metrics(metrics : Metrics) -> CacheMetrics {
+  CacheMetrics::{
+    font_size_bits: float_to_bits(metrics.font_size),
+    line_height_bits: float_to_bits(metrics.line_height),
+  }
+}
+
+///|
+pub fn CacheMetrics::to_metrics(self : CacheMetrics) -> Metrics {
+  Metrics::new(
+    attrs_f32_from_bits(self.font_size_bits),
+    attrs_f32_from_bits(self.line_height_bits),
+  )
+}
+
+///|
+pub fn CacheMetrics::font_size(self : CacheMetrics) -> Float {
+  attrs_f32_from_bits(self.font_size_bits)
+}
+
+///|
+pub fn CacheMetrics::line_height(self : CacheMetrics) -> Float {
+  attrs_f32_from_bits(self.line_height_bits)
+}
+
+///|
+pub impl Eq for CacheMetrics with equal(self, other) {
+  self.font_size_bits == other.font_size_bits &&
+  self.line_height_bits == other.line_height_bits
+}
+
+///|
+pub impl Hash for CacheMetrics with hash_combine(self, hasher) {
+  hasher.combine_uint(self.font_size_bits)
+  hasher.combine_uint(self.line_height_bits)
+}
+
+///|
+pub impl Show for CacheMetrics with output(self, logger) {
+  logger.write_string("CacheMetrics{font_size_bits=")
+  logger.write_string(self.font_size_bits.to_string())
+  logger.write_string(", line_height_bits=")
+  logger.write_string(self.line_height_bits.to_string())
+  logger.write_string("}")
+}
+
+///|
 pub fn Weight::new(value : Int) -> Weight {
   Weight::{ value, }
 }
@@ -170,6 +250,7 @@ pub struct Attrs {
   metadata : Int
   family : Family
   weight : Weight
+  metrics_opt : CacheMetrics?
 }
 
 ///|
@@ -179,7 +260,12 @@ pub fn Attrs::new() -> Attrs {
 
 ///|
 pub fn Attrs::with_metadata(metadata : Int) -> Attrs {
-  Attrs::{ metadata, family: Family::SansSerif, weight: Weight::normal() }
+  Attrs::{
+    metadata,
+    family: Family::SansSerif,
+    weight: Weight::normal(),
+    metrics_opt: None,
+  }
 }
 
 ///|
@@ -198,6 +284,21 @@ pub fn Attrs::weight(self : Attrs, weight : Weight) -> Attrs {
 }
 
 ///|
+/// Set Metrics, overriding values in Buffer for this span.
+pub fn Attrs::metrics(self : Attrs, metrics : Metrics) -> Attrs {
+  Attrs::{ ..self, metrics_opt: Some(CacheMetrics::from_metrics(metrics)) }
+}
+
+///|
+/// Return optional Metrics override.
+pub fn Attrs::metrics_opt(self : Attrs) -> Metrics? {
+  match self.metrics_opt {
+    Option::None => Option::None
+    Option::Some(cm) => Option::Some(cm.to_metrics())
+  }
+}
+
+///|
 pub fn Attrs::family_value(self : Attrs) -> Family {
   self.family
 }
@@ -211,7 +312,8 @@ pub fn Attrs::weight_value(self : Attrs) -> Weight {
 pub impl Eq for Attrs with equal(self, other) {
   self.metadata == other.metadata &&
   self.family == other.family &&
-  self.weight == other.weight
+  self.weight == other.weight &&
+  self.metrics_opt == other.metrics_opt
 }
 
 ///|
@@ -219,6 +321,13 @@ pub impl Hash for Attrs with hash_combine(self, hasher) {
   hasher.combine_int(self.metadata)
   self.family.hash_combine(hasher)
   self.weight.hash_combine(hasher)
+  match self.metrics_opt {
+    Option::None => hasher.combine_int(0)
+    Option::Some(cm) => {
+      hasher.combine_int(1)
+      cm.hash_combine(hasher)
+    }
+  }
 }
 
 ///|

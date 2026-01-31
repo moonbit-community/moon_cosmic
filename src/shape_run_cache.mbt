@@ -69,6 +69,15 @@ pub impl Hash for ShapeRunKey with hash_combine(self, hasher) {
     Monospace => hasher.combine_int(5)
   }
   hasher.combine_int(self.default_attrs.weight_value().value())
+  match self.default_attrs.metrics_opt() {
+    Option::None => hasher.combine_int(0)
+    Option::Some(m) => {
+      hasher.combine_int(1)
+      // Hash f32 bits (stable) via CacheMetrics.
+      let cm = CacheMetrics::from_metrics(m)
+      cm.hash_combine(hasher)
+    }
+  }
   hasher.combine_int(self.attrs_spans.length())
   for s in self.attrs_spans {
     hasher.combine_int(s.0)
@@ -86,6 +95,14 @@ pub impl Hash for ShapeRunKey with hash_combine(self, hasher) {
       Monospace => hasher.combine_int(5)
     }
     hasher.combine_int(s.2.weight_value().value())
+    match s.2.metrics_opt() {
+      Option::None => hasher.combine_int(0)
+      Option::Some(m) => {
+        hasher.combine_int(1)
+        let cm = CacheMetrics::from_metrics(m)
+        cm.hash_combine(hasher)
+      }
+    }
   }
 }
 

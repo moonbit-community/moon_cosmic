@@ -82,10 +82,13 @@ pub struct Attrs {
   metadata : Int
   family : Family
   weight : Weight
+  metrics_opt : CacheMetrics?
 }
 pub fn Attrs::family(Self, Family) -> Self
 pub fn Attrs::family_value(Self) -> Family
 pub fn Attrs::metadata(Self) -> Int
+pub fn Attrs::metrics(Self, Metrics) -> Self
+pub fn Attrs::metrics_opt(Self) -> Metrics?
 pub fn Attrs::new() -> Self
 pub fn Attrs::weight(Self, Weight) -> Self
 pub fn Attrs::weight_value(Self) -> Weight
@@ -213,6 +216,18 @@ pub impl Eq for CacheKey
 pub impl Hash for CacheKey
 pub impl Show for CacheKey
 
+pub struct CacheMetrics {
+  font_size_bits : UInt
+  line_height_bits : UInt
+}
+pub fn CacheMetrics::font_size(Self) -> Float
+pub fn CacheMetrics::from_metrics(Metrics) -> Self
+pub fn CacheMetrics::line_height(Self) -> Float
+pub fn CacheMetrics::to_metrics(Self) -> Metrics
+pub impl Eq for CacheMetrics
+pub impl Hash for CacheMetrics
+pub impl Show for CacheMetrics
+
 pub(all) enum Cached[T] {
   Empty
   Unused(T)
@@ -326,6 +341,7 @@ pub struct FontSystem {
 }
 pub fn FontSystem::fonts(Self) -> Array[FontEntry]
 pub fn FontSystem::get_font(Self, Int) -> @moon_swash.FontRef?
+pub fn FontSystem::get_font_entry(Self, Int) -> FontEntry?
 pub fn FontSystem::load_font_data(Self, Bytes) -> Self
 pub fn FontSystem::locale(Self) -> String
 pub fn FontSystem::new() -> Self
@@ -496,6 +512,7 @@ pub struct ShapeGlyph {
   glyph_id : Int
   metadata : Int
   level : Int
+  metrics_opt : Metrics?
 }
 pub fn ShapeGlyph::new(Int, Int, Float, Float, Float, Float, Int, Int, Int) -> Self
 

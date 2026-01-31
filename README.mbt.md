@@ -74,6 +74,17 @@ fn draw_demo(font_bytes : Bytes) -> Unit {
 }
 ```
 
+## Integration Notes
+
+### Subpixel Cache Keys (Atlas Caching)
+
+Downstream atlas caches should key by `PhysicalGlyph.cache_key` (includes `x_bin`/`y_bin`), not only `(glyph_id, x, y)`.
+
+### Font Collections (TTC / Multi-face)
+
+`FontSystem::load_font_data` may load multiple faces from one file/collection. Each face gets its own `font_id`.
+Use `FontSystem::get_font(font_id)` / `FontSystem::get_font_entry(font_id)` to rasterize the correct face for a given `LayoutGlyph`.
+
 ## Dev Workflow
 
 Common commands:

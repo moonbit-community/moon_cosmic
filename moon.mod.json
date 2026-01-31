@@ -1,14 +1,14 @@
 {
   "name": "Milky2018/moon_cosmic",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "deps": {
     "Milky2018/moon_swash": "0.1.0",
     "Milky2018/moon_zeno": "0.1.0"
   },
   "readme": "README.mbt.md",
-  "repository": "",
+  "repository": "https://github.com/moonbit-community/moon_cosmic",
   "license": "Apache-2.0",
-  "keywords": [],
-  "description": "",
+  "keywords": ["text", "layout", "bidi", "shaping", "swash", "cosmic-text"],
+  "description": "MoonBit port of cosmic-text (text shaping, layout, and editor primitives) built on moon_swash.",
   "source": "src"
 }

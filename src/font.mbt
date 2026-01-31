@@ -248,3 +248,15 @@ pub fn FontSystem::get_font(
   }
   Some(self.fonts[font_id].font)
 }
+
+///|
+/// Get the full FontEntry for a font_id (useful for downstream rasterization with TTC collections).
+pub fn FontSystem::get_font_entry(
+  self : FontSystem,
+  font_id : Int,
+) -> FontEntry? {
+  if font_id < 0 || font_id >= self.fonts.length() {
+    return None
+  }
+  Some(self.fonts[font_id])
+}

@@ -36,6 +36,8 @@ pub struct ShapeGlyph {
   metadata : Int
   /// BiDi embedding level (LTR if divisible by 2).
   level : Int
+  /// Optional Metrics override (font size / line height) for this glyph's span.
+  metrics_opt : Metrics?
 }
 
 ///|
@@ -62,6 +64,7 @@ pub fn ShapeGlyph::new(
     glyph_id,
     metadata,
     level: 0,
+    metrics_opt: None,
   }
 }
 
@@ -205,6 +208,7 @@ pub fn ShapeLine::build(
       } else {
         0
       },
+      metrics_opt: attrs.metrics_opt(),
     })
   }
   ShapeLine::{ rtl, glyphs }
@@ -372,6 +376,7 @@ pub fn ShapeLine::build_with_font_system(
           glyph_id: g.id().to_int(),
           metadata: meta,
           level: lev,
+          metrics_opt: attrs.metrics_opt(),
         })
       }
     })

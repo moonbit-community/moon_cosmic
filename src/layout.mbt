@@ -256,7 +256,7 @@ fn build_layout_line_from_shape(
   shape : ShapeLine,
   glyph_start : Int,
   glyph_end : Int,
-  font_size : Float,
+  default_font_size : Float,
   cell_w : Float,
 ) -> LayoutLine {
   let glyphs : Array[LayoutGlyph] = []
@@ -279,12 +279,34 @@ fn build_layout_line_from_shape(
   }
   let visual = reorder_bidi_glyphs(logical)
   let mut x = 0.0F
+  let mut max_line_height : Float? = Option::None
   for g in visual {
-    let w = g.x_advance * cell_w
+    let glyph_font_size = match g.metrics_opt {
+      Option::None => default_font_size
+      Option::Some(m) => m.font_size
+    }
+    let scale = if default_font_size == 0.0F {
+      1.0F
+    } else {
+      glyph_font_size / default_font_size
+    }
+    let w = g.x_advance * cell_w * scale
+    let glyph_line_height_opt = match g.metrics_opt {
+      Option::None => Option::None
+      Option::Some(m) => Option::Some(m.line_height)
+    }
+    match (max_line_height, glyph_line_height_opt) {
+      (Option::None, Option::Some(h)) => max_line_height = Option::Some(h)
+      (Option::Some(a), Option::Some(b)) =>
+        if b > a {
+          max_line_height = Option::Some(b)
+        }
+      _ => ()
+    }
     glyphs.push(LayoutGlyph::{
       start: g.start,
       end: g.end,
-      font_size,
+      font_size: glyph_font_size,
       font_id: g.font_id,
       font_weight: g.font_weight,
       glyph_id: g.glyph_id,
@@ -292,7 +314,7 @@ fn build_layout_line_from_shape(
       y: 0.0F,
       w,
       level: g.level,
-      line_height_opt: None,
+      line_height_opt: glyph_line_height_opt,
       x_offset: g.x_offset,
       y_offset: g.y_offset,
       color_opt: None,
@@ -307,7 +329,7 @@ fn build_layout_line_from_shape(
     w: x,
     max_ascent: 0.0F,
     max_descent: 0.0F,
-    line_height_opt: None,
+    line_height_opt: max_line_height,
     glyphs,
   }
 }

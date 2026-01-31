@@ -414,7 +414,6 @@ pub struct LayoutRun {
 ///|
 pub fn Buffer::layout_runs(self : Buffer) -> Iter[LayoutRun] {
   let runs : Array[LayoutRun] = []
-  let line_height = self.metrics.line_height
   let mut y = 0.0F
   let n = self.lines.length()
   for i in 0..<n {
@@ -423,6 +422,7 @@ pub fn Buffer::layout_runs(self : Buffer) -> Iter[LayoutRun] {
     let rtl = if shape_opt is Some(s) { s.rtl } else { false }
     match line.layout_opt() {
       None => {
+        let line_height = self.metrics.line_height
         runs.push(LayoutRun::{
           line_i: i,
           line_y: y,
@@ -437,6 +437,7 @@ pub fn Buffer::layout_runs(self : Buffer) -> Iter[LayoutRun] {
       }
       Some(layout_lines) =>
         if layout_lines.length() == 0 {
+          let line_height = self.metrics.line_height
           runs.push(LayoutRun::{
             line_i: i,
             line_y: y,
@@ -450,6 +451,11 @@ pub fn Buffer::layout_runs(self : Buffer) -> Iter[LayoutRun] {
           y = y + line_height
         } else {
           for l in layout_lines {
+            let line_height = if l.line_height_opt is Some(h) {
+              h
+            } else {
+              self.metrics.line_height
+            }
             runs.push(LayoutRun::{
               line_i: i,
               line_y: y,
@@ -1116,7 +1122,12 @@ pub fn Buffer::draw_with_font_system(
               },
             )
           }
-          y = y + buffer.metrics.line_height
+          let line_height = if layout_line.line_height_opt is Some(h) {
+            h
+          } else {
+            buffer.metrics.line_height
+          }
+          y = y + line_height
         }
     }
   }
