@@ -248,11 +248,16 @@ fn abs_int(v : Int) -> Int {
 struct FontCachedCodepointSupportInfo {
   supported : Array[UInt]
   not_supported : Array[UInt]
+  mut charmap_opt : @moon_swash.Charmap?
 }
 
 ///|
 fn FontCachedCodepointSupportInfo::new() -> FontCachedCodepointSupportInfo {
-  FontCachedCodepointSupportInfo::{ supported: [], not_supported: [] }
+  FontCachedCodepointSupportInfo::{
+    supported: [],
+    not_supported: [],
+    charmap_opt: None,
+  }
 }
 
 ///|
@@ -375,7 +380,14 @@ fn cached_codepoint_has_support(
     return false
   }
 
-  let cm = entry.charmap_proxy.materialize(entry.font)
+  let cm = match info.charmap_opt {
+    Some(cached) => cached
+    None => {
+      let built = entry.charmap_proxy.materialize(entry.font)
+      info.charmap_opt = Some(built)
+      built
+    }
+  }
   let ok = cm.map(codepoint) != 0
   if ok {
     if supported_insert_pos != CODEPOINT_SUPPORTED_PER_FONT_LIMIT {
