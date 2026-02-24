@@ -68,7 +68,10 @@ pub struct FontSystem {
 const FONT_MATCHES_CACHE_SIZE_LIMIT : Int = 256
 
 ///|
-const CODEPOINT_SUPPORT_CACHE_SIZE_LIMIT : Int = 8192
+const CODEPOINT_SUPPORTED_PER_FONT_LIMIT : Int = 512
+
+///|
+const CODEPOINT_NOT_SUPPORTED_PER_FONT_LIMIT : Int = 1024
 
 ///|
 pub fn FontSystem::new() -> FontSystem {
@@ -205,9 +208,6 @@ fn font_maps_codepoint(
   entry : FontEntry,
   codepoint : UInt,
 ) -> Bool {
-  if fs.codepoint_support_cache.length() >= CODEPOINT_SUPPORT_CACHE_SIZE_LIMIT {
-    fs.codepoint_support_cache.clear()
-  }
   let key = FontCodepointKey::{ font_id: entry.id, codepoint }
   match fs.codepoint_support_cache.get(key) {
     Some(ok) => ok
@@ -215,6 +215,42 @@ fn font_maps_codepoint(
       let cm = entry.charmap_proxy.materialize(entry.font)
       let ok = cm.map(codepoint) != 0
       fs.codepoint_support_cache.set(key, ok)
+      let entries = fs.codepoint_support_cache.to_array()
+      let mut supported_count = 0
+      let mut not_supported_count = 0
+      for e in entries {
+        let (k, v) = e
+        if k.font_id != entry.id {
+          continue
+        }
+        if v {
+          supported_count = supported_count + 1
+        } else {
+          not_supported_count = not_supported_count + 1
+        }
+      }
+      let mut drop_supported = supported_count -
+        CODEPOINT_SUPPORTED_PER_FONT_LIMIT
+      let mut drop_not_supported = not_supported_count -
+        CODEPOINT_NOT_SUPPORTED_PER_FONT_LIMIT
+      if drop_supported > 0 || drop_not_supported > 0 {
+        for e in entries {
+          let (k, v) = e
+          if k.font_id != entry.id {
+            continue
+          }
+          if v && drop_supported > 0 {
+            fs.codepoint_support_cache.remove(k)
+            drop_supported = drop_supported - 1
+          } else if !v && drop_not_supported > 0 {
+            fs.codepoint_support_cache.remove(k)
+            drop_not_supported = drop_not_supported - 1
+          }
+          if drop_supported <= 0 && drop_not_supported <= 0 {
+            break
+          }
+        }
+      }
       ok
     }
   }
