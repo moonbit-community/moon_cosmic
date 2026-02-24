@@ -185,6 +185,14 @@ fn entry_has_family_name(entry : FontEntry, family_name : String) -> Bool {
 }
 
 ///|
+fn entry_in_forbidden_fallback(entry : FontEntry) -> Bool {
+  // Reference uses platform-specific forbidden fallback lists.
+  // We currently model the strictest practical case (`.LastResort`) to avoid
+  // selecting it during generic fallback stages.
+  entry_has_family_name(entry, ".LastResort")
+}
+
+///|
 /// Load font data (TTF/OTF/TTC bytes) into the system.
 ///
 /// If the bytes do not parse as a font/collection, this is a no-op.
@@ -278,6 +286,32 @@ fn family_matches(entry : FontEntry, family : Family) -> Bool {
     Monospace => entry.is_monospace
     _ => true
   }
+}
+
+///|
+fn move_forbidden_candidates_to_end(
+  fs : FontSystem,
+  family : Family,
+  ids : Array[Int],
+) -> Array[Int] {
+  let head : Array[Int] = []
+  let tail : Array[Int] = []
+  for id in ids {
+    if id < 0 || id >= fs.fonts.length() {
+      continue
+    }
+    let entry = fs.fonts[id]
+    // Keep explicitly requested family candidates in front.
+    if entry_in_forbidden_fallback(entry) && !family_matches(entry, family) {
+      tail.push(id)
+    } else {
+      head.push(id)
+    }
+  }
+  for id in tail {
+    head.push(id)
+  }
+  head
 }
 
 ///|
@@ -509,11 +543,11 @@ fn build_font_matches(fs : FontSystem, attrs : Attrs) -> Array[Int] {
   }
 
   match preferred {
-    None => ids
+    None => move_forbidden_candidates_to_end(fs, family, ids)
     Some(best) => {
       let pid = best.0
       if ids.length() == 0 || ids[0] == pid {
-        return ids
+        return move_forbidden_candidates_to_end(fs, family, ids)
       }
       let reordered : Array[Int] = [pid]
       for id in ids {
@@ -521,7 +555,7 @@ fn build_font_matches(fs : FontSystem, attrs : Attrs) -> Array[Int] {
           reordered.push(id)
         }
       }
-      reordered
+      move_forbidden_candidates_to_end(fs, family, reordered)
     }
   }
 }
