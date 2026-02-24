@@ -177,6 +177,7 @@ pub fn FontSystem::load_font_data(
         let id = fonts.length()
         let family_name = font_family_name(f, locale)
         let postscript_name = font_postscript_name(f)
+        let not_emoji = !string_contains_ascii(postscript_name, "Emoji")
         let metrics = f.metrics([])
         fonts.push(FontEntry::{
           id,
@@ -185,8 +186,8 @@ pub fn FontSystem::load_font_data(
           font: f,
           charmap_proxy: @moon_swash.CharmapProxy::from_font(f),
           attributes: f.attributes(),
-          is_monospace: metrics.is_monospace,
-          not_emoji: !string_contains_ascii(postscript_name, "Emoji"),
+          is_monospace: metrics.is_monospace && not_emoji,
+          not_emoji,
         })
       }
       // New fonts change candidate ordering; clear match cache.
