@@ -161,6 +161,30 @@ fn string_contains_ascii(haystack : String, needle : String) -> Bool {
 }
 
 ///|
+fn is_family_name_id(id : @moon_swash.StringId) -> Bool {
+  match id {
+    @moon_swash.StringId::Family
+    | @moon_swash.StringId::TypographicFamily
+    | @moon_swash.StringId::WwsFamily => true
+    _ => false
+  }
+}
+
+///|
+fn entry_has_family_name(entry : FontEntry, family_name : String) -> Bool {
+  if entry.family_name == family_name {
+    return true
+  }
+  let strings = entry.font.localized_strings()
+  for s in strings.iter() {
+    if is_family_name_id(s.id()) && s.to_string() == family_name {
+      return true
+    }
+  }
+  false
+}
+
+///|
 /// Load font data (TTF/OTF/TTC bytes) into the system.
 ///
 /// If the bytes do not parse as a font/collection, this is a no-op.
@@ -250,7 +274,7 @@ pub impl Hash for FontMatchAttrs with hash_combine(self, hasher) {
 ///|
 fn family_matches(entry : FontEntry, family : Family) -> Bool {
   match family {
-    Name(name) => entry.family_name == name
+    Name(name) => entry_has_family_name(entry, name)
     Monospace => entry.is_monospace
     _ => true
   }

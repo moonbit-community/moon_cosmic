@@ -137,6 +137,24 @@ fn mk_min_font_cmap4_single(cp_hi_byte : Byte, cp_lo_byte : Byte) -> Bytes {
 }
 
 ///|
+fn find_alt_family_name(entry : FontEntry) -> String? {
+  let strings = entry.font().localized_strings()
+  let base = entry.family_name()
+  for s in strings.iter() {
+    let id = s.id()
+    if id is @moon_swash.StringId::Family ||
+      id is @moon_swash.StringId::TypographicFamily ||
+      id is @moon_swash.StringId::WwsFamily {
+      let v = s.to_string()
+      if v != base {
+        return Some(v)
+      }
+    }
+  }
+  None
+}
+
+///|
 test "FontSystem.resolve_for_codepoint prefers a font that supports the codepoint" {
   // Font0 supports U+0041 ('A'); Font1 supports U+0042 ('B').
   let a = mk_min_font_cmap4_single(b'\x00', b'\x41')
@@ -184,4 +202,22 @@ test "FontSystem.resolve_for_codepoint remains stable across cache boundary clea
   }
   inspect(fs.resolve_for_codepoint(attrs, 0x41U), content="Some(0)")
   inspect(fs.resolve_for_codepoint(attrs, 0x42U), content="Some(1)")
+}
+
+///|
+test "FontSystem.select_family Name matches family aliases from name table" {
+  let fs = FontSystem::new().load_font_data(test_font_inter_regular_ttf())
+  match fs.get_font_entry(0) {
+    None => inspect(true, content="false")
+    Some(entry) =>
+      match find_alt_family_name(entry) {
+        None =>
+          inspect(
+            fs.select_family(Name(entry.family_name())),
+            content="Some(0)",
+          )
+        Some(family_alias) =>
+          inspect(fs.select_family(Name(family_alias)), content="Some(0)")
+      }
+  }
 }
