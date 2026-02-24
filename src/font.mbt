@@ -73,7 +73,10 @@ pub struct FontSystem {
   locale : String
   fonts : Array[FontEntry]
   font_matches_cache : @hashmap.HashMap[FontMatchAttrs, Array[Int]]
-  codepoint_support_cache : @hashmap.HashMap[FontCodepointKey, Bool]
+  codepoint_support_cache : @hashmap.HashMap[
+    Int,
+    FontCachedCodepointSupportInfo,
+  ]
 }
 
 ///|
@@ -209,20 +212,14 @@ fn abs_int(v : Int) -> Int {
 }
 
 ///|
-pub struct FontCodepointKey {
-  font_id : Int
-  codepoint : UInt
+struct FontCachedCodepointSupportInfo {
+  supported : Array[UInt]
+  not_supported : Array[UInt]
 }
 
 ///|
-pub impl Eq for FontCodepointKey with equal(self, other) {
-  self.font_id == other.font_id && self.codepoint == other.codepoint
-}
-
-///|
-pub impl Hash for FontCodepointKey with hash_combine(self, hasher) {
-  hasher.combine_int(self.font_id)
-  hasher.combine_uint(self.codepoint)
+fn FontCachedCodepointSupportInfo::new() -> FontCachedCodepointSupportInfo {
+  FontCachedCodepointSupportInfo::{ supported: [], not_supported: [] }
 }
 
 ///|
@@ -264,52 +261,73 @@ fn font_maps_codepoint(
   entry : FontEntry,
   codepoint : UInt,
 ) -> Bool {
-  let key = FontCodepointKey::{ font_id: entry.id, codepoint }
-  match fs.codepoint_support_cache.get(key) {
-    Some(ok) => ok
+  match fs.codepoint_support_cache.get(entry.id) {
+    Some(info) => {
+      let ok = cached_codepoint_has_support(info, entry, codepoint)
+      fs.codepoint_support_cache.set(entry.id, info)
+      ok
+    }
     None => {
-      let cm = entry.charmap_proxy.materialize(entry.font)
-      let ok = cm.map(codepoint) != 0
-      fs.codepoint_support_cache.set(key, ok)
-      let entries = fs.codepoint_support_cache.to_array()
-      let mut supported_count = 0
-      let mut not_supported_count = 0
-      for e in entries {
-        let (k, v) = e
-        if k.font_id != entry.id {
-          continue
-        }
-        if v {
-          supported_count = supported_count + 1
-        } else {
-          not_supported_count = not_supported_count + 1
-        }
-      }
-      let mut drop_supported = supported_count -
-        CODEPOINT_SUPPORTED_PER_FONT_LIMIT
-      let mut drop_not_supported = not_supported_count -
-        CODEPOINT_NOT_SUPPORTED_PER_FONT_LIMIT
-      if drop_supported > 0 || drop_not_supported > 0 {
-        for e in entries {
-          let (k, v) = e
-          if k.font_id != entry.id {
-            continue
-          }
-          if v && drop_supported > 0 {
-            fs.codepoint_support_cache.remove(k)
-            drop_supported = drop_supported - 1
-          } else if !v && drop_not_supported > 0 {
-            fs.codepoint_support_cache.remove(k)
-            drop_not_supported = drop_not_supported - 1
-          }
-          if drop_supported <= 0 && drop_not_supported <= 0 {
-            break
-          }
-        }
-      }
+      let info = FontCachedCodepointSupportInfo::new()
+      let ok = cached_codepoint_has_support(info, entry, codepoint)
+      fs.codepoint_support_cache.set(entry.id, info)
       ok
     }
   }
+}
+
+///|
+fn sorted_search_uint(arr : Array[UInt], value : UInt) -> (Bool, Int) {
+  let mut low = 0
+  let mut high = arr.length()
+  while low < high {
+    let mid = low + (high - low) / 2
+    let cur = arr[mid]
+    if cur == value {
+      return (true, mid)
+    }
+    if cur < value {
+      low = mid + 1
+    } else {
+      high = mid
+    }
+  }
+  (false, low)
+}
+
+///|
+fn cached_codepoint_has_support(
+  info : FontCachedCodepointSupportInfo,
+  entry : FontEntry,
+  codepoint : UInt,
+) -> Bool {
+  let (supported_hit, supported_insert_pos) = sorted_search_uint(
+    info.supported,
+    codepoint,
+  )
+  if supported_hit {
+    return true
+  }
+  let (not_supported_hit, not_supported_insert_pos) = sorted_search_uint(
+    info.not_supported,
+    codepoint,
+  )
+  if not_supported_hit {
+    return false
+  }
+
+  let cm = entry.charmap_proxy.materialize(entry.font)
+  let ok = cm.map(codepoint) != 0
+  if ok {
+    if supported_insert_pos != CODEPOINT_SUPPORTED_PER_FONT_LIMIT {
+      info.supported.insert(supported_insert_pos, codepoint)
+      info.supported.truncate(CODEPOINT_SUPPORTED_PER_FONT_LIMIT)
+    }
+  } else if not_supported_insert_pos != CODEPOINT_NOT_SUPPORTED_PER_FONT_LIMIT {
+    info.not_supported.insert(not_supported_insert_pos, codepoint)
+    info.not_supported.truncate(CODEPOINT_NOT_SUPPORTED_PER_FONT_LIMIT)
+  }
+  ok
 }
 
 ///|
@@ -383,7 +401,8 @@ fn better_font_match(
   let best_weight = best.5
   let best_stretch = best.6
   if cand_not_emoji != best_not_emoji {
-    return cand_not_emoji
+    // Keep the same ordering semantics as reference `FontMatchKey` derived Ord.
+    return !cand_not_emoji
   }
   if cand_wdiff != best_wdiff {
     return cand_wdiff < best_wdiff
