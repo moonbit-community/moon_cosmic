@@ -162,3 +162,13 @@ test "FontSystem.select_family returns a generic-family fallback when fonts exis
   inspect(fs.select_family(Serif), content="Some(0)")
   inspect(fs.select_family(Name("missing")), content="None")
 }
+
+///|
+test "FontSystem.font_matches is stable across cache hits" {
+  let a = mk_min_font_cmap4_single(b'\x00', b'\x41')
+  let b = mk_min_font_cmap4_single(b'\x00', b'\x42')
+  let fs = FontSystem::new().load_font_data(a).load_font_data(b)
+  let attrs = Attrs::new()
+  inspect(fs.font_matches(attrs), content="[0, 1]")
+  inspect(fs.font_matches(attrs), content="[0, 1]")
+}

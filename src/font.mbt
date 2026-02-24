@@ -288,6 +288,12 @@ fn get_font_matches(fs : FontSystem, attrs : Attrs) -> Array[Int] {
 }
 
 ///|
+/// Get ordered font match candidates for attrs (cached).
+pub fn FontSystem::font_matches(self : FontSystem, attrs : Attrs) -> Array[Int] {
+  get_font_matches(self, attrs)
+}
+
+///|
 fn select_family_with_weight(
   fs : FontSystem,
   family : Family,

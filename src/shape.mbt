@@ -387,6 +387,16 @@ fn merge_fallback_glyphs(
 }
 
 ///|
+fn int_array_contains(ids : Array[Int], id : Int) -> Bool {
+  for x in ids {
+    if x == id {
+      return true
+    }
+  }
+  false
+}
+
+///|
 fn shape_run_with_font(
   font_system : FontSystem,
   attrs_list : AttrsList,
@@ -667,8 +677,14 @@ pub fn ShapeLine::build_with_font_system(
     let mut run_glyphs = default_glyphs
     let missing = default_missing
     if missing.length() > 0 {
-      for entry in font_system.fonts() {
-        let alt_font_id = entry.id()
+      let run_start = if run_tokens.length() == 0 {
+        0
+      } else {
+        run_tokens[0].offset().reinterpret_as_int()
+      }
+      let run_attrs = attrs_for_position(attrs_list, run_start, text.length())
+      let ordered = font_system.font_matches(run_attrs)
+      for alt_font_id in ordered {
         if alt_font_id == run_font_id {
           continue
         }
@@ -689,6 +705,33 @@ pub fn ShapeLine::build_with_font_system(
         )
         if missing.length() == 0 {
           break
+        }
+      }
+      if missing.length() > 0 {
+        for entry in font_system.fonts() {
+          let alt_font_id = entry.id()
+          if alt_font_id == run_font_id ||
+            int_array_contains(ordered, alt_font_id) {
+            continue
+          }
+          let (fb_glyphs, fb_missing) = shape_run_with_font(
+            font_system,
+            attrs_list,
+            levels,
+            text.length(),
+            rtl,
+            run_rtl,
+            cx,
+            script,
+            run_tokens,
+            alt_font_id,
+          )
+          run_glyphs = merge_fallback_glyphs(
+            run_glyphs, missing, fb_glyphs, fb_missing,
+          )
+          if missing.length() == 0 {
+            break
+          }
         }
       }
     }

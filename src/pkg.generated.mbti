@@ -357,6 +357,7 @@ pub struct FontSystem {
   font_matches_cache : @hashmap.HashMap[FontMatchAttrs, Array[Int]]
   codepoint_support_cache : @hashmap.HashMap[FontCodepointKey, Bool]
 }
+pub fn FontSystem::font_matches(Self, Attrs) -> Array[Int]
 pub fn FontSystem::fonts(Self) -> Array[FontEntry]
 pub fn FontSystem::get_font(Self, Int) -> @moon_swash.FontRef?
 pub fn FontSystem::get_font_entry(Self, Int) -> FontEntry?
