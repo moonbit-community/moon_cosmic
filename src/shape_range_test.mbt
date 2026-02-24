@@ -1,0 +1,112 @@
+// Copyright 2025 International Digital Economy Academy
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+///|
+test "ShapeLine.build_with_font_system keeps space glyphs on whitespace source ranges" {
+  let text = "Move the mouse to see the circle follow your cursor."
+  let font_system = FontSystem::new().load_font_data(
+    test_font_inter_regular_ttf(),
+  )
+  let shape = ShapeLine::build_with_font_system(
+    ShapeLine::empty(),
+    font_system,
+    text,
+    AttrsList::new(Attrs::new()),
+    Shaping::Advanced,
+    8,
+  )
+  let space_gid = match font_system.get_font(0) {
+    None => 0
+    Some(font) => @moon_swash.Charmap::from_font(font).map(32U).to_int()
+  }
+  let mut bad = 0
+  for glyph in shape.glyphs {
+    if glyph.glyph_id != space_gid {
+      continue
+    }
+    let mut i = glyph.start
+    let mut has_non_ws = false
+    while i < glyph.end && i < text.length() {
+      let cu = text.code_unit_at(i).to_int()
+      if cu != 32 && cu != 9 {
+        has_non_ws = true
+        break
+      }
+      i = i + 1
+    }
+    if has_non_ws {
+      bad = bad + 1
+    }
+  }
+  inspect(bad, content="0")
+}
+
+///|
+test "ShapeLine.build_with_font_system emits non-inverted in-bounds source ranges" {
+  let text = "office affine \u{05D0}\u{05D1}\u{05D2} test"
+  let font_system = FontSystem::new().load_font_data(
+    test_font_inter_regular_ttf(),
+  )
+  let shape = ShapeLine::build_with_font_system(
+    ShapeLine::empty(),
+    font_system,
+    text,
+    AttrsList::new(Attrs::new()),
+    Shaping::Advanced,
+    8,
+  )
+  let mut ok = true
+  for glyph in shape.glyphs {
+    if glyph.start < 0 || glyph.end < glyph.start || glyph.end > text.length() {
+      ok = false
+    }
+  }
+  inspect(ok, content="true")
+}
+
+///|
+test "ShapeLine.build_with_font_system assigns metadata by glyph start attrs" {
+  let text = "abc"
+  let attrs = AttrsList::new(Attrs::with_metadata(7)).add_span(
+    1,
+    2,
+    Attrs::with_metadata(42),
+  )
+  let font_system = FontSystem::new().load_font_data(
+    test_font_inter_regular_ttf(),
+  )
+  let shape = ShapeLine::build_with_font_system(
+    ShapeLine::empty(),
+    font_system,
+    text,
+    attrs,
+    Shaping::Advanced,
+    8,
+  )
+  let mut ok = true
+  let mut saw_mid = false
+  for glyph in shape.glyphs {
+    if glyph.start == 1 {
+      saw_mid = true
+      if glyph.metadata != 42 {
+        ok = false
+      }
+    } else if glyph.start >= 0 && glyph.start < text.length() {
+      if glyph.metadata != 7 {
+        ok = false
+      }
+    }
+  }
+  inspect((saw_mid, ok), content="(true, true)")
+}

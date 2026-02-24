@@ -119,6 +119,21 @@ test "Buffer defaults align with upstream new_empty" {
 }
 
 ///|
+test "Buffer.layout_runs returns no runs before layout cache is built" {
+  let attrs = AttrsList::new(Attrs::new())
+  let buf = Buffer::new(Metrics::new(12.0F, 14.0F)).set_text(
+    "A\nB",
+    attrs,
+    Advanced,
+  )
+  let mut runs = 0
+  for _ in buf.layout_runs() {
+    runs = runs + 1
+  }
+  inspect(runs, content="0")
+}
+
+///|
 test "Buffer setters mark redraw when value changes" {
   let buf0 = Buffer::new_empty(Metrics::new(12.0F, 14.0F))
   let buf1 = buf0.set_wrap(Wrap::Glyph)
@@ -131,6 +146,75 @@ test "Buffer setters mark redraw when value changes" {
   inspect(buf4.redraw(), content="true")
   let buf5 = buf4.set_metrics(Metrics::new(13.0F, 15.0F))
   inspect(buf5.redraw(), content="true")
+}
+
+///|
+test "Buffer.set_wrap invalidates cached layout and relayout reflects new wrap mode" {
+  let attrs = AttrsList::new(Attrs::new())
+  let mut buf = Buffer::new(Metrics::new(12.0F, 14.0F))
+  buf = buf
+    .set_text("a a a a a a", attrs, Advanced)
+    .set_size(Some(24.0F), None)
+    .set_wrap(Wrap::None)
+    .layout_all()
+
+  let mut runs_none = 0
+  for _ in buf.layout_runs() {
+    runs_none = runs_none + 1
+  }
+
+  let buf2 = buf.set_wrap(Wrap::WordOrGlyph).layout_all()
+  let mut runs_wrap = 0
+  for _ in buf2.layout_runs() {
+    runs_wrap = runs_wrap + 1
+  }
+  inspect(runs_none == 1, content="true")
+  inspect(runs_wrap > runs_none, content="true")
+}
+
+///|
+test "Buffer.set_size clamps negative width/height to zero" {
+  let buf = Buffer::new(Metrics::new(12.0F, 14.0F)).set_size(
+    Some(-5.0F),
+    Some(-10.0F),
+  )
+  inspect(
+    match buf.size().0 {
+      Some(v) => v == 0.0F
+      None => false
+    },
+    content="true",
+  )
+  inspect(
+    match buf.size().1 {
+      Some(v) => v == 0.0F
+      None => false
+    },
+    content="true",
+  )
+}
+
+///|
+test "Buffer.layout_runs follows scroll line and viewport height" {
+  let attrs = AttrsList::new(Attrs::new())
+  let mut buf = Buffer::new(Metrics::new(12.0F, 14.0F))
+  buf = buf
+    .set_text("A\nB\nC", attrs, Advanced)
+    .set_size(Some(200.0F), Some(14.0F))
+    .layout_all()
+
+  let vis0 : Array[Int] = []
+  for run in buf.layout_runs() {
+    vis0.push(run.line_i)
+  }
+  inspect(vis0, content="[0]")
+
+  let buf1 = buf.set_scroll(Scroll::new(1, 0.0F, 0.0F)).layout_all()
+  let vis1 : Array[Int] = []
+  for run in buf1.layout_runs() {
+    vis1.push(run.line_i)
+  }
+  inspect(vis1, content="[1]")
 }
 
 ///|

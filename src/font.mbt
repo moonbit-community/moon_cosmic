@@ -60,7 +60,12 @@ pub fn FontEntry::is_monospace(self : FontEntry) -> Bool {
 pub struct FontSystem {
   locale : String
   fonts : Array[FontEntry]
+  font_matches_cache : @hashmap.HashMap[FontMatchAttrs, Array[Int]]
+  codepoint_support_cache : @hashmap.HashMap[FontCodepointKey, Bool]
 }
+
+///|
+const FONT_MATCHES_CACHE_SIZE_LIMIT : Int = 256
 
 ///|
 pub fn FontSystem::new() -> FontSystem {
@@ -69,7 +74,12 @@ pub fn FontSystem::new() -> FontSystem {
 
 ///|
 pub fn FontSystem::new_with_locale(locale : String) -> FontSystem {
-  FontSystem::{ locale, fonts: [] }
+  FontSystem::{
+    locale,
+    fonts: [],
+    font_matches_cache: @hashmap.HashMap::default(),
+    codepoint_support_cache: @hashmap.HashMap::default(),
+  }
 }
 
 ///|
@@ -121,6 +131,8 @@ pub fn FontSystem::load_font_data(
           is_monospace: metrics.is_monospace,
         })
       }
+      // New fonts change candidate ordering; clear match cache.
+      self.font_matches_cache.clear()
       FontSystem::{ ..self, fonts, }
     }
   }
@@ -129,25 +141,7 @@ pub fn FontSystem::load_font_data(
 ///|
 /// Find a font ID that matches the family selector (best-effort).
 pub fn FontSystem::select_family(self : FontSystem, family : Family) -> Int? {
-  match family {
-    Name(name) => {
-      for f in self.fonts {
-        if f.family_name == name {
-          return Some(f.id)
-        }
-      }
-      None
-    }
-    Monospace => {
-      for f in self.fonts {
-        if f.is_monospace {
-          return Some(f.id)
-        }
-      }
-      None
-    }
-    _ => None
-  }
+  select_family_with_weight(self, family, Weight::normal())
 }
 
 ///|
@@ -160,24 +154,153 @@ fn abs_int(v : Int) -> Int {
 }
 
 ///|
+pub struct FontCodepointKey {
+  font_id : Int
+  codepoint : UInt
+}
+
+///|
+pub impl Eq for FontCodepointKey with equal(self, other) {
+  self.font_id == other.font_id && self.codepoint == other.codepoint
+}
+
+///|
+pub impl Hash for FontCodepointKey with hash_combine(self, hasher) {
+  hasher.combine_int(self.font_id)
+  hasher.combine_uint(self.codepoint)
+}
+
+///|
+pub struct FontMatchAttrs {
+  family : Family
+  weight : Weight
+}
+
+///|
+pub impl Eq for FontMatchAttrs with equal(self, other) {
+  self.family == other.family && self.weight == other.weight
+}
+
+///|
+pub impl Hash for FontMatchAttrs with hash_combine(self, hasher) {
+  self.family.hash_combine(hasher)
+  self.weight.hash_combine(hasher)
+}
+
+///|
 fn family_matches(entry : FontEntry, family : Family) -> Bool {
   match family {
     Name(name) => entry.family_name == name
     Monospace => entry.is_monospace
-    _ => false
+    _ => true
   }
 }
 
 ///|
-fn entry_maps_codepoint(entry : FontEntry, codepoint : UInt) -> Bool {
-  let cm = entry.charmap_proxy.materialize(entry.font)
-  cm.map(codepoint) != 0
+fn font_maps_codepoint(
+  fs : FontSystem,
+  entry : FontEntry,
+  codepoint : UInt,
+) -> Bool {
+  let key = FontCodepointKey::{ font_id: entry.id, codepoint }
+  match fs.codepoint_support_cache.get(key) {
+    Some(ok) => ok
+    None => {
+      let cm = entry.charmap_proxy.materialize(entry.font)
+      let ok = cm.map(codepoint) != 0
+      fs.codepoint_support_cache.set(key, ok)
+      ok
+    }
+  }
 }
 
 ///|
 fn entry_weight_diff(entry : FontEntry, req_weight : Weight) -> Int {
   let a = entry.attributes.weight().value.to_int()
   abs_int(a - req_weight.value)
+}
+
+///|
+fn better_font_match(cand : (Int, Bool, Int), best : (Int, Bool, Int)) -> Bool {
+  let cand_id = cand.0
+  let cand_family = cand.1
+  let cand_wdiff = cand.2
+  let best_id = best.0
+  let best_family = best.1
+  let best_wdiff = best.2
+  if cand_family != best_family {
+    return cand_family
+  }
+  if cand_wdiff != best_wdiff {
+    return cand_wdiff < best_wdiff
+  }
+  cand_id < best_id
+}
+
+///|
+fn build_font_matches(fs : FontSystem, attrs : Attrs) -> Array[Int] {
+  let family = attrs.family_value()
+  let req_weight = attrs.weight_value()
+  let candidates : Array[(Int, Bool, Int)] = []
+  for e in fs.fonts {
+    candidates.push(
+      (e.id, family_matches(e, family), entry_weight_diff(e, req_weight)),
+    )
+  }
+  let n = candidates.length()
+  let used : Array[Bool] = Array::makei(n, _ => false)
+  let ids : Array[Int] = []
+  for _ in 0..<n {
+    let mut best_i = -1
+    for i in 0..<n {
+      if used[i] {
+        continue
+      }
+      if best_i < 0 || better_font_match(candidates[i], candidates[best_i]) {
+        best_i = i
+      }
+    }
+    if best_i >= 0 {
+      used.set(best_i, true)
+      ids.push(candidates[best_i].0)
+    }
+  }
+  ids
+}
+
+///|
+fn get_font_matches(fs : FontSystem, attrs : Attrs) -> Array[Int] {
+  if fs.font_matches_cache.length() >= FONT_MATCHES_CACHE_SIZE_LIMIT {
+    fs.font_matches_cache.clear()
+  }
+  let key = FontMatchAttrs::{
+    family: attrs.family_value(),
+    weight: attrs.weight_value(),
+  }
+  match fs.font_matches_cache.get(key) {
+    Some(ids) => ids
+    None => {
+      let ids = build_font_matches(fs, attrs)
+      fs.font_matches_cache.set(key, ids)
+      ids
+    }
+  }
+}
+
+///|
+fn select_family_with_weight(
+  fs : FontSystem,
+  family : Family,
+  req_weight : Weight,
+) -> Int? {
+  let attrs = Attrs::new().family(family).weight(req_weight)
+  let ids = get_font_matches(fs, attrs)
+  for id in ids {
+    if id >= 0 && id < fs.fonts.length() && family_matches(fs.fonts[id], family) {
+      return Some(id)
+    }
+  }
+  None
 }
 
 ///|
@@ -190,51 +313,29 @@ pub fn FontSystem::resolve_for_codepoint(
   attrs : Attrs,
   codepoint : UInt,
 ) -> Int? {
-  let family = attrs.family_value()
-  let req_weight = attrs.weight_value()
-  let mut best_id : Int? = None
-  let mut best_family = false
-  let mut best_weight_diff = 0
-  for e in self.fonts {
-    if !entry_maps_codepoint(e, codepoint) {
+  let matches = get_font_matches(self, attrs)
+  for id in matches {
+    if id < 0 || id >= self.fonts.length() {
       continue
     }
-    let fam_ok = family_matches(e, family)
-    let wdiff = entry_weight_diff(e, req_weight)
-    match best_id {
-      None => {
-        best_id = Some(e.id)
-        best_family = fam_ok
-        best_weight_diff = wdiff
-      }
-      Some(best0) =>
-        // Prefer family matches; then prefer closer weight; then stable by ID.
-        if fam_ok && !best_family {
-          best_id = Some(e.id)
-          best_family = true
-          best_weight_diff = wdiff
-        } else if fam_ok == best_family {
-          if wdiff < best_weight_diff {
-            best_id = Some(e.id)
-            best_weight_diff = wdiff
-          } else if wdiff == best_weight_diff && e.id < best0 {
-            best_id = Some(e.id)
-          }
-        }
+    let e = self.fonts[id]
+    if font_maps_codepoint(self, e, codepoint) {
+      return Some(id)
     }
   }
-  match best_id {
-    Some(id) => Some(id)
-    None => self.resolve(attrs)
-  }
+  self.resolve(attrs)
 }
 
 ///|
 /// Resolve a font ID for the given attrs (best-effort).
 pub fn FontSystem::resolve(self : FontSystem, attrs : Attrs) -> Int? {
-  match self.select_family(attrs.family_value()) {
-    Some(id) => Some(id)
-    None => if self.fonts.length() > 0 { Some(0) } else { None }
+  let matches = get_font_matches(self, attrs)
+  if matches.length() > 0 {
+    Some(matches[0])
+  } else if self.fonts.length() > 0 {
+    Some(0)
+  } else {
+    None
   }
 }
 

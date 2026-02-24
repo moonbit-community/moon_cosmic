@@ -26,6 +26,27 @@ test "BufferLine.set_text returns changed flag" {
 }
 
 ///|
+test "BufferLine.set_align returns changed only on value change" {
+  let attrs = AttrsList::new(Attrs::new())
+  let line0 = BufferLine::new("abc", Lf, attrs, Advanced)
+  let (line1, changed1) = line0.set_align(None)
+  inspect(changed1, content="false")
+  let (line2, changed2) = line1.set_align(Some(Align::Center))
+  inspect(changed2, content="true")
+  let (line3, changed3) = line2.set_align(Some(Align::Center))
+  inspect(changed3, content="false")
+  let (line4, changed4) = line3.set_align(Some(Align::Left))
+  inspect(changed4, content="true")
+  inspect(
+    match line4.align() {
+      Some(Left) => true
+      _ => false
+    },
+    content="true",
+  )
+}
+
+///|
 test "BufferLine.split_off follows upstream ending/align rules" {
   let attrs = AttrsList::new(Attrs::new())
   let line0 = BufferLine::new("hello", CrLf, attrs, Advanced)
@@ -34,6 +55,30 @@ test "BufferLine.split_off follows upstream ending/align rules" {
   inspect(left.ending().as_str(), content="")
   inspect(right.text(), content="llo")
   inspect(right.ending().as_str(), content="\r\n")
+}
+
+///|
+test "BufferLine.set_ending invalidates shaping cache" {
+  let attrs = AttrsList::new(Attrs::new())
+  let line0 = BufferLine::new("abc", Lf, attrs, Advanced)
+  let line1 = line0
+    .shape(4)
+    .layout(10.0F, Some(100.0F), Wrap::None, None, 4, Hinting::Disabled)
+  inspect(
+    match line1.shape_opt() {
+      Some(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  let line2 = line1.set_ending(CrLf)
+  inspect(
+    match line2.shape_opt() {
+      None => true
+      _ => false
+    },
+    content="true",
+  )
 }
 
 ///|
@@ -131,6 +176,73 @@ test "BufferLine.layout: Hinting::Enabled rounds advances" {
   if disabled.layout_opt() is Some(l0) && enabled.layout_opt() is Some(l1) {
     inspect(l0[0].w, content="21")
     inspect(l1[0].w, content="22")
+  } else {
+    fail("expected Some(layout)")
+  }
+}
+
+///|
+test "BufferLine.layout: Align::End follows paragraph direction in RTL lines" {
+  let attrs = AttrsList::new(Attrs::new())
+  let line0 = BufferLine::new("\u{05D0}\u{05D1}", Lf, attrs, Advanced)
+  let (line1, _) = line0.set_align(Some(Align::End))
+  let line2 = line1.layout(
+    10.0F,
+    Some(40.0F),
+    Wrap::None,
+    None,
+    4,
+    Hinting::Disabled,
+  )
+  if line2.shape_opt() is Some(shape) {
+    inspect(shape.rtl, content="true")
+  } else {
+    fail("expected Some(shape)")
+  }
+  if line2.layout_opt() is Some(layout) {
+    inspect(layout.length(), content="1")
+    inspect(layout[0].w, content="20")
+    // In RTL paragraphs, End means logical end (left edge).
+    inspect(layout[0].glyphs[0].x, content="0")
+  } else {
+    fail("expected Some(layout)")
+  }
+}
+
+///|
+test "BufferLine.layout: whitespace-only word wrap keeps a trailing blank segment" {
+  let attrs = AttrsList::new(Attrs::new())
+  let line0 = BufferLine::new("   ", Lf, attrs, Advanced)
+  let line1 = line0.layout(
+    10.0F,
+    Some(5.0F),
+    Wrap::Word,
+    None,
+    4,
+    Hinting::Disabled,
+  )
+  if line1.layout_opt() is Some(layout) {
+    inspect(layout.length(), content="1")
+    inspect(layout[0].w, content="10")
+    inspect(layout[0].start, content="2")
+    inspect(layout[0].end, content="3")
+    inspect(layout[0].glyphs.length(), content="1")
+  } else {
+    fail("expected Some(layout)")
+  }
+}
+
+///|
+test "BufferLine.layout: whitespace-only word wrap keeps blanks when unbounded" {
+  let attrs = AttrsList::new(Attrs::new())
+  let line0 = BufferLine::new("   ", Lf, attrs, Advanced)
+  let line1 = line0.layout(10.0F, None, Wrap::Word, None, 4, Hinting::Disabled)
+  if line1.layout_opt() is Some(layout) {
+    inspect(layout.length(), content="1")
+    inspect(layout[0].w, content="30")
+    inspect(layout[0].start, content="0")
+    inspect(layout[0].end, content="3")
+    inspect(layout[0].glyphs.length(), content="3")
   } else {
     fail("expected Some(layout)")
   }

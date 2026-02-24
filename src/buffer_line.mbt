@@ -33,6 +33,159 @@ fn substring(s : String, start : Int, end : Int) -> String {
 }
 
 ///|
+fn empty_layout_line() -> LayoutLine {
+  LayoutLine::{
+    start: 0,
+    end: 0,
+    w: 0.0F,
+    max_ascent: 0.0F,
+    max_descent: 0.0F,
+    line_height_opt: None,
+    glyphs: [],
+  }
+}
+
+///|
+fn max_layout_width(layout : Array[LayoutLine]) -> Float? {
+  if layout.length() == 0 {
+    return None
+  }
+  let mut max_w = layout[0].w
+  for l in layout {
+    if l.w > max_w {
+      max_w = l.w
+    }
+  }
+  Some(max_w)
+}
+
+///|
+fn justify_line(text : String, line : LayoutLine, width : Float) -> LayoutLine {
+  let extra = width - line.w
+  if extra <= 0.0F {
+    return line
+  }
+  let mut space_count = 0
+  for i in line.start..<line.end {
+    if i >= 0 && i < text.length() && text.code_unit_at(i) == 32 {
+      space_count = space_count + 1
+    }
+  }
+  if space_count == 0 {
+    return line
+  }
+  let add = extra / Float::from_double(space_count.to_double())
+  let glyphs : Array[LayoutGlyph] = []
+  let mut dx = 0.0F
+  for g in line.glyphs {
+    let mut w = g.w
+    if g.end - g.start == 1 &&
+      g.start >= 0 &&
+      g.start < text.length() &&
+      text.code_unit_at(g.start) == 32 {
+      w = w + add
+      glyphs.push(LayoutGlyph::{ ..g, x: g.x + dx, w })
+      dx = dx + add
+    } else {
+      glyphs.push(LayoutGlyph::{ ..g, x: g.x + dx, w })
+    }
+  }
+  LayoutLine::{ ..line, w: line.w + extra, glyphs }
+}
+
+///|
+fn justify_lines_except_last(
+  text : String,
+  layout : Array[LayoutLine],
+  width : Float,
+) -> Array[LayoutLine] {
+  let out : Array[LayoutLine] = []
+  let n = layout.length()
+  for i in 0..<n {
+    if i == n - 1 {
+      out.push(layout[i])
+    } else {
+      out.push(justify_line(text, layout[i], width))
+    }
+  }
+  out
+}
+
+///|
+fn hint_line(l : LayoutLine) -> LayoutLine {
+  if l.glyphs.length() == 0 {
+    return l
+  }
+  let glyphs : Array[LayoutGlyph] = []
+  let mut x = roundf(l.glyphs[0].x)
+  let start_x = x
+  for g in l.glyphs {
+    let w = roundf(g.w)
+    glyphs.push(LayoutGlyph::{ ..g, x, w })
+    x = x + w
+  }
+  LayoutLine::{ ..l, w: x - start_x, glyphs }
+}
+
+///|
+fn apply_layout_postprocess(
+  text : String,
+  layout0 : Array[LayoutLine],
+  rtl : Bool,
+  align_opt : Align?,
+  width_opt : Float?,
+  hinting : Hinting,
+) -> Array[LayoutLine] {
+  let mut layout = if layout0.length() == 0 {
+    [empty_layout_line()]
+  } else {
+    layout0
+  }
+  let default_align = if rtl { Align::Right } else { Align::Left }
+  let align = if align_opt is Some(a) { a } else { default_align }
+  let line_width_opt = if width_opt is Some(width) {
+    Some(width)
+  } else {
+    max_layout_width(layout)
+  }
+  if line_width_opt is Some(width) {
+    match align {
+      Justified => layout = justify_lines_except_last(text, layout, width)
+      _ => layout = apply_align_with_rtl(text, layout, width, align, rtl)
+    }
+  }
+  if hinting is Hinting::Enabled {
+    let out : Array[LayoutLine] = []
+    for l in layout {
+      out.push(hint_line(l))
+    }
+    layout = out
+  }
+  layout
+}
+
+///|
+fn align_eq(a : Align, b : Align) -> Bool {
+  match (a, b) {
+    (Left, Left) => true
+    (Right, Right) => true
+    (Center, Center) => true
+    (Justified, Justified) => true
+    (End, End) => true
+    _ => false
+  }
+}
+
+///|
+fn align_opt_eq(a : Align?, b : Align?) -> Bool {
+  match (a, b) {
+    (None, None) => true
+    (Some(a1), Some(b1)) => align_eq(a1, b1)
+    _ => false
+  }
+}
+
+///|
 pub struct BufferLine {
   text : String
   ending : LineEnding
@@ -81,7 +234,7 @@ pub fn BufferLine::set_ending(
   if ending.as_str() == self.ending.as_str() {
     self
   } else {
-    BufferLine::{ ..self, ending, }.reset_layout()
+    BufferLine::{ ..self, ending, }.reset_shaping()
   }
 }
 
@@ -182,7 +335,7 @@ pub fn BufferLine::layout(
     let shape_opt = line.shape_opt()
     if shape_opt is Some(shape) {
       let cell_w = if match_mono_width is Some(w) { w } else { font_size }
-      let mut layout = layout_from_shape(
+      let layout = layout_from_shape(
         line.text,
         shape,
         font_size,
@@ -190,84 +343,14 @@ pub fn BufferLine::layout(
         width_opt,
         wrap,
       )
-      let default_align = if shape.rtl { Align::Right } else { Align::Left }
-      let align = if line.align is Some(a) { a } else { default_align }
-      if width_opt is Some(width) {
-        match align {
-          Justified => {
-            fn justify_line(
-              text : String,
-              line : LayoutLine,
-              width : Float,
-            ) -> LayoutLine {
-              let extra = width - line.w
-              if extra <= 0.0F {
-                return line
-              }
-              let mut space_count = 0
-              for i in line.start..<line.end {
-                if i >= 0 && i < text.length() && text.code_unit_at(i) == 32 {
-                  space_count = space_count + 1
-                }
-              }
-              if space_count == 0 {
-                return line
-              }
-              let add = extra / Float::from_double(space_count.to_double())
-              let glyphs : Array[LayoutGlyph] = []
-              let mut dx = 0.0F
-              for g in line.glyphs {
-                let mut w = g.w
-                if g.end - g.start == 1 &&
-                  g.start >= 0 &&
-                  g.start < text.length() &&
-                  text.code_unit_at(g.start) == 32 {
-                  w = w + add
-                  glyphs.push(LayoutGlyph::{ ..g, x: g.x + dx, w })
-                  dx = dx + add
-                } else {
-                  glyphs.push(LayoutGlyph::{ ..g, x: g.x + dx, w })
-                }
-              }
-              LayoutLine::{ ..line, w: line.w + extra, glyphs }
-            }
-
-            let out : Array[LayoutLine] = []
-            let n = layout.length()
-            for i in 0..<n {
-              if i == n - 1 {
-                out.push(layout[i])
-              } else {
-                out.push(justify_line(line.text, layout[i], width))
-              }
-            }
-            layout = out
-          }
-          _ => layout = apply_align(line.text, layout, width, align)
-        }
-      }
-      if hinting is Hinting::Enabled {
-        fn hint_line(l : LayoutLine) -> LayoutLine {
-          if l.glyphs.length() == 0 {
-            return l
-          }
-          let glyphs : Array[LayoutGlyph] = []
-          let mut x = roundf(l.glyphs[0].x)
-          let start_x = x
-          for g in l.glyphs {
-            let w = roundf(g.w)
-            glyphs.push(LayoutGlyph::{ ..g, x, w })
-            x = x + w
-          }
-          LayoutLine::{ ..l, w: x - start_x, glyphs }
-        }
-
-        let out : Array[LayoutLine] = []
-        for l in layout {
-          out.push(hint_line(l))
-        }
-        layout = out
-      }
+      let layout = apply_layout_postprocess(
+        line.text,
+        layout,
+        shape.rtl,
+        line.align,
+        width_opt,
+        hinting,
+      )
       let (layout_opt, _) = line.layout_opt.take_unused()
       let layout_opt = layout_opt.set_used(layout)
       BufferLine::{ ..line, layout_opt, }
@@ -296,7 +379,7 @@ pub fn BufferLine::layout_with_font_system(
     let shape_opt = line.shape_opt()
     if shape_opt is Some(shape) {
       let cell_w = if match_mono_width is Some(w) { w } else { font_size }
-      let mut layout = layout_from_shape(
+      let layout = layout_from_shape(
         line.text,
         shape,
         font_size,
@@ -304,84 +387,14 @@ pub fn BufferLine::layout_with_font_system(
         width_opt,
         wrap,
       )
-      let default_align = if shape.rtl { Align::Right } else { Align::Left }
-      let align = if line.align is Some(a) { a } else { default_align }
-      if width_opt is Some(width) {
-        match align {
-          Justified => {
-            fn justify_line(
-              text : String,
-              line : LayoutLine,
-              width : Float,
-            ) -> LayoutLine {
-              let extra = width - line.w
-              if extra <= 0.0F {
-                return line
-              }
-              let mut space_count = 0
-              for i in line.start..<line.end {
-                if i >= 0 && i < text.length() && text.code_unit_at(i) == 32 {
-                  space_count = space_count + 1
-                }
-              }
-              if space_count == 0 {
-                return line
-              }
-              let add = extra / Float::from_double(space_count.to_double())
-              let glyphs : Array[LayoutGlyph] = []
-              let mut dx = 0.0F
-              for g in line.glyphs {
-                let mut w = g.w
-                if g.end - g.start == 1 &&
-                  g.start >= 0 &&
-                  g.start < text.length() &&
-                  text.code_unit_at(g.start) == 32 {
-                  w = w + add
-                  glyphs.push(LayoutGlyph::{ ..g, x: g.x + dx, w })
-                  dx = dx + add
-                } else {
-                  glyphs.push(LayoutGlyph::{ ..g, x: g.x + dx, w })
-                }
-              }
-              LayoutLine::{ ..line, w: line.w + extra, glyphs }
-            }
-
-            let out : Array[LayoutLine] = []
-            let n = layout.length()
-            for i in 0..<n {
-              if i == n - 1 {
-                out.push(layout[i])
-              } else {
-                out.push(justify_line(line.text, layout[i], width))
-              }
-            }
-            layout = out
-          }
-          _ => layout = apply_align(line.text, layout, width, align)
-        }
-      }
-      if hinting is Hinting::Enabled {
-        fn hint_line(l : LayoutLine) -> LayoutLine {
-          if l.glyphs.length() == 0 {
-            return l
-          }
-          let glyphs : Array[LayoutGlyph] = []
-          let mut x = roundf(l.glyphs[0].x)
-          let start_x = x
-          for g in l.glyphs {
-            let w = roundf(g.w)
-            glyphs.push(LayoutGlyph::{ ..g, x, w })
-            x = x + w
-          }
-          LayoutLine::{ ..l, w: x - start_x, glyphs }
-        }
-
-        let out : Array[LayoutLine] = []
-        for l in layout {
-          out.push(hint_line(l))
-        }
-        layout = out
-      }
+      let layout = apply_layout_postprocess(
+        line.text,
+        layout,
+        shape.rtl,
+        line.align,
+        width_opt,
+        hinting,
+      )
       let (layout_opt, _) = line.layout_opt.take_unused()
       let layout_opt = layout_opt.set_used(layout)
       BufferLine::{ ..line, layout_opt, }
@@ -418,8 +431,7 @@ pub fn BufferLine::set_align(
   self : BufferLine,
   align : Align?,
 ) -> (BufferLine, Bool) {
-  // MVP: align impacts layout cache only.
-  if align is None && self.align is None {
+  if align_opt_eq(align, self.align) {
     (self, false)
   } else {
     (BufferLine::{ ..self, align, }.reset_layout(), true)

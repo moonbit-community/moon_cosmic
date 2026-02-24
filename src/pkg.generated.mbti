@@ -17,6 +17,8 @@ pub const CACHE_KEY_FLAG_PIXEL_FONT : UInt = 4
 
 pub fn apply_align(String, Array[LayoutLine], Float, Align) -> Array[LayoutLine]
 
+pub fn apply_align_with_rtl(String, Array[LayoutLine], Float, Align, Bool) -> Array[LayoutLine]
+
 pub fn cosmic_text_version() -> String
 
 pub fn floorf(Float) -> Float
@@ -320,6 +322,13 @@ pub impl Eq for Family
 pub impl Hash for Family
 pub impl Show for Family
 
+pub struct FontCodepointKey {
+  font_id : Int
+  codepoint : UInt
+}
+pub impl Eq for FontCodepointKey
+pub impl Hash for FontCodepointKey
+
 pub struct FontEntry {
   id : Int
   family_name : String
@@ -335,9 +344,18 @@ pub fn FontEntry::font(Self) -> @moon_swash.FontRef
 pub fn FontEntry::id(Self) -> Int
 pub fn FontEntry::is_monospace(Self) -> Bool
 
+pub struct FontMatchAttrs {
+  family : Family
+  weight : Weight
+}
+pub impl Eq for FontMatchAttrs
+pub impl Hash for FontMatchAttrs
+
 pub struct FontSystem {
   locale : String
   fonts : Array[FontEntry]
+  font_matches_cache : @hashmap.HashMap[FontMatchAttrs, Array[Int]]
+  codepoint_support_cache : @hashmap.HashMap[FontCodepointKey, Bool]
 }
 pub fn FontSystem::fonts(Self) -> Array[FontEntry]
 pub fn FontSystem::get_font(Self, Int) -> @moon_swash.FontRef?

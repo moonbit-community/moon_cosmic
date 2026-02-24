@@ -147,6 +147,25 @@ fn float_from_int(v : Int) -> Float {
 }
 
 ///|
+fn glyph_layout_width(
+  glyph : ShapeGlyph,
+  default_font_size : Float,
+  cell_w : Float,
+) -> Float {
+  let glyph_font_size = match glyph.metrics_opt {
+    Option::None => default_font_size
+    Option::Some(m) => m.font_size
+  }
+  let mut w = glyph.x_advance * glyph_font_size
+  if cell_w != default_font_size && default_font_size != 0.0F {
+    let match_em_width = cell_w / default_font_size
+    if match_em_width != 0.0F {
+      // Keep behavior close to upstream `layout_to_buffer`: snap per-glyph advance.
+      w = roundf(w / match_em_width) * match_em_width
+    }
+  }
+  w
+}
 
 ///|
 fn max_int(a : Int, b : Int) -> Int {
@@ -285,12 +304,7 @@ fn build_layout_line_from_shape(
       Option::None => default_font_size
       Option::Some(m) => m.font_size
     }
-    let scale = if default_font_size == 0.0F {
-      1.0F
-    } else {
-      glyph_font_size / default_font_size
-    }
-    let w = g.x_advance * cell_w * scale
+    let w = glyph_layout_width(g, default_font_size, cell_w)
     let glyph_line_height_opt = match g.metrics_opt {
       Option::None => Option::None
       Option::Some(m) => Option::Some(m.line_height)
@@ -369,7 +383,7 @@ fn layout_glyph_wrap_range(
   let mut start = range_start
   let mut w = 0.0F
   for i in range_start..<range_end {
-    let adv_w = shape.glyphs[i].x_advance * cell_w
+    let adv_w = glyph_layout_width(shape.glyphs[i], font_size, cell_w)
     if w + adv_w > max_w && i > start {
       push_layout_line_from_shape(lines, shape, start, i, font_size, cell_w)
       start = i
@@ -576,30 +590,13 @@ pub fn layout_from_shape(
   match (width_opt, wrap) {
     // No width constraint:
     // - Glyph wrap: no wrapping required, keep full glyph span (includes spaces).
-    // - Word/WordOrGlyph: still trim leading/trailing whitespace by using word boundaries,
-    //   so feeding measured width back as a wrap limit stays stable.
+    // - Word/WordOrGlyph: no wrapping required, keep full glyph span (matches upstream behavior).
     (None, Glyph) => {
       push_layout_line_from_shape(lines, shape, 0, glyph_len, font_size, cell_w)
       return lines
     }
     (None, Word) | (None, WordOrGlyph) => {
-      let segs = wrap_word_segments(text)
-      let words : Array[(Int, Int)] = []
-      for seg in segs {
-        if !seg.2 {
-          words.push((seg.0, seg.1))
-        }
-      }
-      if words.length() == 0 {
-        return lines
-      }
-      let first = words[0]
-      let last = words[words.length() - 1]
-      let start_g = glyph_index_for_text_start(shape, first.0)
-      let end_g = glyph_index_for_text_end(shape, last.1)
-      push_layout_line_from_shape(
-        lines, shape, start_g, end_g, font_size, cell_w,
-      )
+      push_layout_line_from_shape(lines, shape, 0, glyph_len, font_size, cell_w)
       return lines
     }
     _ => ()
@@ -610,7 +607,7 @@ pub fn layout_from_shape(
       let mut start = 0
       let mut w = 0.0F
       for i in 0..<glyph_len {
-        let adv_w = shape.glyphs[i].x_advance * cell_w
+        let adv_w = glyph_layout_width(shape.glyphs[i], font_size, cell_w)
         if w + adv_w > max_w && i > start {
           push_layout_line_from_shape(lines, shape, start, i, font_size, cell_w)
           start = i
@@ -635,7 +632,7 @@ pub fn layout_from_shape(
   let mut acc = 0.0F
   prefix.push(acc)
   for i in 0..<glyph_len {
-    acc = acc + shape.glyphs[i].x_advance * cell_w
+    acc = acc + glyph_layout_width(shape.glyphs[i], font_size, cell_w)
     prefix.push(acc)
   }
 
@@ -646,10 +643,6 @@ pub fn layout_from_shape(
   }
   let mut i = 0
   while i < segs.length() {
-    // Skip leading blank segments.
-    while i < segs.length() && segs[i].2 {
-      i = i + 1
-    }
     if i >= segs.length() {
       break
     }
@@ -657,9 +650,10 @@ pub fn layout_from_shape(
     let line_start_text = segs[line_start_i].0
     let line_start_g = glyph_index_for_text_start(shape, line_start_text)
     let mut cur_end_g = line_start_g
-    let mut last_non_blank_end_g = line_start_g
+    let mut before_last_blank_end_g = line_start_g
     let mut emitted = false
-    // Track last "fitting" glyph end (including blanks), but emit trimmed.
+    // Track last "fitting" glyph end and the end position before the most recent
+    // blank segment, mirroring upstream `width_before_last_blank` behavior.
     while i < segs.length() {
       let seg = segs[i]
       let blank = seg.2
@@ -668,10 +662,10 @@ pub fn layout_from_shape(
       let cur_w = prefix_range_w(prefix, line_start_g, cur_end_g)
       let fits = would_w <= max_w || (blank && cur_w <= max_w)
       if fits {
-        cur_end_g = would_end_g
-        if !blank {
-          last_non_blank_end_g = would_end_g
+        if blank {
+          before_last_blank_end_g = cur_end_g
         }
+        cur_end_g = would_end_g
         i = i + 1
         continue
       }
@@ -703,21 +697,31 @@ pub fn layout_from_shape(
         break
       }
 
-      // Emit current line trimmed of trailing blanks.
-      if last_non_blank_end_g > line_start_g {
+      // Emit current line, possibly trimming trailing blanks when wrapping.
+      let emit_end = if i > line_start_i && segs[i - 1].2 {
+        before_last_blank_end_g
+      } else {
+        cur_end_g
+      }
+      if emit_end > line_start_g {
         push_layout_line_from_shape(
-          lines, shape, line_start_g, last_non_blank_end_g, font_size, cell_w,
+          lines, shape, line_start_g, emit_end, font_size, cell_w,
         )
+      }
+      // When a blank segment triggers wrap, consume it so the next line does not
+      // start with that overflowing blank (matches upstream word-wrap behavior).
+      if blank {
+        i = i + 1
       }
       emitted = true
       // Start a new line at the current segment (do not consume it).
       break
     }
 
-    // End-of-input: emit remaining line trimmed.
-    if i >= segs.length() && !emitted && last_non_blank_end_g > line_start_g {
+    // End-of-input: keep trailing blanks that fit in the last visual line.
+    if i >= segs.length() && !emitted && cur_end_g > line_start_g {
       push_layout_line_from_shape(
-        lines, shape, line_start_g, last_non_blank_end_g, font_size, cell_w,
+        lines, shape, line_start_g, cur_end_g, font_size, cell_w,
       )
     }
   }
@@ -730,6 +734,7 @@ fn apply_align_to_line(
   line : LayoutLine,
   width : Float,
   align : Align,
+  rtl : Bool,
 ) -> LayoutLine {
   let extra = width - line.w
   if extra <= 0.0F {
@@ -745,7 +750,7 @@ fn apply_align_to_line(
       }
       LayoutLine::{ ..line, glyphs, }
     }
-    Right | End => {
+    Right => {
       let dx = extra
       let glyphs : Array[LayoutGlyph] = []
       for g in line.glyphs {
@@ -753,6 +758,17 @@ fn apply_align_to_line(
       }
       LayoutLine::{ ..line, glyphs, }
     }
+    End =>
+      if rtl {
+        line
+      } else {
+        let dx = extra
+        let glyphs : Array[LayoutGlyph] = []
+        for g in line.glyphs {
+          glyphs.push(LayoutGlyph::{ ..g, x: g.x + dx })
+        }
+        LayoutLine::{ ..line, glyphs, }
+      }
     Justified => {
       // MVP: distribute extra width across ASCII spaces in this line.
       let mut space_count = 0
@@ -788,15 +804,27 @@ fn apply_align_to_line(
 
 ///|
 /// Apply Align to precomputed layout lines (requires a finite width).
+pub fn apply_align_with_rtl(
+  text : String,
+  lines : Array[LayoutLine],
+  width : Float,
+  align : Align,
+  rtl : Bool,
+) -> Array[LayoutLine] {
+  let out : Array[LayoutLine] = []
+  for line in lines {
+    out.push(apply_align_to_line(text, line, width, align, rtl))
+  }
+  out
+}
+
+///|
+/// Apply Align to precomputed layout lines assuming LTR paragraph direction.
 pub fn apply_align(
   text : String,
   lines : Array[LayoutLine],
   width : Float,
   align : Align,
 ) -> Array[LayoutLine] {
-  let out : Array[LayoutLine] = []
-  for line in lines {
-    out.push(apply_align_to_line(text, line, width, align))
-  }
-  out
+  apply_align_with_rtl(text, lines, width, align, false)
 }

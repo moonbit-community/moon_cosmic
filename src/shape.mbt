@@ -167,6 +167,332 @@ fn script_eq(a : @moon_swash.Script, b : @moon_swash.Script) -> Bool {
 }
 
 ///|
+fn source_start_index(source : @moon_swash.SourceRange) -> Int {
+  source.start().reinterpret_as_int()
+}
+
+///|
+fn source_end_index(source : @moon_swash.SourceRange) -> Int {
+  source.end().reinterpret_as_int()
+}
+
+///|
+fn attrs_for_position(
+  attrs_list : AttrsList,
+  pos : Int,
+  text_len : Int,
+) -> Attrs {
+  if text_len <= 0 {
+    attrs_list.defaults()
+  } else {
+    let i = if pos < 0 {
+      0
+    } else if pos >= text_len {
+      text_len - 1
+    } else {
+      pos
+    }
+    attrs_list.get_span(i)
+  }
+}
+
+///|
+fn clamp_range_to_source(
+  start0 : Int,
+  end0 : Int,
+  source_start : Int,
+  source_end : Int,
+) -> (Int, Int) {
+  let start1 = if start0 < source_start {
+    source_start
+  } else if start0 > source_end {
+    source_end
+  } else {
+    start0
+  }
+  let end1 = if end0 < start1 {
+    start1
+  } else if end0 > source_end {
+    source_end
+  } else {
+    end0
+  }
+  (start1, end1)
+}
+
+///|
+fn build_cluster_starts(
+  source : @moon_swash.SourceRange,
+  components : ArrayView[@moon_swash.SourceRange],
+  glyph_count : Int,
+  rtl : Bool,
+) -> Array[Int] {
+  let starts : Array[Int] = []
+  if glyph_count <= 0 {
+    return starts
+  }
+  if components.length() == 0 {
+    let source_start = source_start_index(source)
+    for _ in 0..<glyph_count {
+      starts.push(source_start)
+    }
+    return starts
+  }
+
+  let component_starts : Array[Int] = []
+  for comp in components {
+    component_starts.push(source_start_index(comp))
+  }
+  let m = component_starts.length()
+  for i in 0..<glyph_count {
+    let bucket = if glyph_count <= m {
+      i * m / glyph_count
+    } else if i < m {
+      i
+    } else {
+      m - 1
+    }
+    let k = if rtl { m - 1 - bucket } else { bucket }
+    starts.push(component_starts[k])
+  }
+  starts
+}
+
+///|
+fn build_cluster_ends(
+  starts : Array[Int],
+  source_end : Int,
+  rtl : Bool,
+) -> Array[Int] {
+  let n = starts.length()
+  let ends : Array[Int] = []
+  for _ in 0..<n {
+    ends.push(source_end)
+  }
+  if n < 2 {
+    return ends
+  }
+  if rtl {
+    for i in 1..<n {
+      let next_start = starts[i - 1]
+      let next_end = ends[i - 1]
+      if starts[i] == next_start {
+        ends.set(i, next_end)
+      } else {
+        ends.set(i, next_start)
+      }
+    }
+  } else {
+    let mut i = n - 1
+    while i > 0 {
+      let next_start = starts[i]
+      let next_end = ends[i]
+      if starts[i - 1] == next_start {
+        ends.set(i - 1, next_end)
+      } else {
+        ends.set(i - 1, next_start)
+      }
+      i = i - 1
+    }
+  }
+  ends
+}
+
+///|
+fn missing_contains(missing : Array[Int], start : Int) -> Bool {
+  for m in missing {
+    if m == start {
+      return true
+    }
+  }
+  false
+}
+
+///|
+fn remove_missing_range(missing : Array[Int], start : Int, end : Int) -> Unit {
+  let keep : Array[Int] = []
+  for m in missing {
+    if m < start || m >= end {
+      keep.push(m)
+    }
+  }
+  missing.clear()
+  for m in keep {
+    missing.push(m)
+  }
+}
+
+///|
+fn replace_cluster_glyphs(
+  run_glyphs : Array[ShapeGlyph],
+  start : Int,
+  end : Int,
+  replacement : Array[ShapeGlyph],
+) -> Array[ShapeGlyph] {
+  let out : Array[ShapeGlyph] = []
+  let mut inserted = false
+  for g in run_glyphs {
+    let in_range = g.start >= start && g.end <= end
+    if in_range && !inserted {
+      for rg in replacement {
+        out.push(rg)
+      }
+      inserted = true
+    }
+    if !in_range {
+      out.push(g)
+    }
+  }
+  if !inserted {
+    for rg in replacement {
+      out.push(rg)
+    }
+  }
+  out
+}
+
+///|
+fn merge_fallback_glyphs(
+  run_glyphs : Array[ShapeGlyph],
+  missing : Array[Int],
+  fallback_glyphs : Array[ShapeGlyph],
+  fallback_missing : Array[Int],
+) -> Array[ShapeGlyph] {
+  let mut merged = run_glyphs
+  let mut fb_i = 0
+  while fb_i < fallback_glyphs.length() {
+    let start = fallback_glyphs[fb_i].start
+    let end = fallback_glyphs[fb_i].end
+    if !missing_contains(missing, start) ||
+      missing_contains(fallback_missing, start) {
+      fb_i = fb_i + 1
+      continue
+    }
+
+    let replacement : Array[ShapeGlyph] = []
+    while fb_i < fallback_glyphs.length() {
+      let g = fallback_glyphs[fb_i]
+      if g.start >= start && g.end <= end {
+        replacement.push(g)
+        fb_i = fb_i + 1
+      } else {
+        break
+      }
+    }
+
+    remove_missing_range(missing, start, end)
+    merged = replace_cluster_glyphs(merged, start, end, replacement)
+  }
+  merged
+}
+
+///|
+fn shape_run_with_font(
+  font_system : FontSystem,
+  attrs_list : AttrsList,
+  levels : Array[Int],
+  text_len : Int,
+  line_rtl : Bool,
+  run_rtl : Bool,
+  cx : @shape.ShapeContext,
+  script : @moon_swash.Script,
+  run_tokens : Array[@moon_swash.Token],
+  font_id : Int,
+) -> (Array[ShapeGlyph], Array[Int]) {
+  let font_opt = font_system.get_font(font_id)
+  let font = match font_opt {
+    None => {
+      let missing : Array[Int] = []
+      for t in run_tokens {
+        missing.push(t.offset().reinterpret_as_int())
+      }
+      return ([], missing)
+    }
+    Some(f) => f
+  }
+  let cmap = @moon_swash.Charmap::from_font(font)
+  let empty_features : Array[@moon_swash.Setting[UInt16]] = []
+  let empty_variations : Array[@moon_swash.Setting[Double]] = []
+  let shaper = cx
+    .builder(font)
+    .script(script)
+    .direction(
+      if run_rtl {
+        @shape.Direction::RightToLeft
+      } else {
+        @shape.Direction::LeftToRight
+      },
+    )
+    .language(None)
+    .size(1.0)
+    .features(empty_features.iter())
+    .variations(empty_variations.iter())
+    .build()
+
+  let parser = @moon_swash.Parser::new(script, run_tokens.iter())
+  let cluster = @moon_swash.CharCluster::new()
+  while parser.next(cluster) {
+    cluster.map(fn(ch) { cmap.map(ch.to_int().reinterpret_as_uint()) })
+    |> ignore
+    shaper.add_cluster(cluster)
+  }
+
+  let out : Array[ShapeGlyph] = []
+  let missing : Array[Int] = []
+  shaper.shape_with(fn(gc) {
+    let source = gc.source()
+    let source_start = source_start_index(source)
+    let source_end = source_end_index(source)
+    let shaped = gc.glyphs()
+    let shaped_count = shaped.length()
+    if shaped_count != 0 {
+      let starts = build_cluster_starts(
+        source,
+        gc.components(),
+        shaped_count,
+        run_rtl,
+      )
+      let ends = build_cluster_ends(starts, source_end, run_rtl)
+      for i in 0..<shaped_count {
+        let g = shaped[i]
+        let (start, end) = clamp_range_to_source(
+          starts[i],
+          ends[i],
+          source_start,
+          source_end,
+        )
+        let attrs = attrs_for_position(attrs_list, start, text_len)
+        let lev = if levels.get(start) is Some(v) {
+          v
+        } else if line_rtl {
+          1
+        } else {
+          0
+        }
+        if g.id().to_int() == 0 {
+          missing.push(start)
+        }
+        out.push(ShapeGlyph::{
+          start,
+          end,
+          x_advance: Float::from_double(g.advance()),
+          y_advance: 0.0F,
+          x_offset: Float::from_double(g.x()),
+          y_offset: Float::from_double(g.y()),
+          font_id,
+          font_weight: attrs.weight_value().value(),
+          glyph_id: g.id().to_int(),
+          metadata: attrs.metadata(),
+          level: lev,
+          metrics_opt: attrs.metrics_opt(),
+        })
+      }
+    }
+  })
+  (out, missing)
+}
+
+///|
 /// Build a shaped line from text and attributes list.
 ///
 /// MVP notes:
@@ -248,17 +574,14 @@ pub fn ShapeLine::build_with_font_system(
       )
     Some(id) => id
   }
-  let default_font_opt = font_system.get_font(default_font_id)
-  let default_font = match default_font_opt {
-    None =>
-      return ShapeLine::build(
-        ShapeLine::empty(),
-        text,
-        attrs_list,
-        shaping,
-        tab_width,
-      )
-    Some(f) => f
+  if font_system.get_font(default_font_id) is None {
+    return ShapeLine::build(
+      ShapeLine::empty(),
+      text,
+      attrs_list,
+      shaping,
+      tab_width,
+    )
   }
 
   // Use swash's shaping engine for clusters/ligatures/marks. We intentionally use
@@ -266,24 +589,19 @@ pub fn ShapeLine::build_with_font_system(
   // which are later multiplied by `font_size` during layout.
   let rtl = detect_base_rtl(text)
   let levels = compute_bidi_levels(text, rtl)
-  let direction = if rtl {
-    @shape.Direction::RightToLeft
-  } else {
-    @shape.Direction::LeftToRight
-  }
   let cx = @shape.ShapeContext::new()
-  let empty_features : Array[@moon_swash.Setting[UInt16]] = []
-  let empty_variations : Array[@moon_swash.Setting[Double]] = []
-  let default_cmap = @moon_swash.Charmap::from_font(default_font)
-  let runs : Array[(Int, @moon_swash.Script, Array[@moon_swash.Token])] = []
+  let runs : Array[(Int, @moon_swash.Script, Bool, Array[@moon_swash.Token])] = []
   let mut off = 0U
   let mut cur_script = @moon_swash.Script::Latin
   let mut cur_font_id = default_font_id
+  let mut cur_rtl = rtl
   let mut cur_tokens : Array[@moon_swash.Token] = []
   for ch0 in text {
     let script0 = @moon_swash.CharInfo::from_char(ch0).properties().script()
     let len_u = utf16_len_of_char(ch0).reinterpret_as_uint()
     let i = off.reinterpret_as_int()
+    let level_i = if levels.get(i) is Some(v) { v } else if rtl { 1 } else { 0 }
+    let run_rtl = level_i % 2 != 0
     let attrs = attrs_list.get_span(i)
     // Tabs are shaped as spaces (upstream behavior).
     let ch = if ch0 == '\t' { ' ' } else { ch0 }
@@ -312,74 +630,71 @@ pub fn ShapeLine::build_with_font_system(
     if cur_tokens.length() == 0 {
       cur_script = effective
       cur_font_id = font_id
-    } else if !script_eq(effective, cur_script) || font_id != cur_font_id {
-      runs.push((cur_font_id, cur_script, cur_tokens))
+      cur_rtl = run_rtl
+    } else if !script_eq(effective, cur_script) ||
+      font_id != cur_font_id ||
+      run_rtl != cur_rtl {
+      runs.push((cur_font_id, cur_script, cur_rtl, cur_tokens))
       cur_tokens = []
       cur_script = effective
       cur_font_id = font_id
+      cur_rtl = run_rtl
     }
     cur_tokens.push(tok)
     off = off + len_u
   }
   let glyphs : Array[ShapeGlyph] = []
   if cur_tokens.length() != 0 {
-    runs.push((cur_font_id, cur_script, cur_tokens))
+    runs.push((cur_font_id, cur_script, cur_rtl, cur_tokens))
   }
-  let cluster = @moon_swash.CharCluster::new()
   for run in runs {
-    let font_id = run.0
+    let run_font_id = run.0
     let script = run.1
-    let run_tokens = run.2
-    let font_opt = font_system.get_font(font_id)
-    let font = match font_opt {
-      None => continue
-      Some(f) => f
-    }
-    let cmap = @moon_swash.Charmap::from_font(font)
-    let shaper = cx
-      .builder(font)
-      .script(script)
-      .direction(direction)
-      .language(None)
-      .size(1.0)
-      .features(empty_features.iter())
-      .variations(empty_variations.iter())
-      .build()
-    let parser = @moon_swash.Parser::new(script, run_tokens.iter())
-    while parser.next(cluster) {
-      cluster.map(fn(ch) { cmap.map(ch.to_int().reinterpret_as_uint()) })
-      |> ignore
-      shaper.add_cluster(cluster)
-    }
-    shaper.shape_with(fn(gc) {
-      let start = gc.source().start().reinterpret_as_int()
-      let end = gc.source().end().reinterpret_as_int()
-      let attrs = attrs_list.get_span(start)
-      let meta = gc.data().reinterpret_as_int()
-      let lev = if levels.get(start) is Some(v) {
-        v
-      } else if rtl {
-        1
-      } else {
-        0
+    let run_rtl = run.2
+    let run_tokens = run.3
+    let (default_glyphs, default_missing) = shape_run_with_font(
+      font_system,
+      attrs_list,
+      levels,
+      text.length(),
+      rtl,
+      run_rtl,
+      cx,
+      script,
+      run_tokens,
+      run_font_id,
+    )
+    let mut run_glyphs = default_glyphs
+    let missing = default_missing
+    if missing.length() > 0 {
+      for entry in font_system.fonts() {
+        let alt_font_id = entry.id()
+        if alt_font_id == run_font_id {
+          continue
+        }
+        let (fb_glyphs, fb_missing) = shape_run_with_font(
+          font_system,
+          attrs_list,
+          levels,
+          text.length(),
+          rtl,
+          run_rtl,
+          cx,
+          script,
+          run_tokens,
+          alt_font_id,
+        )
+        run_glyphs = merge_fallback_glyphs(
+          run_glyphs, missing, fb_glyphs, fb_missing,
+        )
+        if missing.length() == 0 {
+          break
+        }
       }
-      for g in gc.glyphs() {
-        glyphs.push(ShapeGlyph::{
-          start,
-          end,
-          x_advance: Float::from_double(g.advance()),
-          y_advance: 0.0F,
-          x_offset: Float::from_double(g.x()),
-          y_offset: Float::from_double(g.y()),
-          font_id,
-          font_weight: attrs.weight_value().value(),
-          glyph_id: g.id().to_int(),
-          metadata: meta,
-          level: lev,
-          metrics_opt: attrs.metrics_opt(),
-        })
-      }
-    })
+    }
+    for g in run_glyphs {
+      glyphs.push(g)
+    }
   }
 
   // If shaping produces no glyphs, fall back to the simple shaper to keep layout stable.
@@ -393,25 +708,17 @@ pub fn ShapeLine::build_with_font_system(
     )
   }
 
-  // Apply tab stops by snapping to the next multiple of (space_advance * tab_width).
-  let gm = default_font.glyph_metrics([])
-  let upem = gm.units_per_em().to_int().to_double()
-  let space_gid = default_cmap.map(32U)
-  let space_adv = if upem == 0.0 {
-    0.0
-  } else {
-    gm.advance_width(space_gid) / upem
-  }
-  let step = space_adv * tab_width.to_double()
-  if step != 0.0 {
-    let mut x = 0.0
-    for i in 0..<glyphs.length() {
-      let g0 = glyphs[i]
-      let is_tab_glyph = g0.end - g0.start == 1 &&
-        g0.start >= 0 &&
-        g0.start < text.length() &&
-        is_tab(text.code_unit_at(g0.start).to_int())
-      if is_tab_glyph {
+  // Apply tab stops using each tab glyph's own advance as the tab unit.
+  let mut x = 0.0
+  for i in 0..<glyphs.length() {
+    let g0 = glyphs[i]
+    let is_tab_glyph = g0.end - g0.start == 1 &&
+      g0.start >= 0 &&
+      g0.start < text.length() &&
+      is_tab(text.code_unit_at(g0.start).to_int())
+    if is_tab_glyph {
+      let step = g0.x_advance.to_double() * tab_width.to_double()
+      if step != 0.0 {
         let next = ((x / step).floor() + 1.0) * step
         let adv = next - x
         let g1 = ShapeGlyph::{ ..g0, x_advance: Float::from_double(adv) }
@@ -420,6 +727,8 @@ pub fn ShapeLine::build_with_font_system(
       } else {
         x = x + g0.x_advance.to_double()
       }
+    } else {
+      x = x + g0.x_advance.to_double()
     }
   }
   ShapeLine::{ rtl, glyphs }

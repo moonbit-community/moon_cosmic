@@ -127,20 +127,81 @@ fn hinting_eq(a : Hinting, b : Hinting) -> Bool {
 }
 
 ///|
+fn float_opt_eq(a : Float?, b : Float?) -> Bool {
+  match (a, b) {
+    (None, None) => true
+    (Some(x), Some(y)) => x == y
+    _ => false
+  }
+}
+
+///|
+fn clamp_nonneg_opt(v : Float?) -> Float? {
+  match v {
+    None => None
+    Some(x) => if x < 0.0F { Some(0.0F) } else { Some(x) }
+  }
+}
+
+///|
+fn line_has_tab(s : String) -> Bool {
+  for i in 0..<s.length() {
+    if s.code_unit_at(i).to_int() == 9 {
+      return true
+    }
+  }
+  false
+}
+
+///|
+fn reset_layout_lines(lines : Array[BufferLine]) -> Array[BufferLine] {
+  let out : Array[BufferLine] = []
+  for line in lines {
+    out.push(line.reset_layout())
+  }
+  out
+}
+
+///|
+fn reset_shaping_lines_for_tab_width(
+  lines : Array[BufferLine],
+) -> Array[BufferLine] {
+  let out : Array[BufferLine] = []
+  for line in lines {
+    if line.shape_opt() is Some(_) && line_has_tab(line.text()) {
+      out.push(line.reset_shaping())
+    } else {
+      out.push(line)
+    }
+  }
+  out
+}
+
+///|
 pub fn Buffer::set_wrap(self : Buffer, wrap : Wrap) -> Buffer {
   if wrap_eq(self.wrap, wrap) {
     self
   } else {
-    Buffer::{ ..self, wrap, redraw: true }
+    Buffer::{
+      ..self,
+      wrap,
+      lines: reset_layout_lines(self.lines),
+      redraw: true,
+    }
   }
 }
 
 ///|
 pub fn Buffer::set_tab_width(self : Buffer, tab_width : Int) -> Buffer {
-  if self.tab_width == tab_width {
+  if tab_width <= 0 || self.tab_width == tab_width {
     self
   } else {
-    Buffer::{ ..self, tab_width, redraw: true }
+    Buffer::{
+      ..self,
+      tab_width,
+      lines: reset_shaping_lines_for_tab_width(self.lines),
+      redraw: true,
+    }
   }
 }
 
@@ -149,7 +210,12 @@ pub fn Buffer::set_hinting(self : Buffer, hinting : Hinting) -> Buffer {
   if hinting_eq(self.hinting, hinting) {
     self
   } else {
-    Buffer::{ ..self, hinting, redraw: true }
+    Buffer::{
+      ..self,
+      hinting,
+      lines: reset_layout_lines(self.lines),
+      redraw: true,
+    }
   }
 }
 
@@ -158,17 +224,23 @@ pub fn Buffer::set_monospace_width(
   self : Buffer,
   monospace_width : Float?,
 ) -> Buffer {
-  if self.monospace_width is Some(w0) && monospace_width is Some(w1) && w0 == w1 {
-    self
-  } else if self.monospace_width is None && monospace_width is None {
+  if float_opt_eq(self.monospace_width, monospace_width) {
     self
   } else {
-    Buffer::{ ..self, monospace_width, redraw: true }
+    Buffer::{
+      ..self,
+      monospace_width,
+      lines: reset_layout_lines(self.lines),
+      redraw: true,
+    }
   }
 }
 
 ///|
 pub fn Buffer::set_metrics(self : Buffer, metrics : Metrics) -> Buffer {
+  if metrics.font_size == 0.0F {
+    abort("font size cannot be 0")
+  }
   if metrics.line_height == 0.0F {
     abort("line height cannot be 0")
   }
@@ -176,7 +248,12 @@ pub fn Buffer::set_metrics(self : Buffer, metrics : Metrics) -> Buffer {
     self.metrics.line_height == metrics.line_height {
     self
   } else {
-    Buffer::{ ..self, metrics, redraw: true }
+    Buffer::{
+      ..self,
+      metrics,
+      lines: reset_layout_lines(self.lines),
+      redraw: true,
+    }
   }
 }
 
@@ -186,21 +263,19 @@ pub fn Buffer::set_size(
   width_opt : Float?,
   height_opt : Float?,
 ) -> Buffer {
-  // MVP: any size change triggers redraw.
-  if self.width_opt is Some(w0) &&
-    width_opt is Some(w1) &&
-    w0 == w1 &&
-    self.height_opt is Some(h0) &&
-    height_opt is Some(h1) &&
-    h0 == h1 {
-    self
-  } else if self.width_opt is None &&
-    width_opt is None &&
-    self.height_opt is None &&
-    height_opt is None {
+  let clamped_width_opt = clamp_nonneg_opt(width_opt)
+  let clamped_height_opt = clamp_nonneg_opt(height_opt)
+  if float_opt_eq(self.width_opt, clamped_width_opt) &&
+    float_opt_eq(self.height_opt, clamped_height_opt) {
     self
   } else {
-    Buffer::{ ..self, width_opt, height_opt, redraw: true }
+    Buffer::{
+      ..self,
+      width_opt: clamped_width_opt,
+      height_opt: clamped_height_opt,
+      lines: reset_layout_lines(self.lines),
+      redraw: true,
+    }
   }
 }
 
@@ -414,61 +489,55 @@ pub struct LayoutRun {
 ///|
 pub fn Buffer::layout_runs(self : Buffer) -> Iter[LayoutRun] {
   let runs : Array[LayoutRun] = []
-  let mut y = 0.0F
   let n = self.lines.length()
-  for i in 0..<n {
+  if n == 0 {
+    return runs.iter()
+  }
+  let start_line = if self.scroll.line < 0 {
+    0
+  } else if self.scroll.line >= n {
+    n
+  } else {
+    self.scroll.line
+  }
+  let mut line_top_acc = 0.0F
+  for i in start_line..<n {
     let line = self.lines[i]
-    let shape_opt = line.shape_opt()
-    let rtl = if shape_opt is Some(s) { s.rtl } else { false }
-    match line.layout_opt() {
-      None => {
-        let line_height = self.metrics.line_height
-        runs.push(LayoutRun::{
-          line_i: i,
-          line_y: y,
-          line_top: y,
-          line_height,
-          text: line.text(),
-          rtl,
-          glyphs: [],
-          line_w: 0.0F,
-        })
-        y = y + line_height
+    let rtl = match line.shape_opt() {
+      Some(shape) => shape.rtl
+      None => return runs.iter()
+    }
+    let layout_lines = match line.layout_opt() {
+      Some(layout) => layout
+      None => return runs.iter()
+    }
+    for l in layout_lines {
+      let line_height = if l.line_height_opt is Some(h) {
+        h
+      } else {
+        self.metrics.line_height
       }
-      Some(layout_lines) =>
-        if layout_lines.length() == 0 {
-          let line_height = self.metrics.line_height
-          runs.push(LayoutRun::{
-            line_i: i,
-            line_y: y,
-            line_top: y,
-            line_height,
-            text: line.text(),
-            rtl,
-            glyphs: [],
-            line_w: 0.0F,
-          })
-          y = y + line_height
-        } else {
-          for l in layout_lines {
-            let line_height = if l.line_height_opt is Some(h) {
-              h
-            } else {
-              self.metrics.line_height
-            }
-            runs.push(LayoutRun::{
-              line_i: i,
-              line_y: y,
-              line_top: y,
-              line_height,
-              text: line.text(),
-              rtl,
-              glyphs: l.glyphs,
-              line_w: l.w,
-            })
-            y = y + line_height
-          }
-        }
+      let line_top = line_top_acc - self.scroll.vertical
+      let glyph_height = l.max_ascent + l.max_descent
+      let centering_offset = (line_height - glyph_height) / 2.0F
+      let line_y = line_top + centering_offset + l.max_ascent
+      if self.height_opt is Some(h) && line_y - l.max_ascent > h {
+        return runs.iter()
+      }
+      line_top_acc = line_top_acc + line_height
+      if line_y + l.max_descent < 0.0F {
+        continue
+      }
+      runs.push(LayoutRun::{
+        line_i: i,
+        line_y,
+        line_top,
+        line_height,
+        text: line.text(),
+        rtl,
+        glyphs: l.glyphs,
+        line_w: l.w,
+      })
     }
   }
   runs.iter()
@@ -554,7 +623,12 @@ pub fn Buffer::cursor_motion(
   motion : Motion,
 ) -> (Cursor, Int?)? {
   // Layout to get visual line runs.
-  let buffer = self.layout_all()
+  let laid_out = self.layout_all()
+  let buffer = Buffer::{
+    ..laid_out,
+    scroll: Scroll::default(),
+    height_opt: None,
+  }
   let runs : Array[LayoutRun] = []
   for r in buffer.layout_runs() {
     runs.push(r)
@@ -1105,30 +1179,16 @@ pub fn Buffer::draw_with_font_system(
   f : (Int, Int, UInt, UInt, Color) -> Unit,
 ) -> (Buffer, SwashCache) {
   let buffer = self.layout_all_with_font_system(font_system)
-  let mut y = 0.0F
-  for line in buffer.lines {
-    match line.layout_opt() {
-      None => y = y + buffer.metrics.line_height
-      Some(layout_lines) =>
-        for layout_line in layout_lines {
-          for glyph in layout_line.glyphs {
-            let physical = glyph.physical((0.0F, y), 1.0F)
-            swash_cache.with_pixels(
-              font_system,
-              physical.cache_key,
-              text_color,
-              fn(px, py, color) {
-                f(physical.x + px, physical.y + py, 1U, 1U, color)
-              },
-            )
-          }
-          let line_height = if layout_line.line_height_opt is Some(h) {
-            h
-          } else {
-            buffer.metrics.line_height
-          }
-          y = y + line_height
-        }
+  for run in buffer.layout_runs() {
+    for glyph in run.glyphs {
+      let physical = glyph.physical((0.0F, run.line_y), 1.0F)
+      swash_cache.with_pixels(font_system, physical.cache_key, text_color, fn(
+        px,
+        py,
+        color,
+      ) {
+        f(physical.x + px, physical.y + py, 1U, 1U, color)
+      })
     }
   }
   (buffer, swash_cache)

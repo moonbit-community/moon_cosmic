@@ -103,6 +103,67 @@ test "layout_from_shape: Wrap::WordOrGlyph falls back to glyph wrap inside a lon
 }
 
 ///|
+test "layout_from_shape: match_mono_width snaps per-glyph advance" {
+  fn absf(v : Float) -> Float {
+    if v < 0.0F {
+      0.0F - v
+    } else {
+      v
+    }
+  }
+
+  let text = "x"
+  let shape = ShapeLine::new(false, [
+    ShapeGlyph::new(0, 1, 1.3F, 0.0F, 0.0F, 0.0F, 0, 1, 0),
+  ])
+  let base = layout_from_shape(text, shape, 10.0F, 10.0F, None, Wrap::None)
+  let snapped = layout_from_shape(text, shape, 10.0F, 8.0F, None, Wrap::None)
+  inspect(base.length(), content="1")
+  inspect(snapped.length(), content="1")
+  inspect(absf(base[0].w - 13.0F) < 0.001F, content="true")
+  inspect(absf(snapped[0].w - 12.8F) < 0.001F, content="true")
+}
+
+///|
+test "layout_from_shape: Wrap::Word keeps blanks when width is unbounded" {
+  let text = "  a  "
+  let shape = ShapeLine::build(
+    ShapeLine::empty(),
+    text,
+    AttrsList::new(Attrs::new()),
+    Shaping::Basic,
+    8,
+  )
+  let lines = layout_from_shape(text, shape, 10.0F, 10.0F, None, Wrap::Word)
+  inspect(lines.length(), content="1")
+  inspect((lines[0].start, lines[0].end), content="(0, 5)")
+  inspect(lines[0].w, content="50")
+}
+
+///|
+test "layout_from_shape: Wrap::Word keeps trailing blanks on final line" {
+  let text = "a  "
+  let shape = ShapeLine::build(
+    ShapeLine::empty(),
+    text,
+    AttrsList::new(Attrs::new()),
+    Shaping::Basic,
+    8,
+  )
+  let lines = layout_from_shape(
+    text,
+    shape,
+    10.0F,
+    10.0F,
+    Some(20.0F),
+    Wrap::Word,
+  )
+  inspect(lines.length(), content="1")
+  inspect((lines[0].start, lines[0].end), content="(0, 3)")
+  inspect(lines[0].w, content="30")
+}
+
+///|
 test "layout_from_shape: stable wrap when feeding measured width back as limit" {
   fn shape_basic(text : String) -> ShapeLine {
     ShapeLine::build(
@@ -196,6 +257,8 @@ test "layout_from_shape: stable wrap when feeding measured width back as limit" 
   let cases : Array[String] = [
     "(6)  SomewhatBoringDisplayTransform", "", " ", "  ", "   ", "       ", "hello world",
     "Lorem ipsum dolor sit amet, qui minim labore adipisicing minim sint cillum sint consectetur cupidatat.",
+    "שָׁלוֹם עָלֵיכֶם", "السَّلَامُ عَلَيْكُمْ",
+    "I like to render اللغة العربية in Rust!",
   ]
   for text in cases {
     for wrap in [Wrap::None, Wrap::Glyph, Wrap::Word, Wrap::WordOrGlyph] {
