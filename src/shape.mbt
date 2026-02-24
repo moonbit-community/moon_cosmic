@@ -600,10 +600,9 @@ pub fn ShapeLine::build_with_font_system(
   let rtl = detect_base_rtl(text)
   let levels = compute_bidi_levels(text, rtl)
   let cx = @shape.ShapeContext::new()
-  let runs : Array[(Int, @moon_swash.Script, Bool, Array[@moon_swash.Token])] = []
+  let runs : Array[(@moon_swash.Script, Bool, Array[@moon_swash.Token])] = []
   let mut off = 0U
   let mut cur_script = @moon_swash.Script::Latin
-  let mut cur_font_id = default_font_id
   let mut cur_rtl = rtl
   let mut cur_tokens : Array[@moon_swash.Token] = []
   for ch0 in text {
@@ -615,11 +614,6 @@ pub fn ShapeLine::build_with_font_system(
     let attrs = attrs_list.get_span(i)
     // Tabs are shaped as spaces (upstream behavior).
     let ch = if ch0 == '\t' { ' ' } else { ch0 }
-    let cp = ch.to_int().reinterpret_as_uint()
-    let font_id = match font_system.resolve_for_codepoint(attrs, cp) {
-      None => default_font_id
-      Some(id) => id
-    }
     let info = @moon_swash.CharInfo::from_char(ch)
     let tok = @moon_swash.Token::new(
       ch,
@@ -639,15 +633,12 @@ pub fn ShapeLine::build_with_font_system(
     }
     if cur_tokens.length() == 0 {
       cur_script = effective
-      cur_font_id = font_id
       cur_rtl = run_rtl
     } else if !script_eq(effective, cur_script) ||
-      font_id != cur_font_id ||
       run_rtl != cur_rtl {
-      runs.push((cur_font_id, cur_script, cur_rtl, cur_tokens))
+      runs.push((cur_script, cur_rtl, cur_tokens))
       cur_tokens = []
       cur_script = effective
-      cur_font_id = font_id
       cur_rtl = run_rtl
     }
     cur_tokens.push(tok)
@@ -655,13 +646,22 @@ pub fn ShapeLine::build_with_font_system(
   }
   let glyphs : Array[ShapeGlyph] = []
   if cur_tokens.length() != 0 {
-    runs.push((cur_font_id, cur_script, cur_rtl, cur_tokens))
+    runs.push((cur_script, cur_rtl, cur_tokens))
   }
   for run in runs {
-    let run_font_id = run.0
-    let script = run.1
-    let run_rtl = run.2
-    let run_tokens = run.3
+    let script = run.0
+    let run_rtl = run.1
+    let run_tokens = run.2
+    let run_start = if run_tokens.length() == 0 {
+      0
+    } else {
+      run_tokens[0].offset().reinterpret_as_int()
+    }
+    let run_attrs = attrs_for_position(attrs_list, run_start, text.length())
+    let run_font_id = match font_system.resolve(run_attrs) {
+      None => default_font_id
+      Some(id) => id
+    }
     let (default_glyphs, default_missing) = shape_run_with_font(
       font_system,
       attrs_list,
@@ -677,12 +677,6 @@ pub fn ShapeLine::build_with_font_system(
     let mut run_glyphs = default_glyphs
     let missing = default_missing
     if missing.length() > 0 {
-      let run_start = if run_tokens.length() == 0 {
-        0
-      } else {
-        run_tokens[0].offset().reinterpret_as_int()
-      }
-      let run_attrs = attrs_for_position(attrs_list, run_start, text.length())
       let ordered = font_system.font_matches(run_attrs)
       for alt_font_id in ordered {
         if alt_font_id == run_font_id {
