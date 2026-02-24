@@ -20,10 +20,12 @@
 pub struct FontEntry {
   id : Int
   family_name : String
+  postscript_name : String
   font : @moon_swash.FontRef
   charmap_proxy : @moon_swash.CharmapProxy
   attributes : @moon_swash.Attributes
   is_monospace : Bool
+  not_emoji : Bool
 }
 
 ///|
@@ -34,6 +36,11 @@ pub fn FontEntry::id(self : FontEntry) -> Int {
 ///|
 pub fn FontEntry::family_name(self : FontEntry) -> String {
   self.family_name
+}
+
+///|
+pub fn FontEntry::postscript_name(self : FontEntry) -> String {
+  self.postscript_name
 }
 
 ///|
@@ -54,6 +61,11 @@ pub fn FontEntry::attributes(self : FontEntry) -> @moon_swash.Attributes {
 ///|
 pub fn FontEntry::is_monospace(self : FontEntry) -> Bool {
   self.is_monospace
+}
+
+///|
+pub fn FontEntry::not_emoji(self : FontEntry) -> Bool {
+  self.not_emoji
 }
 
 ///|
@@ -112,6 +124,40 @@ fn font_family_name(font : @moon_swash.FontRef, locale : String) -> String {
 }
 
 ///|
+fn font_postscript_name(font : @moon_swash.FontRef) -> String {
+  let strings = font.localized_strings()
+  match strings.find_by_id(@moon_swash.StringId::PostScript, None) {
+    Some(s) => s.to_string()
+    None => ""
+  }
+}
+
+///|
+fn string_contains_ascii(haystack : String, needle : String) -> Bool {
+  let hlen = haystack.length()
+  let nlen = needle.length()
+  if nlen == 0 {
+    return true
+  }
+  if nlen > hlen {
+    return false
+  }
+  for i in 0..<(hlen - nlen + 1) {
+    let mut ok = true
+    for j in 0..<nlen {
+      if haystack.code_unit_at(i + j) != needle.code_unit_at(j) {
+        ok = false
+        break
+      }
+    }
+    if ok {
+      return true
+    }
+  }
+  false
+}
+
+///|
 /// Load font data (TTF/OTF/TTC bytes) into the system.
 ///
 /// If the bytes do not parse as a font/collection, this is a no-op.
@@ -127,14 +173,17 @@ pub fn FontSystem::load_font_data(
       for f in data_ref.fonts() {
         let id = fonts.length()
         let family_name = font_family_name(f, locale)
+        let postscript_name = font_postscript_name(f)
         let metrics = f.metrics([])
         fonts.push(FontEntry::{
           id,
           family_name,
+          postscript_name,
           font: f,
           charmap_proxy: @moon_swash.CharmapProxy::from_font(f),
           attributes: f.attributes(),
           is_monospace: metrics.is_monospace,
+          not_emoji: !string_contains_ascii(postscript_name, "Emoji"),
         })
       }
       // New fonts change candidate ordering; clear match cache.
@@ -180,17 +229,24 @@ pub impl Hash for FontCodepointKey with hash_combine(self, hasher) {
 pub struct FontMatchAttrs {
   family : Family
   weight : Weight
+  stretch : @moon_swash.Stretch
+  style : @moon_swash.Style
 }
 
 ///|
 pub impl Eq for FontMatchAttrs with equal(self, other) {
-  self.family == other.family && self.weight == other.weight
+  self.family == other.family &&
+  self.weight == other.weight &&
+  self.stretch == other.stretch &&
+  self.style == other.style
 }
 
 ///|
 pub impl Hash for FontMatchAttrs with hash_combine(self, hasher) {
   self.family.hash_combine(hasher)
   self.weight.hash_combine(hasher)
+  hasher.combine_int(self.stretch.raw().to_int())
+  hasher.combine_string(self.style.to_string())
 }
 
 ///|
@@ -263,13 +319,86 @@ fn entry_weight_diff(entry : FontEntry, req_weight : Weight) -> Int {
 }
 
 ///|
-fn better_font_match(cand : (Int, Int), best : (Int, Int)) -> Bool {
+fn entry_weight_raw(entry : FontEntry) -> Int {
+  entry.attributes.weight().value.to_int()
+}
+
+///|
+fn entry_stretch_raw(entry : FontEntry) -> Int {
+  entry.attributes.stretch().raw().to_int()
+}
+
+///|
+fn entry_stretch_diff(
+  entry : FontEntry,
+  req_stretch : @moon_swash.Stretch,
+) -> Int {
+  abs_int(entry_stretch_raw(entry) - req_stretch.raw().to_int())
+}
+
+///|
+fn style_bucket(style : @moon_swash.Style) -> Int {
+  match style {
+    @moon_swash.Style::Normal => 0
+    @moon_swash.Style::Italic => 1
+    @moon_swash.Style::Oblique(_) => 2
+  }
+}
+
+///|
+fn style_diff(lhs : @moon_swash.Style, rhs : @moon_swash.Style) -> Int {
+  let a = style_bucket(lhs)
+  let b = style_bucket(rhs)
+  if a == b {
+    0
+  } else if (a == 1 && b == 2) || (a == 2 && b == 1) {
+    1
+  } else {
+    2
+  }
+}
+
+///|
+fn entry_style_diff(entry : FontEntry, req_style : @moon_swash.Style) -> Int {
+  style_diff(entry.attributes.style(), req_style)
+}
+
+///|
+fn better_font_match(
+  cand : (Int, Bool, Int, Int, Int, Int, Int),
+  best : (Int, Bool, Int, Int, Int, Int, Int),
+) -> Bool {
   let cand_id = cand.0
-  let cand_wdiff = cand.1
+  let cand_not_emoji = cand.1
+  let cand_wdiff = cand.2
+  let cand_stretch_diff = cand.3
+  let cand_style_diff = cand.4
+  let cand_weight = cand.5
+  let cand_stretch = cand.6
   let best_id = best.0
-  let best_wdiff = best.1
+  let best_not_emoji = best.1
+  let best_wdiff = best.2
+  let best_stretch_diff = best.3
+  let best_style_diff = best.4
+  let best_weight = best.5
+  let best_stretch = best.6
+  if cand_not_emoji != best_not_emoji {
+    return cand_not_emoji
+  }
   if cand_wdiff != best_wdiff {
     return cand_wdiff < best_wdiff
+  }
+  if cand_stretch_diff != best_stretch_diff {
+    return cand_stretch_diff < best_stretch_diff
+  }
+  if cand_style_diff != best_style_diff {
+    return cand_style_diff < best_style_diff
+  }
+  if cand_weight != best_weight {
+    return cand_weight < best_weight
+  }
+  if cand_stretch != best_stretch {
+    return cand_stretch < best_stretch
   }
   cand_id < best_id
 }
@@ -278,9 +407,21 @@ fn better_font_match(cand : (Int, Int), best : (Int, Int)) -> Bool {
 fn build_font_matches(fs : FontSystem, attrs : Attrs) -> Array[Int] {
   let family = attrs.family_value()
   let req_weight = attrs.weight_value()
-  let candidates : Array[(Int, Int)] = []
+  let req_stretch = attrs.stretch_value()
+  let req_style = attrs.style_value()
+  let candidates : Array[(Int, Bool, Int, Int, Int, Int, Int)] = []
   for e in fs.fonts {
-    candidates.push((e.id, entry_weight_diff(e, req_weight)))
+    candidates.push(
+      (
+        e.id,
+        e.not_emoji,
+        entry_weight_diff(e, req_weight),
+        entry_stretch_diff(e, req_stretch),
+        entry_style_diff(e, req_style),
+        entry_weight_raw(e),
+        entry_stretch_raw(e),
+      ),
+    )
   }
   let n = candidates.length()
   let used : Array[Bool] = Array::makei(n, _ => false)
@@ -303,30 +444,30 @@ fn build_font_matches(fs : FontSystem, attrs : Attrs) -> Array[Int] {
 
   // Keep candidate ordering close to upstream:
   // sort globally by match score, then move query best family match to front.
-  let mut preferred_id : Int? = None
-  let mut preferred_wdiff = 0
+  let mut preferred : (Int, Bool, Int, Int, Int, Int, Int)? = None
   for e in fs.fonts {
     if !family_matches(e, family) {
       continue
     }
-    let wdiff = entry_weight_diff(e, req_weight)
-    match preferred_id {
-      None => {
-        preferred_id = Some(e.id)
-        preferred_wdiff = wdiff
-      }
-      Some(best_id) =>
-        if wdiff < preferred_wdiff ||
-          (wdiff == preferred_wdiff && e.id < best_id) {
-          preferred_id = Some(e.id)
-          preferred_wdiff = wdiff
-        }
+    let cand = (
+      e.id,
+      e.not_emoji,
+      entry_weight_diff(e, req_weight),
+      entry_stretch_diff(e, req_stretch),
+      entry_style_diff(e, req_style),
+      entry_weight_raw(e),
+      entry_stretch_raw(e),
+    )
+    match preferred {
+      None => preferred = Some(cand)
+      Some(best) => if better_font_match(cand, best) { preferred = Some(cand) }
     }
   }
 
-  match preferred_id {
+  match preferred {
     None => ids
-    Some(pid) => {
+    Some(best) => {
+      let pid = best.0
       if ids.length() == 0 || ids[0] == pid {
         return ids
       }
@@ -349,6 +490,8 @@ fn get_font_matches(fs : FontSystem, attrs : Attrs) -> Array[Int] {
   let key = FontMatchAttrs::{
     family: attrs.family_value(),
     weight: attrs.weight_value(),
+    stretch: attrs.stretch_value(),
+    style: attrs.style_value(),
   }
   match fs.font_matches_cache.get(key) {
     Some(ids) => ids

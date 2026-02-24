@@ -250,6 +250,8 @@ pub struct Attrs {
   metadata : Int
   family : Family
   weight : Weight
+  stretch : @moon_swash.Stretch
+  style : @moon_swash.Style
   metrics_opt : CacheMetrics?
 }
 
@@ -264,6 +266,8 @@ pub fn Attrs::with_metadata(metadata : Int) -> Attrs {
     metadata,
     family: Family::SansSerif,
     weight: Weight::normal(),
+    stretch: @moon_swash.Stretch::normal(),
+    style: @moon_swash.Style::Normal,
     metrics_opt: None,
   }
 }
@@ -281,6 +285,16 @@ pub fn Attrs::family(self : Attrs, family : Family) -> Attrs {
 ///|
 pub fn Attrs::weight(self : Attrs, weight : Weight) -> Attrs {
   Attrs::{ ..self, weight, }
+}
+
+///|
+pub fn Attrs::stretch(self : Attrs, stretch : @moon_swash.Stretch) -> Attrs {
+  Attrs::{ ..self, stretch, }
+}
+
+///|
+pub fn Attrs::style(self : Attrs, style : @moon_swash.Style) -> Attrs {
+  Attrs::{ ..self, style, }
 }
 
 ///|
@@ -309,10 +323,22 @@ pub fn Attrs::weight_value(self : Attrs) -> Weight {
 }
 
 ///|
+pub fn Attrs::stretch_value(self : Attrs) -> @moon_swash.Stretch {
+  self.stretch
+}
+
+///|
+pub fn Attrs::style_value(self : Attrs) -> @moon_swash.Style {
+  self.style
+}
+
+///|
 pub impl Eq for Attrs with equal(self, other) {
   self.metadata == other.metadata &&
   self.family == other.family &&
   self.weight == other.weight &&
+  self.stretch == other.stretch &&
+  self.style == other.style &&
   self.metrics_opt == other.metrics_opt
 }
 
@@ -321,6 +347,8 @@ pub impl Hash for Attrs with hash_combine(self, hasher) {
   hasher.combine_int(self.metadata)
   self.family.hash_combine(hasher)
   self.weight.hash_combine(hasher)
+  hasher.combine_int(self.stretch.raw().to_int())
+  hasher.combine_string(self.style.to_string())
   match self.metrics_opt {
     Option::None => hasher.combine_int(0)
     Option::Some(cm) => {

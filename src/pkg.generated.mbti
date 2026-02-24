@@ -84,6 +84,8 @@ pub struct Attrs {
   metadata : Int
   family : Family
   weight : Weight
+  stretch : @moon_swash.Stretch
+  style : @moon_swash.Style
   metrics_opt : CacheMetrics?
 }
 pub fn Attrs::family(Self, Family) -> Self
@@ -92,6 +94,10 @@ pub fn Attrs::metadata(Self) -> Int
 pub fn Attrs::metrics(Self, Metrics) -> Self
 pub fn Attrs::metrics_opt(Self) -> Metrics?
 pub fn Attrs::new() -> Self
+pub fn Attrs::stretch(Self, @moon_swash.Stretch) -> Self
+pub fn Attrs::stretch_value(Self) -> @moon_swash.Stretch
+pub fn Attrs::style(Self, @moon_swash.Style) -> Self
+pub fn Attrs::style_value(Self) -> @moon_swash.Style
 pub fn Attrs::weight(Self, Weight) -> Self
 pub fn Attrs::weight_value(Self) -> Weight
 pub fn Attrs::with_metadata(Int) -> Self
@@ -332,10 +338,12 @@ pub impl Hash for FontCodepointKey
 pub struct FontEntry {
   id : Int
   family_name : String
+  postscript_name : String
   font : @moon_swash.FontRef
   charmap_proxy : @moon_swash.CharmapProxy
   attributes : @moon_swash.Attributes
   is_monospace : Bool
+  not_emoji : Bool
 }
 pub fn FontEntry::attributes(Self) -> @moon_swash.Attributes
 pub fn FontEntry::charmap_proxy(Self) -> @moon_swash.CharmapProxy
@@ -343,10 +351,14 @@ pub fn FontEntry::family_name(Self) -> String
 pub fn FontEntry::font(Self) -> @moon_swash.FontRef
 pub fn FontEntry::id(Self) -> Int
 pub fn FontEntry::is_monospace(Self) -> Bool
+pub fn FontEntry::not_emoji(Self) -> Bool
+pub fn FontEntry::postscript_name(Self) -> String
 
 pub struct FontMatchAttrs {
   family : Family
   weight : Weight
+  stretch : @moon_swash.Stretch
+  style : @moon_swash.Style
 }
 pub impl Eq for FontMatchAttrs
 pub impl Hash for FontMatchAttrs
