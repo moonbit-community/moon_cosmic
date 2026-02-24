@@ -387,16 +387,6 @@ fn merge_fallback_glyphs(
 }
 
 ///|
-fn int_array_contains(ids : Array[Int], id : Int) -> Bool {
-  for x in ids {
-    if x == id {
-      return true
-    }
-  }
-  false
-}
-
-///|
 fn shape_run_with_font(
   font_system : FontSystem,
   attrs_list : AttrsList,
@@ -634,8 +624,7 @@ pub fn ShapeLine::build_with_font_system(
     if cur_tokens.length() == 0 {
       cur_script = effective
       cur_rtl = run_rtl
-    } else if !script_eq(effective, cur_script) ||
-      run_rtl != cur_rtl {
+    } else if !script_eq(effective, cur_script) || run_rtl != cur_rtl {
       runs.push((cur_script, cur_rtl, cur_tokens))
       cur_tokens = []
       cur_script = effective
@@ -699,33 +688,6 @@ pub fn ShapeLine::build_with_font_system(
         )
         if missing.length() == 0 {
           break
-        }
-      }
-      if missing.length() > 0 {
-        for entry in font_system.fonts() {
-          let alt_font_id = entry.id()
-          if alt_font_id == run_font_id ||
-            int_array_contains(ordered, alt_font_id) {
-            continue
-          }
-          let (fb_glyphs, fb_missing) = shape_run_with_font(
-            font_system,
-            attrs_list,
-            levels,
-            text.length(),
-            rtl,
-            run_rtl,
-            cx,
-            script,
-            run_tokens,
-            alt_font_id,
-          )
-          run_glyphs = merge_fallback_glyphs(
-            run_glyphs, missing, fb_glyphs, fb_missing,
-          )
-          if missing.length() == 0 {
-            break
-          }
         }
       }
     }

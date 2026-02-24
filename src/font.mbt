@@ -68,6 +68,9 @@ pub struct FontSystem {
 const FONT_MATCHES_CACHE_SIZE_LIMIT : Int = 256
 
 ///|
+const CODEPOINT_SUPPORT_CACHE_SIZE_LIMIT : Int = 8192
+
+///|
 pub fn FontSystem::new() -> FontSystem {
   FontSystem::new_with_locale("en-US")
 }
@@ -202,6 +205,9 @@ fn font_maps_codepoint(
   entry : FontEntry,
   codepoint : UInt,
 ) -> Bool {
+  if fs.codepoint_support_cache.length() >= CODEPOINT_SUPPORT_CACHE_SIZE_LIMIT {
+    fs.codepoint_support_cache.clear()
+  }
   let key = FontCodepointKey::{ font_id: entry.id, codepoint }
   match fs.codepoint_support_cache.get(key) {
     Some(ok) => ok
@@ -221,16 +227,11 @@ fn entry_weight_diff(entry : FontEntry, req_weight : Weight) -> Int {
 }
 
 ///|
-fn better_font_match(cand : (Int, Bool, Int), best : (Int, Bool, Int)) -> Bool {
+fn better_font_match(cand : (Int, Int), best : (Int, Int)) -> Bool {
   let cand_id = cand.0
-  let cand_family = cand.1
-  let cand_wdiff = cand.2
+  let cand_wdiff = cand.1
   let best_id = best.0
-  let best_family = best.1
-  let best_wdiff = best.2
-  if cand_family != best_family {
-    return cand_family
-  }
+  let best_wdiff = best.1
   if cand_wdiff != best_wdiff {
     return cand_wdiff < best_wdiff
   }
@@ -241,11 +242,9 @@ fn better_font_match(cand : (Int, Bool, Int), best : (Int, Bool, Int)) -> Bool {
 fn build_font_matches(fs : FontSystem, attrs : Attrs) -> Array[Int] {
   let family = attrs.family_value()
   let req_weight = attrs.weight_value()
-  let candidates : Array[(Int, Bool, Int)] = []
+  let candidates : Array[(Int, Int)] = []
   for e in fs.fonts {
-    candidates.push(
-      (e.id, family_matches(e, family), entry_weight_diff(e, req_weight)),
-    )
+    candidates.push((e.id, entry_weight_diff(e, req_weight)))
   }
   let n = candidates.length()
   let used : Array[Bool] = Array::makei(n, _ => false)
@@ -265,7 +264,45 @@ fn build_font_matches(fs : FontSystem, attrs : Attrs) -> Array[Int] {
       ids.push(candidates[best_i].0)
     }
   }
-  ids
+
+  // Keep candidate ordering close to upstream:
+  // sort globally by match score, then move query best family match to front.
+  let mut preferred_id : Int? = None
+  let mut preferred_wdiff = 0
+  for e in fs.fonts {
+    if !family_matches(e, family) {
+      continue
+    }
+    let wdiff = entry_weight_diff(e, req_weight)
+    match preferred_id {
+      None => {
+        preferred_id = Some(e.id)
+        preferred_wdiff = wdiff
+      }
+      Some(best_id) =>
+        if wdiff < preferred_wdiff ||
+          (wdiff == preferred_wdiff && e.id < best_id) {
+          preferred_id = Some(e.id)
+          preferred_wdiff = wdiff
+        }
+    }
+  }
+
+  match preferred_id {
+    None => ids
+    Some(pid) => {
+      if ids.length() == 0 || ids[0] == pid {
+        return ids
+      }
+      let reordered : Array[Int] = [pid]
+      for id in ids {
+        if id != pid {
+          reordered.push(id)
+        }
+      }
+      reordered
+    }
+  }
 }
 
 ///|

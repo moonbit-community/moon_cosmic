@@ -172,3 +172,16 @@ test "FontSystem.font_matches is stable across cache hits" {
   inspect(fs.font_matches(attrs), content="[0, 1]")
   inspect(fs.font_matches(attrs), content="[0, 1]")
 }
+
+///|
+test "FontSystem.resolve_for_codepoint remains stable across cache boundary clears" {
+  let a = mk_min_font_cmap4_single(b'\x00', b'\x41')
+  let b = mk_min_font_cmap4_single(b'\x00', b'\x42')
+  let fs = FontSystem::new().load_font_data(a).load_font_data(b)
+  let attrs = Attrs::new()
+  for i in 0..<9000 {
+    fs.resolve_for_codepoint(attrs, i.reinterpret_as_uint()) |> ignore
+  }
+  inspect(fs.resolve_for_codepoint(attrs, 0x41U), content="Some(0)")
+  inspect(fs.resolve_for_codepoint(attrs, 0x42U), content="Some(1)")
+}
