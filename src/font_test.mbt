@@ -440,3 +440,55 @@ test "FontSystem.font_matches_for_script respects weight-zero gate for script/co
   inspect(base == arabic, content="true")
   inspect(base == han, content="true")
 }
+
+///|
+test "FontSystem.font_matches_for_scripts matches singleton script behavior" {
+  let min_font = mk_min_font_cmap4_single(b'\x00', b'\x41')
+  let fs = FontSystem::new()
+    .load_font_data(min_font)
+    .load_font_data(test_font_inter_regular_ttf())
+  let attrs = Attrs::new()
+  let script = @moon_swash.Script::Arabic
+  inspect(
+    fs.font_matches_for_scripts(attrs, [script]) ==
+    fs.font_matches_for_script(attrs, script),
+    content="true",
+  )
+}
+
+///|
+test "FontSystem.font_matches_for_scripts ignores latin/common/inherited/unknown" {
+  let min_font = mk_min_font_cmap4_single(b'\x00', b'\x41')
+  let fs = FontSystem::new()
+    .load_font_data(min_font)
+    .load_font_data(test_font_inter_regular_ttf())
+  let attrs = Attrs::new()
+  let base = fs.font_matches(attrs)
+  let staged = fs.font_matches_for_scripts(attrs, [
+    @moon_swash.Script::Latin,
+    @moon_swash.Script::Common,
+    @moon_swash.Script::Inherited,
+    @moon_swash.Script::Unknown,
+  ])
+  inspect(staged == base, content="true")
+}
+
+///|
+test "FontSystem.font_matches_for_scripts deduplicates repeated scripts" {
+  let min_font = mk_min_font_cmap4_single(b'\x00', b'\x41')
+  let fs = FontSystem::new()
+    .load_font_data(min_font)
+    .load_font_data(test_font_inter_regular_ttf())
+  let attrs = Attrs::new()
+  let repeated = fs.font_matches_for_scripts(attrs, [
+    @moon_swash.Script::Arabic,
+    @moon_swash.Script::Arabic,
+    @moon_swash.Script::Han,
+    @moon_swash.Script::Han,
+  ])
+  let unique = fs.font_matches_for_scripts(attrs, [
+    @moon_swash.Script::Arabic,
+    @moon_swash.Script::Han,
+  ])
+  inspect(repeated == unique, content="true")
+}

@@ -167,6 +167,63 @@ fn script_eq(a : @moon_swash.Script, b : @moon_swash.Script) -> Bool {
 }
 
 ///|
+fn shape_script_needs_fallback_stage(script : @moon_swash.Script) -> Bool {
+  match script {
+    @moon_swash.Script::Common
+    | @moon_swash.Script::Inherited
+    | @moon_swash.Script::Latin
+    | @moon_swash.Script::Unknown => false
+    _ => true
+  }
+}
+
+///|
+fn shape_script_in_array(
+  scripts : Array[@moon_swash.Script],
+  script : @moon_swash.Script,
+) -> Bool {
+  for s in scripts {
+    if script_eq(s, script) {
+      return true
+    }
+  }
+  false
+}
+
+///|
+fn collect_run_fallback_scripts(
+  run_tokens : Array[@moon_swash.Token],
+) -> Array[@moon_swash.Script] {
+  let scripts : Array[@moon_swash.Script] = []
+  for tok in run_tokens {
+    let script = @moon_swash.CharInfo::from_char(tok.ch()).properties().script()
+    if shape_script_needs_fallback_stage(script) &&
+      !shape_script_in_array(scripts, script) {
+      scripts.push(script)
+    }
+  }
+  scripts
+}
+
+///|
+fn entry_supports_any_run_script(
+  entry : FontEntry,
+  scripts : Array[@moon_swash.Script],
+) -> Bool {
+  if scripts.length() == 0 {
+    return false
+  }
+  let systems = entry.font().writing_systems()
+  for ws in systems.iter() {
+    match ws.script() {
+      None => ()
+      Some(s) => if shape_script_in_array(scripts, s) { return true }
+    }
+  }
+  false
+}
+
+///|
 fn source_start_index(source : @moon_swash.SourceRange) -> Int {
   source.start().reinterpret_as_int()
 }
@@ -420,6 +477,7 @@ fn better_monospace_fallback_candidate(
 fn reorder_monospace_fallback_candidates(
   font_system : FontSystem,
   run_attrs : Attrs,
+  run_scripts : Array[@moon_swash.Script],
   run_tokens : Array[@moon_swash.Token],
   ordered : Array[Int],
 ) -> Array[Int] {
@@ -447,13 +505,37 @@ fn reorder_monospace_fallback_candidates(
     }
   }
 
+  let mut has_script_specific_monospace = false
+  for id in ordered {
+    match font_system.get_font_entry(id) {
+      None => ()
+      Some(entry) =>
+        if entry.is_monospace() &&
+          entry_supports_any_run_script(entry, run_scripts) {
+          has_script_specific_monospace = true
+          break
+        }
+    }
+  }
+
   let mono_candidates : Array[(Int, Bool, Int, Int, Int)] = []
   let non_mono_candidates : Array[Int] = []
   for id in ordered {
     match font_system.get_font_entry(id) {
       None => non_mono_candidates.push(id)
-      Some(entry) =>
-        if entry.is_monospace() {
+      Some(entry) => {
+        let keep_as_mono = if !entry.is_monospace() {
+          false
+        } else if has_script_specific_monospace {
+          match primary_default_mono_id {
+            Some(pid) =>
+              pid == id || entry_supports_any_run_script(entry, run_scripts)
+            None => entry_supports_any_run_script(entry, run_scripts)
+          }
+        } else {
+          true
+        }
+        if keep_as_mono {
           let supported = font_system.count_supported_codepoints(id, codepoints)
           let info = (
             id,
@@ -469,6 +551,7 @@ fn reorder_monospace_fallback_candidates(
         } else {
           non_mono_candidates.push(id)
         }
+      }
     }
   }
 
@@ -709,10 +792,18 @@ pub fn ShapeLine::build_with_font_system(
   let rtl = detect_base_rtl(text)
   let levels = compute_bidi_levels(text, rtl)
   let cx = @shape.ShapeContext::new()
-  let runs : Array[(@moon_swash.Script, Bool, Array[@moon_swash.Token])] = []
+  let runs : Array[
+    (
+      @moon_swash.Script,
+      Array[@moon_swash.Script],
+      Bool,
+      Array[@moon_swash.Token],
+    ),
+  ] = []
   let mut off = 0U
-  let mut cur_script = @moon_swash.Script::Latin
+  let mut cur_primary_script = @moon_swash.Script::Latin
   let mut cur_rtl = rtl
+  let mut cur_scripts : Array[@moon_swash.Script] = []
   let mut cur_tokens : Array[@moon_swash.Token] = []
   for ch0 in text {
     let script0 = @moon_swash.CharInfo::from_char(ch0).properties().script()
@@ -731,35 +822,49 @@ pub fn ShapeLine::build_with_font_system(
       info,
       attrs.metadata().reinterpret_as_uint(),
     )
-    let effective = match script0 {
+    let primary = match script0 {
       Common | Inherited | Unknown =>
         if cur_tokens.length() == 0 {
           @moon_swash.Script::Latin
         } else {
-          cur_script
+          cur_primary_script
         }
       _ => script0
     }
     if cur_tokens.length() == 0 {
-      cur_script = effective
+      cur_primary_script = primary
       cur_rtl = run_rtl
-    } else if !script_eq(effective, cur_script) || run_rtl != cur_rtl {
-      runs.push((cur_script, cur_rtl, cur_tokens))
+      cur_scripts = []
+    } else if run_rtl != cur_rtl {
+      runs.push((cur_primary_script, cur_scripts, cur_rtl, cur_tokens))
       cur_tokens = []
-      cur_script = effective
+      cur_primary_script = primary
       cur_rtl = run_rtl
+      cur_scripts = []
+    } else if cur_primary_script is @moon_swash.Script::Latin &&
+      !(script0 is Common || script0 is Inherited || script0 is Unknown) {
+      cur_primary_script = script0
+    }
+    if shape_script_needs_fallback_stage(script0) &&
+      !shape_script_in_array(cur_scripts, script0) {
+      cur_scripts.push(script0)
     }
     cur_tokens.push(tok)
     off = off + len_u
   }
   let glyphs : Array[ShapeGlyph] = []
   if cur_tokens.length() != 0 {
-    runs.push((cur_script, cur_rtl, cur_tokens))
+    runs.push((cur_primary_script, cur_scripts, cur_rtl, cur_tokens))
   }
   for run in runs {
     let script = run.0
-    let run_rtl = run.1
-    let run_tokens = run.2
+    let run_scripts = if run.1.length() == 0 {
+      collect_run_fallback_scripts(run.3)
+    } else {
+      run.1
+    }
+    let run_rtl = run.2
+    let run_tokens = run.3
     let run_start = if run_tokens.length() == 0 {
       0
     } else {
@@ -785,9 +890,11 @@ pub fn ShapeLine::build_with_font_system(
     let mut run_glyphs = default_glyphs
     let missing = default_missing
     if missing.length() > 0 {
-      let ordered0 = font_system.font_matches_for_script(run_attrs, script)
+      let ordered0 = font_system.font_matches_for_scripts(
+        run_attrs, run_scripts,
+      )
       let ordered = reorder_monospace_fallback_candidates(
-        font_system, run_attrs, run_tokens, ordered0,
+        font_system, run_attrs, run_scripts, run_tokens, ordered0,
       )
       for alt_font_id in ordered {
         if alt_font_id == run_font_id {

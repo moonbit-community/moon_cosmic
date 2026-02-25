@@ -38,6 +38,17 @@ fn sort_monospace_infos_for_test(
 }
 
 ///|
+fn token_for_test(ch : Char, offset : Int) -> @moon_swash.Token {
+  @moon_swash.Token::new(
+    ch,
+    offset.reinterpret_as_uint(),
+    utf16_len_of_char(ch).reinterpret_as_uint(),
+    @moon_swash.CharInfo::from_char(ch),
+    0U,
+  )
+}
+
+///|
 test "monospace fallback primary-default rank has top priority" {
   let infos : Array[(Int, Bool, Int, Int, Int)] = [
     (10, false, 0, 0, 400),
@@ -66,4 +77,32 @@ test "monospace fallback ranks lower non-matches when weight diff ties" {
     (12, false, 1, 2, 400),
   ]
   inspect(sort_monospace_infos_for_test(infos), content="[11, 12, 10]")
+}
+
+///|
+test "collect_run_fallback_scripts keeps first-seen unique script order" {
+  let tokens = [
+    token_for_test('a', 0),
+    token_for_test(' ', 1),
+    token_for_test('\u{0628}', 2),
+    token_for_test('\u{4F60}', 3),
+    token_for_test('\u{0628}', 4),
+    token_for_test('\u{3042}', 5),
+  ]
+  let scripts = collect_run_fallback_scripts(tokens)
+  let ok = scripts.length() == 3 &&
+    script_eq(scripts[0], @moon_swash.Script::Arabic) &&
+    script_eq(scripts[1], @moon_swash.Script::Han) &&
+    script_eq(scripts[2], @moon_swash.Script::Hiragana)
+  inspect(ok, content="true")
+}
+
+///|
+test "collect_run_fallback_scripts ignores latin/common/inherited/unknown" {
+  let tokens = [
+    token_for_test('a', 0),
+    token_for_test('1', 1),
+    token_for_test(' ', 2),
+  ]
+  inspect(collect_run_fallback_scripts(tokens).length(), content="0")
 }

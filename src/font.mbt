@@ -705,6 +705,30 @@ fn script_fallback_family_names(
 }
 
 ///|
+fn script_uses_fallback_stage(script : @moon_swash.Script) -> Bool {
+  match script {
+    @moon_swash.Script::Common
+    | @moon_swash.Script::Inherited
+    | @moon_swash.Script::Latin
+    | @moon_swash.Script::Unknown => false
+    _ => true
+  }
+}
+
+///|
+fn script_in_array(
+  scripts : Array[@moon_swash.Script],
+  script : @moon_swash.Script,
+) -> Bool {
+  for s in scripts {
+    if s.to_opentype() == script.to_opentype() {
+      return true
+    }
+  }
+  false
+}
+
+///|
 fn font_maps_codepoint(
   fs : FontSystem,
   entry : FontEntry,
@@ -990,6 +1014,15 @@ pub fn FontSystem::font_matches_for_script(
   attrs : Attrs,
   script : @moon_swash.Script,
 ) -> Array[Int] {
+  self.font_matches_for_scripts(attrs, [script])
+}
+
+///|
+pub fn FontSystem::font_matches_for_scripts(
+  self : FontSystem,
+  attrs : Attrs,
+  scripts : Array[@moon_swash.Script],
+) -> Array[Int] {
   let family = attrs.family_value()
   let req_weight = attrs.weight_value()
   let profile = fallback_profile(self)
@@ -997,16 +1030,25 @@ pub fn FontSystem::font_matches_for_script(
   let (defaults, rest0) = split_default_stage_candidates(
     self, family, req_weight, ids,
   )
-  let rest1 = move_named_fallback_candidates_forward(
-    self,
-    req_weight,
-    rest0,
-    script_fallback_family_names(script, self.locale, profile),
-  )
+  let seen_scripts : Array[@moon_swash.Script] = []
+  let mut rest = rest0
+  for script in scripts {
+    if !script_uses_fallback_stage(script) ||
+      script_in_array(seen_scripts, script) {
+      continue
+    }
+    seen_scripts.push(script)
+    rest = move_named_fallback_candidates_forward(
+      self,
+      req_weight,
+      rest,
+      script_fallback_family_names(script, self.locale, profile),
+    )
+  }
   let rest2 = move_named_fallback_candidates_forward(
     self,
     req_weight,
-    rest1,
+    rest,
     common_fallback_family_names(profile),
   )
   let staged : Array[Int] = []
