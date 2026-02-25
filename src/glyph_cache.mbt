@@ -129,7 +129,7 @@ pub fn SubpixelBin::new(pos : Float) -> (Int, SubpixelBin) {
 pub struct CacheKey {
   /// Font ID (implementation-defined; see FontSystem)
   font_id : Int
-  /// Glyph ID
+  /// Glyph ID (normalized to UInt16 domain for swash parity)
   glyph_id : Int
   /// `f32` bits of font size
   font_size_bits : UInt
@@ -199,6 +199,11 @@ fn u32_from_be_bytes(b : Bytes) -> UInt {
 }
 
 ///|
+fn normalize_glyph_id(glyph_id : Int) -> Int {
+  glyph_id.to_uint16().to_int()
+}
+
+///|
 pub fn CacheKey::new(
   font_id : Int,
   glyph_id : Int,
@@ -210,10 +215,11 @@ pub fn CacheKey::new(
   let (x, x_bin) = SubpixelBin::new(pos.0)
   let (y, y_bin) = SubpixelBin::new(pos.1)
   let font_size_bits = u32_from_be_bytes(Float::to_be_bytes(font_size))
+  let normalized_glyph_id = normalize_glyph_id(glyph_id)
   (
     CacheKey::{
       font_id,
-      glyph_id,
+      glyph_id: normalized_glyph_id,
       font_size_bits,
       x_bin,
       y_bin,

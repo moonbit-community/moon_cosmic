@@ -48,3 +48,13 @@ test "subpixel bins (ported from cosmic-text)" {
   inspect(SubpixelBin::new(-1.0F), content="(-1, Zero)")
   inspect(SubpixelBin::new(-1.124F), content="(-1, Zero)")
 }
+
+///|
+test "CacheKey::new normalizes glyph_id to UInt16 domain" {
+  let (k1, _, _) = CacheKey::new(1, 65, 12.0F, (0.0F, 0.0F), 400, 0U)
+  let (k2, _, _) = CacheKey::new(1, 65536 + 65, 12.0F, (0.0F, 0.0F), 400, 0U)
+  let (k3, _, _) = CacheKey::new(1, -65471, 12.0F, (0.0F, 0.0F), 400, 0U)
+  inspect(k1 == k2, content="true")
+  inspect(k1 == k3, content="true")
+  inspect(k1, content="CacheKey{font_id=1, glyph_id=65, font_size_bits=1094713344, x_bin=Zero, y_bin=Zero, font_weight=400, flags=0}")
+}
