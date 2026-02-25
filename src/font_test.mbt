@@ -393,3 +393,23 @@ test "FontSystem.font_matches_for_script keeps candidate set unchanged" {
   inspect(is_permutation_of_ids_for_test(base, s2), content="true")
   inspect(is_permutation_of_ids_for_test(base, s3), content="true")
 }
+
+///|
+test "FontSystem.font_matches_for_script remains stable across repeated cache hits" {
+  let min_font = mk_min_font_cmap4_single(b'\x00', b'\x41')
+  let fs = FontSystem::new()
+    .load_font_data(min_font)
+    .load_font_data(test_font_inter_regular_ttf())
+  let attrs = Attrs::new()
+  let scripts = [
+    @moon_swash.Script::Arabic,
+    @moon_swash.Script::Han,
+    @moon_swash.Script::Hebrew,
+    @moon_swash.Script::Thai,
+    @moon_swash.Script::Devanagari,
+  ]
+  for i in 0..<2000 {
+    fs.font_matches_for_script(attrs, scripts[i % scripts.length()]) |> ignore
+  }
+  inspect(fs.font_matches(attrs), content="[0, 1]")
+}

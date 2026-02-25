@@ -73,6 +73,7 @@ pub struct FontSystem {
   locale : String
   fonts : Array[FontEntry]
   font_matches_cache : @hashmap.HashMap[FontMatchAttrs, Array[Int]]
+  script_support_cache : @hashmap.HashMap[FontScriptKey, Bool]
   codepoint_support_cache : @hashmap.HashMap[
     Int,
     FontCachedCodepointSupportInfo,
@@ -81,6 +82,9 @@ pub struct FontSystem {
 
 ///|
 const FONT_MATCHES_CACHE_SIZE_LIMIT : Int = 256
+
+///|
+const SCRIPT_SUPPORT_CACHE_SIZE_LIMIT : Int = 4096
 
 ///|
 const CODEPOINT_SUPPORTED_PER_FONT_LIMIT : Int = 512
@@ -99,6 +103,7 @@ pub fn FontSystem::new_with_locale(locale : String) -> FontSystem {
     locale,
     fonts: [],
     font_matches_cache: @hashmap.HashMap::default(),
+    script_support_cache: @hashmap.HashMap::default(),
     codepoint_support_cache: @hashmap.HashMap::default(),
   }
 }
@@ -261,6 +266,23 @@ fn FontCachedCodepointSupportInfo::new() -> FontCachedCodepointSupportInfo {
 }
 
 ///|
+struct FontScriptKey {
+  font_id : Int
+  script_tag : UInt
+}
+
+///|
+pub impl Eq for FontScriptKey with equal(self, other) {
+  self.font_id == other.font_id && self.script_tag == other.script_tag
+}
+
+///|
+pub impl Hash for FontScriptKey with hash_combine(self, hasher) {
+  hasher.combine_int(self.font_id)
+  hasher.combine_uint(self.script_tag)
+}
+
+///|
 pub struct FontMatchAttrs {
   family : Family
   weight : Weight
@@ -347,16 +369,34 @@ fn script_needs_fallback_stage(script : @moon_swash.Script) -> Bool {
 
 ///|
 fn entry_supports_script(
+  fs : FontSystem,
   entry : FontEntry,
   script : @moon_swash.Script,
 ) -> Bool {
+  if fs.script_support_cache.length() >= SCRIPT_SUPPORT_CACHE_SIZE_LIMIT {
+    fs.script_support_cache.clear()
+  }
+  let key = FontScriptKey::{
+    font_id: entry.id,
+    script_tag: script.to_opentype(),
+  }
+  match fs.script_support_cache.get(key) {
+    Some(ok) => return ok
+    None => ()
+  }
+
   let systems = entry.font.writing_systems()
   for ws in systems.iter() {
     match ws.script() {
       None => ()
-      Some(s) => if font_script_eq(s, script) { return true }
+      Some(s) =>
+        if font_script_eq(s, script) {
+          fs.script_support_cache.set(key, true)
+          return true
+        }
     }
   }
+  fs.script_support_cache.set(key, false)
   false
 }
 
@@ -378,7 +418,7 @@ fn split_script_stage_candidates(
     let entry = fs.fonts[id]
     if explicit_family_matches(entry, family) {
       defaults.push(id)
-    } else if run_script_stage && entry_supports_script(entry, script) {
+    } else if run_script_stage && entry_supports_script(fs, entry, script) {
       script_hits.push(id)
     } else {
       rest.push(id)
