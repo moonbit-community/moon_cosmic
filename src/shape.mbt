@@ -470,6 +470,15 @@ fn reverse_glyphs(glyphs : Array[ShapeGlyph]) -> Unit {
 }
 
 ///|
+fn absf(v : Float) -> Float {
+  if v < 0.0F {
+    0.0F - v
+  } else {
+    v
+  }
+}
+
+///|
 fn is_space_like_char(ch : Char) -> Bool {
   if ch == '\t' {
     return true
@@ -495,6 +504,76 @@ fn glyph_is_blank(text : String, glyph : ShapeGlyph) -> Bool {
     }
   }
   has_char
+}
+
+///|
+fn normalize_rtl_mark_clusters(
+  glyphs : Array[ShapeGlyph],
+  run_rtl : Bool,
+) -> Unit {
+  if !run_rtl || glyphs.length() < 2 {
+    return
+  }
+  let mut i = 0
+  while i < glyphs.length() {
+    let start = glyphs[i].start
+    let end = glyphs[i].end
+    let mut j = i + 1
+    while j < glyphs.length() &&
+          glyphs[j].start == start &&
+          glyphs[j].end == end {
+      j = j + 1
+    }
+    if j - i > 1 {
+      let mut base_adv = 0.0F
+      let bases : Array[ShapeGlyph] = []
+      let marks : Array[ShapeGlyph] = []
+      for k in i..<j {
+        let g = glyphs[k]
+        if absf(g.x_advance) <= 0.000001F {
+          marks.push(g)
+        } else {
+          bases.push(g)
+          if g.x_advance > base_adv {
+            base_adv = g.x_advance
+          }
+        }
+      }
+      if base_adv != 0.0F && marks.length() > 0 {
+        // swash mark offsets in RTL clusters are relative to cluster end;
+        // normalize to cluster start semantics used by reference shaping.
+        for m in 0..<marks.length() {
+          let g = marks[m]
+          marks.set(m, ShapeGlyph::{ ..g, x_offset: g.x_offset + base_adv })
+        }
+        // Keep deterministic mark order for same-range cluster: larger x_offset first.
+        let mut a = 0
+        while a < marks.length() {
+          let mut b = a + 1
+          while b < marks.length() {
+            if marks[b].x_offset > marks[a].x_offset {
+              let ga = marks[a]
+              let gb = marks[b]
+              marks.set(a, gb)
+              marks.set(b, ga)
+            }
+            b = b + 1
+          }
+          a = a + 1
+        }
+        let mut p = i
+        for g in bases {
+          glyphs.set(p, g)
+          p = p + 1
+        }
+        for g in marks {
+          glyphs.set(p, g)
+          p = p + 1
+        }
+      }
+    }
+    i = j
+  }
 }
 
 ///|
@@ -551,6 +630,7 @@ fn reorder_run_glyphs_for_bidi(
       out.push(glyph)
     }
   }
+  normalize_rtl_mark_clusters(out, run_rtl)
   out
 }
 
