@@ -440,43 +440,23 @@ fn split_default_stage_candidates(
   (defaults, rest)
 }
 
-fn take_named_fallback_candidates(
+fn first_named_fallback_candidate(
   fs : FontSystem,
   req_weight : Weight,
   ids : Array[Int],
-  family_names : Array[String],
-) -> (Array[Int], Array[Int]) {
-  if family_names.length() == 0 || ids.length() == 0 {
-    return ([], ids)
-  }
-  let used : Array[Bool] = Array::makei(ids.length(), _ => false)
-  let promoted : Array[Int] = []
-  for family_name in family_names {
-    let mut promoted_one = false
-    for i in 0..<ids.length() {
-      if used[i] || promoted_one {
-        continue
-      }
-      let id = ids[i]
-      if id < 0 || id >= fs.fonts.length() {
-        continue
-      }
-      let entry = fs.fonts[id]
-      if entry_weight_diff(entry, req_weight) == 0 &&
-        entry_has_family_name(entry, family_name) {
-        promoted.push(id)
-        used.set(i, true)
-        promoted_one = true
-      }
+  family_name : String,
+) -> Int? {
+  for id in ids {
+    if id < 0 || id >= fs.fonts.length() {
+      continue
+    }
+    let entry = fs.fonts[id]
+    if entry_weight_diff(entry, req_weight) == 0 &&
+      entry_has_family_name(entry, family_name) {
+      return Some(id)
     }
   }
-  let rest : Array[Int] = []
-  for i in 0..<ids.length() {
-    if !used[i] {
-      rest.push(ids[i])
-    }
-  }
-  (promoted, rest)
+  None
 }
 
 ///|
@@ -1033,35 +1013,31 @@ pub fn FontSystem::font_matches_for_scripts(
 
   let seen_scripts : Array[@moon_swash.Script] = []
   let script_stage : Array[Int] = []
-  let mut script_rest = rest0
   for script in scripts {
     if !script_uses_fallback_stage(script) ||
       script_in_array(seen_scripts, script) {
       continue
     }
     seen_scripts.push(script)
-    let selected = take_named_fallback_candidates(
-      self,
-      req_weight,
-      script_rest,
-      script_fallback_family_names(script, self.locale, profile),
-    )
-    for id in selected.0 {
-      script_stage.push(id)
+    let families = script_fallback_family_names(script, self.locale, profile)
+    for family_name in families {
+      match first_named_fallback_candidate(self, req_weight, rest0, family_name) {
+        None => ()
+        Some(id) => script_stage.push(id)
+      }
     }
-    script_rest = selected.1
   }
-  let common_selected = take_named_fallback_candidates(
-    self,
-    req_weight,
-    script_rest,
-    common_fallback_family_names(profile),
-  )
-  let common_stage = common_selected.0
+  let common_stage : Array[Int] = []
+  for family_name in common_fallback_family_names(profile) {
+    match first_named_fallback_candidate(self, req_weight, rest0, family_name) {
+      None => ()
+      Some(id) => common_stage.push(id)
+    }
+  }
   let other_stage = filter_forbidden_from_other_stage(
     self,
     forbidden_families,
-    common_selected.1,
+    ids,
   )
 
   let staged : Array[Int] = []

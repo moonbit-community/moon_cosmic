@@ -215,24 +215,23 @@ test "named fallback stage promotes only first match for each family" {
     Some(entry) => entry.family_name()
     None => ""
   }
-  let selected = take_named_fallback_candidates(
-    fs,
-    Weight::normal(),
-    [2, 99, 1, 0],
-    [family_name],
-  )
-  let reordered : Array[Int] = []
-  for id in selected.0 {
-    reordered.push(id)
+  let promoted : Array[Int] = []
+  for _ in 0..<2 {
+    match first_named_fallback_candidate(
+      fs,
+      Weight::normal(),
+      [2, 99, 1, 0],
+      family_name,
+    ) {
+      None => ()
+      Some(id) => promoted.push(id)
+    }
   }
-  for id in selected.1 {
-    reordered.push(id)
-  }
-  inspect(reordered, content="[2, 99, 1, 0]")
+  inspect(promoted, content="[2, 2]")
 }
 
 ///|
-test "take_named_fallback_candidates returns promoted and rest stages" {
+test "first_named_fallback_candidate returns first valid weight-zero match" {
   let min = mk_min_font_cmap4_single(b'\x00', b'\x41')
   let fs = FontSystem::new()
     .load_font_data(min)
@@ -242,14 +241,13 @@ test "take_named_fallback_candidates returns promoted and rest stages" {
     Some(entry) => entry.family_name()
     None => ""
   }
-  let selected = take_named_fallback_candidates(
+  let selected = first_named_fallback_candidate(
     fs,
     Weight::normal(),
     [2, 99, 1, 0],
-    [family_name],
+    family_name,
   )
-  inspect(selected.0, content="[2]")
-  inspect(selected.1, content="[99, 1, 0]")
+  inspect(selected, content="Some(2)")
 }
 
 ///|
