@@ -260,70 +260,6 @@ fn build_glyph_wrap_segments(
 }
 
 ///|
-fn reorder_shape_glyphs_for_word_wrap(
-  text : String,
-  shape : ShapeLine,
-) -> ShapeLine {
-  let n = shape.glyphs.length()
-  if n < 2 {
-    return shape
-  }
-  let ordered : Array[ShapeGlyph] = []
-  let mut span_start = 0
-  while span_start < n {
-    let level = shape.glyphs[span_start].level
-    let span_rtl = level % 2 != 0
-    let mut span_end = span_start + 1
-    while span_end < n && shape.glyphs[span_end].level == level {
-      span_end = span_end + 1
-    }
-
-    let words : Array[GlyphWrapSegment] = []
-    let mut i = span_start
-    while i < span_end {
-      let blank = layout_glyph_is_blank(text, shape.glyphs[i])
-      if blank {
-        words.push(GlyphWrapSegment::{ glyph_start: i, glyph_end: i + 1, blank })
-        i = i + 1
-      } else {
-        let wstart = i
-        i = i + 1
-        while i < span_end && !layout_glyph_is_blank(text, shape.glyphs[i]) {
-          i = i + 1
-        }
-        words.push(GlyphWrapSegment::{
-          glyph_start: wstart,
-          glyph_end: i,
-          blank: false,
-        })
-      }
-    }
-
-    if shape.rtl != span_rtl {
-      let mut w = words.length() - 1
-      while true {
-        let seg = words[w]
-        for gi in seg.glyph_start..<seg.glyph_end {
-          ordered.push(shape.glyphs[gi])
-        }
-        if w == 0 {
-          break
-        }
-        w = w - 1
-      }
-    } else {
-      for seg in words {
-        for gi in seg.glyph_start..<seg.glyph_end {
-          ordered.push(shape.glyphs[gi])
-        }
-      }
-    }
-    span_start = span_end
-  }
-  ShapeLine::{ ..shape, glyphs: ordered }
-}
-
-///|
 fn build_layout_line_from_shape(
   shape : ShapeLine,
   glyph_start : Int,
@@ -613,6 +549,319 @@ fn finalize_layout_lines(
 }
 
 ///|
+priv struct WrapWordLayout {
+  glyph_start : Int
+  glyph_end : Int
+  blank : Bool
+  w : Float
+}
+
+///|
+priv struct WrapSpanLayout {
+  level : Int
+  words : Array[WrapWordLayout]
+}
+
+///|
+priv struct VisualRangeLayout {
+  span_index : Int
+  start_word : Int
+  start_glyph : Int
+  end_word : Int
+  end_glyph : Int
+}
+
+///|
+fn build_wrap_spans_from_shape(
+  text : String,
+  shape : ShapeLine,
+  font_size : Float,
+  cell_w : Float,
+) -> Array[WrapSpanLayout] {
+  let spans : Array[WrapSpanLayout] = []
+  let n = shape.glyphs.length()
+  let mut span_start = 0
+  while span_start < n {
+    let level = shape.glyphs[span_start].level
+    let mut span_end = span_start + 1
+    while span_end < n && shape.glyphs[span_end].level == level {
+      span_end = span_end + 1
+    }
+    let words : Array[WrapWordLayout] = []
+    let mut i = span_start
+    while i < span_end {
+      let blank = layout_glyph_is_blank(text, shape.glyphs[i])
+      if blank {
+        let w = glyph_layout_width(shape.glyphs[i], font_size, cell_w)
+        words.push(WrapWordLayout::{
+          glyph_start: i,
+          glyph_end: i + 1,
+          blank: true,
+          w,
+        })
+        i = i + 1
+      } else {
+        let word_start = i
+        let mut w = 0.0F
+        while i < span_end && !layout_glyph_is_blank(text, shape.glyphs[i]) {
+          w = w + glyph_layout_width(shape.glyphs[i], font_size, cell_w)
+          i = i + 1
+        }
+        words.push(WrapWordLayout::{
+          glyph_start: word_start,
+          glyph_end: i,
+          blank: false,
+          w,
+        })
+      }
+    }
+    spans.push(WrapSpanLayout::{ level, words })
+    span_start = span_end
+  }
+  spans
+}
+
+///|
+fn add_visual_range(
+  ranges : Array[VisualRangeLayout],
+  cur_w : Float,
+  span_index : Int,
+  start_word : Int,
+  start_glyph : Int,
+  end_word : Int,
+  end_glyph : Int,
+  width : Float,
+) -> Float {
+  if start_word == end_word && start_glyph == end_glyph {
+    return cur_w
+  }
+  ranges.push(VisualRangeLayout::{
+    span_index,
+    start_word,
+    start_glyph,
+    end_word,
+    end_glyph,
+  })
+  cur_w + width
+}
+
+///|
+fn reverse_runs(runs : Array[(Int, Int)], start : Int, end : Int) -> Unit {
+  if end <= start {
+    return
+  }
+  let mut i = start
+  let mut j = end - 1
+  while i < j {
+    let t = runs[i]
+    runs[i] = runs[j]
+    runs[j] = t
+    i = i + 1
+    j = j - 1
+  }
+}
+
+///|
+fn reorder_visual_range_runs(
+  spans : Array[WrapSpanLayout],
+  ranges : Array[VisualRangeLayout],
+) -> Array[(Int, Int)] {
+  let out : Array[(Int, Int)] = []
+  if ranges.length() == 0 {
+    return out
+  }
+  let levels : Array[Int] = []
+  for r in ranges {
+    levels.push(spans[r.span_index].level)
+  }
+  let mut start = 0
+  let mut run_level = levels[0]
+  let mut min_level = run_level
+  let mut max_level = run_level
+  for i in 1..<levels.length() {
+    let new_level = levels[i]
+    if new_level != run_level {
+      out.push((start, i))
+      start = i
+      run_level = new_level
+      if run_level < min_level {
+        min_level = run_level
+      }
+      if run_level > max_level {
+        max_level = run_level
+      }
+    }
+  }
+  out.push((start, levels.length()))
+  let mut min_odd = min_level
+  if min_odd % 2 == 0 {
+    min_odd = min_odd + 1
+  }
+  let mut level = max_level
+  while level >= min_odd {
+    let mut seq_start = 0
+    while seq_start < out.length() {
+      let run_start = out[seq_start].0
+      if levels[run_start] < level {
+        seq_start = seq_start + 1
+        continue
+      }
+      let mut seq_end = seq_start + 1
+      while seq_end < out.length() {
+        let next_run_start = out[seq_end].0
+        if levels[next_run_start] < level {
+          break
+        }
+        seq_end = seq_end + 1
+      }
+      reverse_runs(out, seq_start, seq_end)
+      seq_start = seq_end
+    }
+    level = level - 1
+  }
+  out
+}
+
+///|
+fn build_layout_lines_from_visual_ranges(
+  shape : ShapeLine,
+  font_size : Float,
+  cell_w : Float,
+  visual_ranges : Array[Array[VisualRangeLayout]],
+  visual_widths : Array[Float],
+  spans : Array[WrapSpanLayout],
+) -> Array[LayoutLine] {
+  let lines : Array[LayoutLine] = []
+  for li in 0..<visual_ranges.length() {
+    let ranges = visual_ranges[li]
+    if ranges.length() == 0 {
+      continue
+    }
+    let runs = reorder_visual_range_runs(spans, ranges)
+    let glyphs : Array[LayoutGlyph] = []
+    let mut x = 0.0F
+    let mut text_start : Int? = None
+    let mut text_end : Int? = None
+    let mut max_line_height : Float? = None
+    fn process_range(
+      shape : ShapeLine,
+      spans : Array[WrapSpanLayout],
+      ranges : Array[VisualRangeLayout],
+      ridx : Int,
+      glyphs : Array[LayoutGlyph],
+      x : Float,
+      text_start : Int?,
+      text_end : Int?,
+      max_line_height : Float?,
+      font_size : Float,
+      cell_w : Float,
+    ) -> (Float, Int?, Int?, Float?) {
+      let mut x2 = x
+      let mut ts = text_start
+      let mut te = text_end
+      let mut max_h = max_line_height
+      let vr = ranges[ridx]
+      let span = spans[vr.span_index]
+      let end_add = if vr.end_glyph == 0 { 0 } else { 1 }
+      for wi in vr.start_word..<(vr.end_word + end_add) {
+        let word = span.words[wi]
+        let word_len = word.glyph_end - word.glyph_start
+        let local_start = if wi == vr.start_word { vr.start_glyph } else { 0 }
+        let local_end = if wi == vr.end_word { vr.end_glyph } else { word_len }
+        for gi in local_start..<local_end {
+          let abs_i = word.glyph_start + gi
+          let g = shape.glyphs[abs_i]
+          let glyph_font_size = match g.metrics_opt {
+            None => font_size
+            Some(m) => m.font_size
+          }
+          let w = glyph_layout_width(g, font_size, cell_w)
+          let glyph_line_height_opt : Float? = match g.metrics_opt {
+            None => None
+            Some(m) => Some(m.line_height)
+          }
+          match (max_h, glyph_line_height_opt) {
+            (None, Some(h)) => max_h = Some(h)
+            (Some(a), Some(b)) => if b > a { max_h = Some(b) }
+            _ => ()
+          }
+          match ts {
+            None => ts = Some(g.start)
+            Some(v) => if g.start < v { ts = Some(g.start) }
+          }
+          match te {
+            None => te = Some(g.end)
+            Some(v) => if g.end > v { te = Some(g.end) }
+          }
+          glyphs.push(LayoutGlyph::{
+            start: g.start,
+            end: g.end,
+            font_size: glyph_font_size,
+            font_id: g.font_id,
+            font_weight: g.font_weight,
+            glyph_id: g.glyph_id,
+            x: x2,
+            y: 0.0F,
+            w,
+            level: g.level,
+            line_height_opt: glyph_line_height_opt,
+            x_offset: g.x_offset,
+            y_offset: g.y_offset,
+            color_opt: None,
+            metadata: g.metadata,
+            cache_key_flags: 0U,
+          })
+          x2 = x2 + w
+        }
+      }
+      (x2, ts, te, max_h)
+    }
+    if shape.rtl {
+      let mut ri = runs.length()
+      while ri > 0 {
+        let run = runs[ri - 1]
+        for ridx in run.0..<run.1 {
+          let (x2, ts, te, max_h) = process_range(
+            shape, spans, ranges, ridx, glyphs, x, text_start, text_end, max_line_height,
+            font_size, cell_w,
+          )
+          x = x2
+          text_start = ts
+          text_end = te
+          max_line_height = max_h
+        }
+        ri = ri - 1
+      }
+    } else {
+      for run in runs {
+        for ridx in run.0..<run.1 {
+          let (x2, ts, te, max_h) = process_range(
+            shape, spans, ranges, ridx, glyphs, x, text_start, text_end, max_line_height,
+            font_size, cell_w,
+          )
+          x = x2
+          text_start = ts
+          text_end = te
+          max_line_height = max_h
+        }
+      }
+    }
+    let s = if text_start is Some(v) { v } else { 0 }
+    let e = if text_end is Some(v) { v } else { s }
+    lines.push(LayoutLine::{
+      start: s,
+      end: e,
+      w: visual_widths[li],
+      max_ascent: 0.0F,
+      max_descent: 0.0F,
+      line_height_opt: max_line_height,
+      glyphs,
+    })
+  }
+  lines
+}
+
+///|
 /// Layout from ShapeLine (MVP).
 ///
 /// `cell_w` is the pixel width per "advance cell" (ShapeGlyph.x_advance is in cells).
@@ -637,20 +886,27 @@ pub fn layout_from_shape(
     })
     return finalize_layout_lines(lines, shape.rtl, width_opt)
   }
-  let shape_for_wrap = match wrap {
-    Word | WordOrGlyph | Glyph =>
-      reorder_shape_glyphs_for_word_wrap(text, shape)
-    _ => shape
-  }
+  let shape_for_wrap = shape
   let glyph_len = shape_for_wrap.glyphs.length()
   if glyph_len == 0 {
     return finalize_layout_lines(lines, shape_for_wrap.rtl, width_opt)
   }
   match wrap {
     None => {
-      push_layout_line_from_shape(
-        lines, shape_for_wrap, 0, glyph_len, font_size, cell_w,
+      let mut line = build_layout_line_from_shape(
+        shape_for_wrap, 0, glyph_len, font_size, cell_w,
       )
+      let spans = build_wrap_spans_from_shape(
+        text, shape_for_wrap, font_size, cell_w,
+      )
+      let mut total_w = 0.0F
+      for span in spans {
+        for word in span.words {
+          total_w = total_w + word.w
+        }
+      }
+      line = LayoutLine::{ ..line, w: total_w }
+      lines.push(line)
       return finalize_layout_lines(lines, shape_for_wrap.rtl, width_opt)
     }
     _ => ()
@@ -675,28 +931,256 @@ pub fn layout_from_shape(
   }
   let max_w = if width_opt is Some(w) { w } else { 0.0F }
   match wrap {
-    Glyph => {
-      let mut start = 0
-      let mut w = 0.0F
-      for i in 0..<glyph_len {
-        let adv_w = glyph_layout_width(
-          shape_for_wrap.glyphs[i],
-          font_size,
-          cell_w,
-        )
-        let blank = layout_glyph_is_blank(text, shape_for_wrap.glyphs[i])
-        if w + adv_w > max_w && i > start && !(blank && w <= max_w) {
-          push_layout_line_from_shape(
-            lines, shape_for_wrap, start, i, font_size, cell_w,
-          )
-          start = i
-          w = 0.0F
-        }
-        w = w + adv_w
-      }
-      push_layout_line_from_shape(
-        lines, shape_for_wrap, start, glyph_len, font_size, cell_w,
+    Glyph | Word | WordOrGlyph => {
+      let spans = build_wrap_spans_from_shape(
+        text, shape_for_wrap, font_size, cell_w,
       )
+      let visual_ranges : Array[Array[VisualRangeLayout]] = []
+      let visual_widths : Array[Float] = []
+      let mut current_ranges : Array[VisualRangeLayout] = []
+      let mut current_w = 0.0F
+      for span_i in 0..<spans.length() {
+        let span = spans[span_i]
+        let span_rtl = span.level % 2 != 0
+        let mut word_range_w = 0.0F
+        let mut width_before_last_blank = 0.0F
+        if shape_for_wrap.rtl != span_rtl {
+          let mut fitting_word = span.words.length()
+          let mut fitting_glyph = 0
+          let mut wi = span.words.length()
+          while wi > 0 {
+            let i = wi - 1
+            let word = span.words[i]
+            let word_w = word.w
+            let fits = current_w + (word_range_w + word_w) <= max_w ||
+              (word.blank && current_w + word_range_w <= max_w)
+            if fits {
+              if word.blank {
+                width_before_last_blank = word_range_w
+              }
+              word_range_w = word_range_w + word_w
+            } else if wrap is Glyph || (wrap is WordOrGlyph && word_w > max_w) {
+              if word_range_w > 0.0F && wrap is WordOrGlyph && word_w > max_w {
+                current_w = add_visual_range(
+                  current_ranges,
+                  current_w,
+                  span_i,
+                  i + 1,
+                  0,
+                  fitting_word,
+                  fitting_glyph,
+                  word_range_w,
+                )
+                if current_ranges.length() > 0 {
+                  visual_ranges.push(current_ranges)
+                  visual_widths.push(current_w)
+                  current_ranges = []
+                  current_w = 0.0F
+                }
+                word_range_w = 0.0F
+                fitting_word = i
+                fitting_glyph = 0
+              }
+              let word_len = word.glyph_end - word.glyph_start
+              let mut gi = word_len
+              while gi > 0 {
+                let gidx = gi - 1
+                let abs_i = word.glyph_start + gidx
+                let glyph_w = glyph_layout_width(
+                  shape_for_wrap.glyphs[abs_i],
+                  font_size,
+                  cell_w,
+                )
+                if current_w + (word_range_w + glyph_w) <= max_w {
+                  word_range_w = word_range_w + glyph_w
+                } else {
+                  current_w = add_visual_range(
+                    current_ranges,
+                    current_w,
+                    span_i,
+                    i,
+                    gidx + 1,
+                    fitting_word,
+                    fitting_glyph,
+                    word_range_w,
+                  )
+                  if current_ranges.length() > 0 {
+                    visual_ranges.push(current_ranges)
+                    visual_widths.push(current_w)
+                    current_ranges = []
+                    current_w = 0.0F
+                  }
+                  word_range_w = glyph_w
+                  fitting_word = i
+                  fitting_glyph = gidx + 1
+                }
+                gi = gidx
+              }
+            } else {
+              if word_range_w > 0.0F {
+                let trailing_blank = i + 1 < span.words.length() &&
+                  span.words[i + 1].blank
+                if trailing_blank {
+                  current_w = add_visual_range(
+                    current_ranges,
+                    current_w,
+                    span_i,
+                    i + 2,
+                    0,
+                    fitting_word,
+                    fitting_glyph,
+                    width_before_last_blank,
+                  )
+                } else {
+                  current_w = add_visual_range(
+                    current_ranges,
+                    current_w,
+                    span_i,
+                    i + 1,
+                    0,
+                    fitting_word,
+                    fitting_glyph,
+                    word_range_w,
+                  )
+                }
+                if current_ranges.length() > 0 {
+                  visual_ranges.push(current_ranges)
+                  visual_widths.push(current_w)
+                  current_ranges = []
+                  current_w = 0.0F
+                }
+              }
+              if word.blank {
+                word_range_w = 0.0F
+                fitting_word = i
+                fitting_glyph = 0
+              } else {
+                word_range_w = word_w
+                fitting_word = i + 1
+                fitting_glyph = 0
+              }
+            }
+            wi = i
+          }
+          current_w = add_visual_range(
+            current_ranges, current_w, span_i, 0, 0, fitting_word, fitting_glyph,
+            word_range_w,
+          )
+        } else {
+          let mut fitting_word = 0
+          let mut fitting_glyph = 0
+          for i in 0..<span.words.length() {
+            let word = span.words[i]
+            let word_w = word.w
+            let fits = current_w + (word_range_w + word_w) <= max_w ||
+              (word.blank && current_w + word_range_w <= max_w)
+            if fits {
+              if word.blank {
+                width_before_last_blank = word_range_w
+              }
+              word_range_w = word_range_w + word_w
+            } else if wrap is Glyph || (wrap is WordOrGlyph && word_w > max_w) {
+              if word_range_w > 0.0F && wrap is WordOrGlyph && word_w > max_w {
+                current_w = add_visual_range(
+                  current_ranges, current_w, span_i, fitting_word, fitting_glyph,
+                  i, 0, word_range_w,
+                )
+                if current_ranges.length() > 0 {
+                  visual_ranges.push(current_ranges)
+                  visual_widths.push(current_w)
+                  current_ranges = []
+                  current_w = 0.0F
+                }
+                word_range_w = 0.0F
+                fitting_word = i
+                fitting_glyph = 0
+              }
+              let word_len = word.glyph_end - word.glyph_start
+              for gidx in 0..<word_len {
+                let abs_i = word.glyph_start + gidx
+                let glyph_w = glyph_layout_width(
+                  shape_for_wrap.glyphs[abs_i],
+                  font_size,
+                  cell_w,
+                )
+                if current_w + (word_range_w + glyph_w) <= max_w {
+                  word_range_w = word_range_w + glyph_w
+                } else {
+                  current_w = add_visual_range(
+                    current_ranges, current_w, span_i, fitting_word, fitting_glyph,
+                    i, gidx, word_range_w,
+                  )
+                  if current_ranges.length() > 0 {
+                    visual_ranges.push(current_ranges)
+                    visual_widths.push(current_w)
+                    current_ranges = []
+                    current_w = 0.0F
+                  }
+                  word_range_w = glyph_w
+                  fitting_word = i
+                  fitting_glyph = gidx
+                }
+              }
+            } else {
+              if word_range_w > 0.0F {
+                let trailing_blank = i > 0 && span.words[i - 1].blank
+                if trailing_blank {
+                  current_w = add_visual_range(
+                    current_ranges,
+                    current_w,
+                    span_i,
+                    fitting_word,
+                    fitting_glyph,
+                    i - 1,
+                    0,
+                    width_before_last_blank,
+                  )
+                } else {
+                  current_w = add_visual_range(
+                    current_ranges, current_w, span_i, fitting_word, fitting_glyph,
+                    i, 0, word_range_w,
+                  )
+                }
+                if current_ranges.length() > 0 {
+                  visual_ranges.push(current_ranges)
+                  visual_widths.push(current_w)
+                  current_ranges = []
+                  current_w = 0.0F
+                }
+              }
+              if word.blank {
+                word_range_w = 0.0F
+                fitting_word = i + 1
+                fitting_glyph = 0
+              } else {
+                word_range_w = word_w
+                fitting_word = i
+                fitting_glyph = 0
+              }
+            }
+          }
+          current_w = add_visual_range(
+            current_ranges,
+            current_w,
+            span_i,
+            fitting_word,
+            fitting_glyph,
+            span.words.length(),
+            0,
+            word_range_w,
+          )
+        }
+      }
+      if current_ranges.length() > 0 {
+        visual_ranges.push(current_ranges)
+        visual_widths.push(current_w)
+      }
+      let new_lines = build_layout_lines_from_visual_ranges(
+        shape_for_wrap, font_size, cell_w, visual_ranges, visual_widths, spans,
+      )
+      for line in new_lines {
+        lines.push(line)
+      }
       return finalize_layout_lines(lines, shape_for_wrap.rtl, width_opt)
     }
     _ => ()
@@ -841,6 +1325,8 @@ pub fn layout_from_shape(
         segs[i - 1].blank &&
         !kept_overflow_after_blank &&
         !seen_incongruent_nonblank &&
+        !(wrap is WordOrGlyph &&
+        prefix_range_w(prefix, seg.glyph_start, seg.glyph_end) > max_w) &&
         seg_rtl != shape_for_wrap.rtl {
         cur_end_g = would_end_g
         kept_overflow_after_blank = true
