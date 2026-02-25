@@ -300,6 +300,16 @@ test "FontSystem.resolve_for_codepoint remains stable across cache boundary clea
 }
 
 ///|
+test "FontSystem.count_supported_codepoints counts duplicates per run semantics" {
+  let a = mk_min_font_cmap4_single(b'\x00', b'\x41')
+  let b = mk_min_font_cmap4_single(b'\x00', b'\x42')
+  let fs = FontSystem::new().load_font_data(a).load_font_data(b)
+  let cps = [0x41U, 0x42U, 0x41U]
+  inspect(fs.count_supported_codepoints(0, cps), content="2")
+  inspect(fs.count_supported_codepoints(1, cps), content="1")
+}
+
+///|
 test "FontSystem.select_family Name matches family aliases from name table" {
   let fs = FontSystem::new().load_font_data(test_font_inter_regular_ttf())
   match fs.get_font_entry(0) {

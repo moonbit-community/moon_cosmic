@@ -690,6 +690,25 @@ pub fn FontSystem::font_matches_for_script(
 }
 
 ///|
+pub fn FontSystem::count_supported_codepoints(
+  self : FontSystem,
+  font_id : Int,
+  codepoints : Array[UInt],
+) -> Int {
+  if font_id < 0 || font_id >= self.fonts.length() {
+    return 0
+  }
+  let entry = self.fonts[font_id]
+  let mut count = 0
+  for cp in codepoints {
+    if font_maps_codepoint(self, entry, cp) {
+      count = count + 1
+    }
+  }
+  count
+}
+
+///|
 fn select_family_with_weight(
   fs : FontSystem,
   family : Family,

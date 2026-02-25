@@ -387,6 +387,48 @@ fn merge_fallback_glyphs(
 }
 
 ///|
+fn reorder_monospace_fallback_candidates(
+  font_system : FontSystem,
+  run_attrs : Attrs,
+  run_tokens : Array[@moon_swash.Token],
+  ordered : Array[Int],
+) -> Array[Int] {
+  if !(run_attrs.family_value() is Monospace) {
+    return ordered
+  }
+  let codepoints : Array[UInt] = []
+  for t in run_tokens {
+    codepoints.push(t.ch().to_int().reinterpret_as_uint())
+  }
+  if codepoints.length() == 0 {
+    return ordered
+  }
+  let counts : Array[Int] = []
+  for id in ordered {
+    counts.push(font_system.count_supported_codepoints(id, codepoints))
+  }
+  let n = ordered.length()
+  let used : Array[Bool] = Array::makei(n, _ => false)
+  let reordered : Array[Int] = []
+  for _ in 0..<n {
+    let mut best = -1
+    for i in 0..<n {
+      if used[i] {
+        continue
+      }
+      if best < 0 || counts[i] > counts[best] {
+        best = i
+      }
+    }
+    if best >= 0 {
+      used.set(best, true)
+      reordered.push(ordered[best])
+    }
+  }
+  reordered
+}
+
+///|
 fn shape_run_with_font(
   font_system : FontSystem,
   attrs_list : AttrsList,
@@ -666,7 +708,10 @@ pub fn ShapeLine::build_with_font_system(
     let mut run_glyphs = default_glyphs
     let missing = default_missing
     if missing.length() > 0 {
-      let ordered = font_system.font_matches_for_script(run_attrs, script)
+      let ordered0 = font_system.font_matches_for_script(run_attrs, script)
+      let ordered = reorder_monospace_fallback_candidates(
+        font_system, run_attrs, run_tokens, ordered0,
+      )
       for alt_font_id in ordered {
         if alt_font_id == run_font_id {
           continue
