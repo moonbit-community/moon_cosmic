@@ -387,6 +387,36 @@ fn merge_fallback_glyphs(
 }
 
 ///|
+fn better_monospace_fallback_candidate(
+  cand : (Int, Bool, Int, Int, Int),
+  best : (Int, Bool, Int, Int, Int),
+) -> Bool {
+  let cand_id = cand.0
+  let cand_is_primary_default = cand.1
+  let cand_weight_diff = cand.2
+  let cand_non_matches = cand.3
+  let cand_weight = cand.4
+  let best_id = best.0
+  let best_is_primary_default = best.1
+  let best_weight_diff = best.2
+  let best_non_matches = best.3
+  let best_weight = best.4
+  if cand_is_primary_default != best_is_primary_default {
+    return cand_is_primary_default
+  }
+  if cand_weight_diff != best_weight_diff {
+    return cand_weight_diff < best_weight_diff
+  }
+  if cand_non_matches != best_non_matches {
+    return cand_non_matches < best_non_matches
+  }
+  if cand_weight != best_weight {
+    return cand_weight < best_weight
+  }
+  cand_id < best_id
+}
+
+///|
 fn reorder_monospace_fallback_candidates(
   font_system : FontSystem,
   run_attrs : Attrs,
@@ -400,30 +430,77 @@ fn reorder_monospace_fallback_candidates(
   for t in run_tokens {
     codepoints.push(t.ch().to_int().reinterpret_as_uint())
   }
-  if codepoints.length() == 0 {
+  if codepoints.length() == 0 || ordered.length() <= 1 {
     return ordered
   }
-  let counts : Array[Int] = []
+
+  let req_weight = run_attrs.weight_value()
+  let mut primary_default_mono_id : Int? = None
   for id in ordered {
-    counts.push(font_system.count_supported_codepoints(id, codepoints))
+    match font_system.get_font_entry(id) {
+      None => ()
+      Some(entry) =>
+        if entry.is_monospace() && entry_weight_diff(entry, req_weight) == 0 {
+          primary_default_mono_id = Some(id)
+          break
+        }
+    }
   }
-  let n = ordered.length()
+
+  let mono_candidates : Array[(Int, Bool, Int, Int, Int)] = []
+  let non_mono_candidates : Array[Int] = []
+  for id in ordered {
+    match font_system.get_font_entry(id) {
+      None => non_mono_candidates.push(id)
+      Some(entry) =>
+        if entry.is_monospace() {
+          let supported = font_system.count_supported_codepoints(id, codepoints)
+          let info = (
+            id,
+            match primary_default_mono_id {
+              Some(pid) => pid == id
+              None => false
+            },
+            entry_weight_diff(entry, req_weight),
+            codepoints.length() - supported,
+            entry_weight_raw(entry),
+          )
+          mono_candidates.push(info)
+        } else {
+          non_mono_candidates.push(id)
+        }
+    }
+  }
+
+  let n = mono_candidates.length()
   let used : Array[Bool] = Array::makei(n, _ => false)
-  let reordered : Array[Int] = []
+  let reordered_mono : Array[Int] = []
   for _ in 0..<n {
     let mut best = -1
     for i in 0..<n {
       if used[i] {
         continue
       }
-      if best < 0 || counts[i] > counts[best] {
+      if best < 0 ||
+        better_monospace_fallback_candidate(
+          mono_candidates[i],
+          mono_candidates[best],
+        ) {
         best = i
       }
     }
     if best >= 0 {
       used.set(best, true)
-      reordered.push(ordered[best])
+      reordered_mono.push(mono_candidates[best].0)
     }
+  }
+
+  let reordered : Array[Int] = []
+  for id in reordered_mono {
+    reordered.push(id)
+  }
+  for id in non_mono_candidates {
+    reordered.push(id)
   }
   reordered
 }

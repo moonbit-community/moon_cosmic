@@ -203,3 +203,15 @@ test "default stage keeps only the primary zero-weight explicit-family candidate
   inspect(defaults, content="[0]")
   inspect(rest, content="[1]")
 }
+
+///|
+#cfg(not(target="native"))
+test "non-native fallback profile defaults to Other" {
+  let data = mk_min_font_cmap4_single(b'\x00', b'\x41')
+  let fs = FontSystem::new().load_font_data(data)
+  let is_other = match fallback_profile(fs) {
+    Other => true
+    _ => false
+  }
+  inspect(is_other, content="true")
+}
