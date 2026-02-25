@@ -306,6 +306,19 @@ test "FontSystem.font_matches cache is not externally mutable" {
 }
 
 ///|
+test "FontSystem.font_matches generic-family ordering does not enforce explicit-family promotion" {
+  let a = mk_min_font_cmap4_single(b'\x00', b'\x41')
+  let b = mk_min_font_cmap4_single(b'\x00', b'\x42')
+  let fs = FontSystem::new().load_font_data(a).load_font_data(b)
+  let sans = Attrs::new().family(SansSerif)
+  let serif = Attrs::new().family(Serif)
+  let mono = Attrs::new().family(Monospace)
+  inspect(fs.font_matches(sans), content="[0, 1]")
+  inspect(fs.font_matches(serif), content="[0, 1]")
+  inspect(fs.font_matches(mono), content="[0, 1]")
+}
+
+///|
 test "FontSystem.resolve_for_codepoint remains stable across cache boundary clears" {
   let a = mk_min_font_cmap4_single(b'\x00', b'\x41')
   let b = mk_min_font_cmap4_single(b'\x00', b'\x42')
@@ -412,4 +425,18 @@ test "FontSystem.font_matches_for_script remains stable across repeated cache hi
     fs.font_matches_for_script(attrs, scripts[i % scripts.length()]) |> ignore
   }
   inspect(fs.font_matches(attrs), content="[0, 1]")
+}
+
+///|
+test "FontSystem.font_matches_for_script respects weight-zero gate for script/common promotion" {
+  let min_font = mk_min_font_cmap4_single(b'\x00', b'\x41')
+  let fs = FontSystem::new()
+    .load_font_data(min_font)
+    .load_font_data(test_font_inter_regular_ttf())
+  let attrs = Attrs::new().weight(Weight::bold())
+  let base = fs.font_matches(attrs)
+  let arabic = fs.font_matches_for_script(attrs, @moon_swash.Script::Arabic)
+  let han = fs.font_matches_for_script(attrs, @moon_swash.Script::Han)
+  inspect(base == arabic, content="true")
+  inspect(base == han, content="true")
 }

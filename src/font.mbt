@@ -404,6 +404,7 @@ fn entry_supports_script(
 fn split_script_stage_candidates(
   fs : FontSystem,
   family : Family,
+  req_weight : Weight,
   script : @moon_swash.Script,
   ids : Array[Int],
 ) -> (Array[Int], Array[Int], Array[Int]) {
@@ -418,7 +419,9 @@ fn split_script_stage_candidates(
     let entry = fs.fonts[id]
     if explicit_family_matches(entry, family) {
       defaults.push(id)
-    } else if run_script_stage && entry_supports_script(fs, entry, script) {
+    } else if run_script_stage &&
+      entry_weight_diff(entry, req_weight) == 0 &&
+      entry_supports_script(fs, entry, script) {
       script_hits.push(id)
     } else {
       rest.push(id)
@@ -430,6 +433,7 @@ fn split_script_stage_candidates(
 ///|
 fn move_named_fallback_candidates_forward(
   fs : FontSystem,
+  req_weight : Weight,
   ids : Array[Int],
   family_names : Array[String],
 ) -> Array[Int] {
@@ -447,7 +451,9 @@ fn move_named_fallback_candidates_forward(
       if id < 0 || id >= fs.fonts.length() {
         continue
       }
-      if entry_has_family_name(fs.fonts[id], family_name) {
+      let entry = fs.fonts[id]
+      if entry_weight_diff(entry, req_weight) == 0 &&
+        entry_has_family_name(entry, family_name) {
         promoted.push(id)
         used.set(i, true)
       }
@@ -730,7 +736,7 @@ fn build_font_matches(fs : FontSystem, attrs : Attrs) -> Array[Int] {
   // sort globally by match score, then move query best family match to front.
   let mut preferred : (Int, Bool, Int, Int, Int, Int, Int)? = None
   for e in fs.fonts {
-    if !family_matches(e, family) {
+    if !explicit_family_matches(e, family) {
       continue
     }
     let cand = (
@@ -800,17 +806,20 @@ pub fn FontSystem::font_matches_for_script(
   script : @moon_swash.Script,
 ) -> Array[Int] {
   let family = attrs.family_value()
+  let req_weight = attrs.weight_value()
   let ids = get_font_matches(self, attrs)
   let (defaults, script_hits, rest0) = split_script_stage_candidates(
-    self, family, script, ids,
+    self, family, req_weight, script, ids,
   )
   let rest1 = move_named_fallback_candidates_forward(
     self,
+    req_weight,
     rest0,
     script_fallback_family_names(script, self.locale),
   )
   let rest2 = move_named_fallback_candidates_forward(
     self,
+    req_weight,
     rest1,
     common_fallback_family_names(),
   )
