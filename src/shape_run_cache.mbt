@@ -25,13 +25,16 @@ pub struct ShapeRunKey {
 
 ///|
 pub fn ShapeRunKey::new(text : String, attrs_list : AttrsList) -> ShapeRunKey {
+  let default_attrs = attrs_list.defaults()
   let spans : Array[(Int, Int, Attrs)] = []
   for s in attrs_list.spans_iter() {
-    spans.push((s.start, s.end, s.attrs))
+    if s.attrs != default_attrs {
+      spans.push((s.start, s.end, s.attrs))
+    }
   }
   ShapeRunKey::{
     text,
-    default_attrs: attrs_list.defaults(),
+    default_attrs,
     attrs_spans: spans,
   }
 }

@@ -38,3 +38,13 @@ test "ShapeRunCache: get updates age and trim evicts old entries" {
   cache.trim(0UL)
   inspect(cache.peek(mk_key()) is Some(_), content="false")
 }
+
+///|
+test "ShapeRunKey::new ignores spans equal to defaults" {
+  let defaults = Attrs::new()
+  let plain = AttrsList::new(defaults)
+  let with_default_span = AttrsList::new(defaults).add_span(0, 2, defaults)
+  let key_plain = ShapeRunKey::new("ab", plain)
+  let key_with_default_span = ShapeRunKey::new("ab", with_default_span)
+  inspect(key_plain == key_with_default_span, content="true")
+}
