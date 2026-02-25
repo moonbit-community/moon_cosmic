@@ -119,3 +119,10 @@ test "shape_primary_script_seed keeps latin when explicitly latin" {
     content="true",
   )
 }
+
+///|
+test "shape_levels_require_new_run splits on any level change" {
+  inspect(shape_levels_require_new_run(0, 0), content="false")
+  inspect(shape_levels_require_new_run(0, 2), content="true")
+  inspect(shape_levels_require_new_run(1, 2), content="true")
+}

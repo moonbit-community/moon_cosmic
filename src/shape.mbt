@@ -216,6 +216,11 @@ fn shape_primary_script_seed(
 }
 
 ///|
+fn shape_levels_require_new_run(prev_level : Int, new_level : Int) -> Bool {
+  prev_level != new_level
+}
+
+///|
 fn entry_supports_any_run_script(
   entry : FontEntry,
   scripts : Array[@moon_swash.Script],
@@ -813,6 +818,7 @@ pub fn ShapeLine::build_with_font_system(
   let mut off = 0U
   let mut cur_primary_script = @moon_swash.Script::Latin
   let mut cur_primary_pending = true
+  let mut cur_level = if rtl { 1 } else { 0 }
   let mut cur_rtl = rtl
   let mut cur_scripts : Array[@moon_swash.Script] = []
   let mut cur_tokens : Array[@moon_swash.Token] = []
@@ -837,13 +843,15 @@ pub fn ShapeLine::build_with_font_system(
     if cur_tokens.length() == 0 {
       cur_primary_script = primary.0
       cur_primary_pending = primary.1
+      cur_level = level_i
       cur_rtl = run_rtl
       cur_scripts = []
-    } else if run_rtl != cur_rtl {
+    } else if shape_levels_require_new_run(cur_level, level_i) {
       runs.push((cur_primary_script, cur_scripts, cur_rtl, cur_tokens))
       cur_tokens = []
       cur_primary_script = primary.0
       cur_primary_pending = primary.1
+      cur_level = level_i
       cur_rtl = run_rtl
       cur_scripts = []
     } else if cur_primary_pending &&
