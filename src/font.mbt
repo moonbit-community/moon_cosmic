@@ -72,8 +72,8 @@ pub fn FontEntry::not_emoji(self : FontEntry) -> Bool {
 pub struct FontSystem {
   locale : String
   fonts : Array[FontEntry]
+  priv mut fallback_profile_opt : FallbackProfile?
   font_matches_cache : @hashmap.HashMap[FontMatchAttrs, Array[Int]]
-  script_support_cache : @hashmap.HashMap[FontScriptKey, Bool]
   codepoint_support_cache : @hashmap.HashMap[
     Int,
     FontCachedCodepointSupportInfo,
@@ -81,10 +81,15 @@ pub struct FontSystem {
 }
 
 ///|
-const FONT_MATCHES_CACHE_SIZE_LIMIT : Int = 256
+priv enum FallbackProfile {
+  Unix
+  MacOS
+  Windows
+  Other
+}
 
 ///|
-const SCRIPT_SUPPORT_CACHE_SIZE_LIMIT : Int = 4096
+const FONT_MATCHES_CACHE_SIZE_LIMIT : Int = 256
 
 ///|
 const CODEPOINT_SUPPORTED_PER_FONT_LIMIT : Int = 512
@@ -102,8 +107,8 @@ pub fn FontSystem::new_with_locale(locale : String) -> FontSystem {
   FontSystem::{
     locale,
     fonts: [],
+    fallback_profile_opt: None,
     font_matches_cache: @hashmap.HashMap::default(),
-    script_support_cache: @hashmap.HashMap::default(),
     codepoint_support_cache: @hashmap.HashMap::default(),
   }
 }
@@ -190,11 +195,16 @@ fn entry_has_family_name(entry : FontEntry, family_name : String) -> Bool {
 }
 
 ///|
-fn entry_in_forbidden_fallback(entry : FontEntry) -> Bool {
-  // Reference uses platform-specific forbidden fallback lists.
-  // We currently model the strictest practical case (`.LastResort`) to avoid
-  // selecting it during generic fallback stages.
-  entry_has_family_name(entry, ".LastResort")
+fn entry_in_forbidden_fallback(
+  entry : FontEntry,
+  forbidden_families : Array[String],
+) -> Bool {
+  for family_name in forbidden_families {
+    if entry_has_family_name(entry, family_name) {
+      return true
+    }
+  }
+  false
 }
 
 ///|
@@ -229,6 +239,7 @@ pub fn FontSystem::load_font_data(
       }
       // New fonts change candidate ordering; clear match cache.
       self.font_matches_cache.clear()
+      self.fallback_profile_opt = None
       FontSystem::{ ..self, fonts, }
     }
   }
@@ -263,23 +274,6 @@ fn FontCachedCodepointSupportInfo::new() -> FontCachedCodepointSupportInfo {
     not_supported: [],
     charmap_opt: None,
   }
-}
-
-///|
-struct FontScriptKey {
-  font_id : Int
-  script_tag : UInt
-}
-
-///|
-pub impl Eq for FontScriptKey with equal(self, other) {
-  self.font_id == other.font_id && self.script_tag == other.script_tag
-}
-
-///|
-pub impl Hash for FontScriptKey with hash_combine(self, hasher) {
-  hasher.combine_int(self.font_id)
-  hasher.combine_uint(self.script_tag)
 }
 
 ///|
@@ -325,93 +319,95 @@ fn explicit_family_matches(entry : FontEntry, family : Family) -> Bool {
 }
 
 ///|
+fn profile_marker_hits(fs : FontSystem, markers : Array[String]) -> Int {
+  let mut hits = 0
+  for family_name in markers {
+    for entry in fs.fonts {
+      if entry_has_family_name(entry, family_name) {
+        hits = hits + 1
+        break
+      }
+    }
+  }
+  hits
+}
+
+///|
+fn detect_fallback_profile(fs : FontSystem) -> FallbackProfile {
+  let mac_hits = profile_marker_hits(fs, [
+    ".SF NS", "Menlo", "Apple Color Emoji", "PingFang SC", "Hiragino Sans",
+  ])
+  let windows_hits = profile_marker_hits(fs, [
+    "Segoe UI", "Segoe UI Emoji", "Segoe UI Symbol", "Microsoft YaHei UI", "Malgun Gothic",
+    "Nirmala UI",
+  ])
+  let unix_hits = profile_marker_hits(fs, [
+    "Noto Sans", "DejaVu Sans", "FreeSans", "Noto Sans Mono", "Noto Color Emoji",
+  ])
+  if mac_hits > 0 && mac_hits >= windows_hits && mac_hits >= unix_hits {
+    MacOS
+  } else if windows_hits > 0 && windows_hits >= unix_hits {
+    Windows
+  } else if unix_hits > 0 {
+    Unix
+  } else {
+    Other
+  }
+}
+
+///|
+fn fallback_profile(fs : FontSystem) -> FallbackProfile {
+  match fs.fallback_profile_opt {
+    Some(profile) => profile
+    None => {
+      let profile = detect_fallback_profile(fs)
+      fs.fallback_profile_opt = Some(profile)
+      profile
+    }
+  }
+}
+
+///|
+fn forbidden_fallback_family_names(profile : FallbackProfile) -> Array[String] {
+  match profile {
+    MacOS => [".LastResort"]
+    _ => []
+  }
+}
+
+///|
 fn move_forbidden_candidates_to_end(
   fs : FontSystem,
   family : Family,
   ids : Array[Int],
 ) -> Array[Int] {
+  let forbidden_families = forbidden_fallback_family_names(fallback_profile(fs))
+  if forbidden_families.length() == 0 {
+    return ids
+  }
   let head : Array[Int] = []
-  let tail : Array[Int] = []
   for id in ids {
     if id < 0 || id >= fs.fonts.length() {
       continue
     }
     let entry = fs.fonts[id]
-    // Keep explicitly requested family candidates in front.
-    if entry_in_forbidden_fallback(entry) &&
-      !explicit_family_matches(entry, family) {
-      tail.push(id)
-    } else {
+    // Keep explicitly requested family candidates even if forbidden.
+    if !entry_in_forbidden_fallback(entry, forbidden_families) ||
+      explicit_family_matches(entry, family) {
       head.push(id)
     }
-  }
-  for id in tail {
-    head.push(id)
   }
   head
 }
 
 ///|
-fn font_script_eq(a : @moon_swash.Script, b : @moon_swash.Script) -> Bool {
-  a.to_opentype() == b.to_opentype()
-}
-
-///|
-fn script_needs_fallback_stage(script : @moon_swash.Script) -> Bool {
-  match script {
-    @moon_swash.Script::Common
-    | @moon_swash.Script::Inherited
-    | @moon_swash.Script::Latin
-    | @moon_swash.Script::Unknown => false
-    _ => true
-  }
-}
-
-///|
-fn entry_supports_script(
-  fs : FontSystem,
-  entry : FontEntry,
-  script : @moon_swash.Script,
-) -> Bool {
-  if fs.script_support_cache.length() >= SCRIPT_SUPPORT_CACHE_SIZE_LIMIT {
-    fs.script_support_cache.clear()
-  }
-  let key = FontScriptKey::{
-    font_id: entry.id,
-    script_tag: script.to_opentype(),
-  }
-  match fs.script_support_cache.get(key) {
-    Some(ok) => return ok
-    None => ()
-  }
-
-  let systems = entry.font.writing_systems()
-  for ws in systems.iter() {
-    match ws.script() {
-      None => ()
-      Some(s) =>
-        if font_script_eq(s, script) {
-          fs.script_support_cache.set(key, true)
-          return true
-        }
-    }
-  }
-  fs.script_support_cache.set(key, false)
-  false
-}
-
-///|
-fn split_script_stage_candidates(
+fn split_default_stage_candidates(
   fs : FontSystem,
   family : Family,
-  req_weight : Weight,
-  script : @moon_swash.Script,
   ids : Array[Int],
-) -> (Array[Int], Array[Int], Array[Int]) {
+) -> (Array[Int], Array[Int]) {
   let defaults : Array[Int] = []
-  let script_hits : Array[Int] = []
   let rest : Array[Int] = []
-  let run_script_stage = script_needs_fallback_stage(script)
   for id in ids {
     if id < 0 || id >= fs.fonts.length() {
       continue
@@ -419,15 +415,11 @@ fn split_script_stage_candidates(
     let entry = fs.fonts[id]
     if explicit_family_matches(entry, family) {
       defaults.push(id)
-    } else if run_script_stage &&
-      entry_weight_diff(entry, req_weight) == 0 &&
-      entry_supports_script(fs, entry, script) {
-      script_hits.push(id)
     } else {
       rest.push(id)
     }
   }
-  (defaults, script_hits, rest)
+  (defaults, rest)
 }
 
 ///|
@@ -468,27 +460,213 @@ fn move_named_fallback_candidates_forward(
 }
 
 ///|
-fn common_fallback_family_names() -> Array[String] {
-  [
-    ".SF NS", "Segoe UI", "Segoe UI Emoji", "Segoe UI Symbol", "Segoe UI Historic",
-    "Noto Sans", "DejaVu Sans", "FreeSans", "Noto Sans Mono", "DejaVu Sans Mono",
-    "FreeMono", "Menlo", "Apple Color Emoji", "Geneva", "Arial Unicode MS", "Noto Sans Symbols",
-    "Noto Sans Symbols2", "Noto Color Emoji",
-  ]
+fn common_fallback_family_names(profile : FallbackProfile) -> Array[String] {
+  match profile {
+    Unix =>
+      [
+        "Noto Sans", "DejaVu Sans", "FreeSans", "Noto Sans Mono", "DejaVu Sans Mono",
+        "FreeMono", "Noto Sans Symbols", "Noto Sans Symbols2", "Noto Color Emoji",
+      ]
+    MacOS =>
+      [".SF NS", "Menlo", "Apple Color Emoji", "Geneva", "Arial Unicode MS"]
+    Windows =>
+      ["Segoe UI", "Segoe UI Emoji", "Segoe UI Symbol", "Segoe UI Historic"]
+    Other => []
+  }
 }
 
 ///|
-fn han_unification_family_names(locale : String) -> Array[String] {
-  if locale == "ja" {
-    ["Noto Sans CJK JP", "Hiragino Sans", "Yu Gothic"]
-  } else if locale == "ko" {
-    ["Noto Sans CJK KR", "Apple SD Gothic Neo", "Malgun Gothic"]
-  } else if locale == "zh-HK" {
-    ["Noto Sans CJK HK", "PingFang HK", "MingLiU_HKSCS"]
-  } else if locale == "zh-TW" {
-    ["Noto Sans CJK TC", "PingFang TC", "Microsoft JhengHei UI"]
-  } else {
-    ["Noto Sans CJK SC", "PingFang SC", "Microsoft YaHei UI"]
+fn han_unification_family_names(
+  profile : FallbackProfile,
+  locale : String,
+) -> Array[String] {
+  match profile {
+    Unix =>
+      if locale == "ja" {
+        ["Noto Sans CJK JP"]
+      } else if locale == "ko" {
+        ["Noto Sans CJK KR"]
+      } else if locale == "zh-HK" {
+        ["Noto Sans CJK HK"]
+      } else if locale == "zh-TW" {
+        ["Noto Sans CJK TC"]
+      } else {
+        ["Noto Sans CJK SC"]
+      }
+    MacOS =>
+      if locale == "ja" {
+        ["Hiragino Sans"]
+      } else if locale == "ko" {
+        ["Apple SD Gothic Neo"]
+      } else if locale == "zh-HK" {
+        ["PingFang HK"]
+      } else if locale == "zh-TW" {
+        ["PingFang TC"]
+      } else {
+        ["PingFang SC"]
+      }
+    Windows =>
+      if locale == "ja" {
+        ["Yu Gothic"]
+      } else if locale == "ko" {
+        ["Malgun Gothic"]
+      } else if locale == "zh-HK" {
+        ["MingLiU_HKSCS"]
+      } else if locale == "zh-TW" {
+        ["Microsoft JhengHei UI"]
+      } else {
+        ["Microsoft YaHei UI"]
+      }
+    Other => []
+  }
+}
+
+///|
+fn script_fallback_family_names_unix(
+  script : @moon_swash.Script,
+  locale : String,
+) -> Array[String] {
+  match script {
+    @moon_swash.Script::Adlam => ["Noto Sans Adlam", "Noto Sans Adlam Unjoined"]
+    @moon_swash.Script::Arabic => ["Noto Sans Arabic"]
+    @moon_swash.Script::Armenian => ["Noto Sans Armenian"]
+    @moon_swash.Script::Bengali => ["Noto Sans Bengali"]
+    @moon_swash.Script::Bopomofo => han_unification_family_names(Unix, locale)
+    @moon_swash.Script::Braille => ["FreeMono"]
+    @moon_swash.Script::Buhid => ["Noto Sans Buhid"]
+    @moon_swash.Script::Chakma => ["Noto Sans Chakma"]
+    @moon_swash.Script::Cherokee => ["Noto Sans Cherokee"]
+    @moon_swash.Script::Deseret => ["Noto Sans Deseret"]
+    @moon_swash.Script::Devanagari => ["Noto Sans Devanagari"]
+    @moon_swash.Script::Ethiopic => ["Noto Sans Ethiopic"]
+    @moon_swash.Script::Georgian => ["Noto Sans Georgian"]
+    @moon_swash.Script::Gothic => ["Noto Sans Gothic"]
+    @moon_swash.Script::Grantha => ["Noto Sans Grantha"]
+    @moon_swash.Script::Gujarati => ["Noto Sans Gujarati"]
+    @moon_swash.Script::Gurmukhi => ["Noto Sans Gurmukhi"]
+    @moon_swash.Script::Han => han_unification_family_names(Unix, locale)
+    @moon_swash.Script::Hangul => han_unification_family_names(Unix, "ko")
+    @moon_swash.Script::Hanunoo => ["Noto Sans Hanunoo"]
+    @moon_swash.Script::Hebrew => ["Noto Sans Hebrew"]
+    @moon_swash.Script::Hiragana => han_unification_family_names(Unix, "ja")
+    @moon_swash.Script::Javanese => ["Noto Sans Javanese"]
+    @moon_swash.Script::Kannada => ["Noto Sans Kannada"]
+    @moon_swash.Script::Katakana => han_unification_family_names(Unix, "ja")
+    @moon_swash.Script::Khmer => ["Noto Sans Khmer"]
+    @moon_swash.Script::Lao => ["Noto Sans Lao"]
+    @moon_swash.Script::Malayalam => ["Noto Sans Malayalam"]
+    @moon_swash.Script::Mongolian => ["Noto Sans Mongolian"]
+    @moon_swash.Script::Myanmar => ["Noto Sans Myanmar"]
+    @moon_swash.Script::Oriya => ["Noto Sans Oriya"]
+    @moon_swash.Script::Runic => ["Noto Sans Runic"]
+    @moon_swash.Script::Sinhala => ["Noto Sans Sinhala"]
+    @moon_swash.Script::Syriac => ["Noto Sans Syriac"]
+    @moon_swash.Script::Tagalog => ["Noto Sans Tagalog"]
+    @moon_swash.Script::Tagbanwa => ["Noto Sans Tagbanwa"]
+    @moon_swash.Script::TaiLe => ["Noto Sans Tai Le"]
+    @moon_swash.Script::TaiTham => ["Noto Sans Tai Tham"]
+    @moon_swash.Script::TaiViet => ["Noto Sans Tai Viet"]
+    @moon_swash.Script::Tamil => ["Noto Sans Tamil"]
+    @moon_swash.Script::Telugu => ["Noto Sans Telugu"]
+    @moon_swash.Script::Thaana => ["Noto Sans Thaana"]
+    @moon_swash.Script::Thai => ["Noto Sans Thai"]
+    @moon_swash.Script::Tibetan => ["Noto Serif Tibetan"]
+    @moon_swash.Script::Tifinagh => ["Noto Sans Tifinagh"]
+    @moon_swash.Script::Vai => ["Noto Sans Vai"]
+    @moon_swash.Script::Yi => ["Noto Sans Yi", "Noto Sans CJK SC"]
+    _ => []
+  }
+}
+
+///|
+fn script_fallback_family_names_macos(
+  script : @moon_swash.Script,
+  locale : String,
+) -> Array[String] {
+  match script {
+    @moon_swash.Script::Adlam => ["Noto Sans Adlam"]
+    @moon_swash.Script::Arabic => ["Geeza Pro"]
+    @moon_swash.Script::Armenian => ["Noto Sans Armenian"]
+    @moon_swash.Script::Bengali => ["Bangla Sangam MN"]
+    @moon_swash.Script::Buhid => ["Noto Sans Buhid"]
+    @moon_swash.Script::CanadianAboriginal => ["Euphemia UCAS"]
+    @moon_swash.Script::Chakma => ["Noto Sans Chakma"]
+    @moon_swash.Script::Devanagari => ["Devanagari Sangam MN"]
+    @moon_swash.Script::Ethiopic => ["Kefa"]
+    @moon_swash.Script::Gothic => ["Noto Sans Gothic"]
+    @moon_swash.Script::Grantha => ["Grantha Sangam MN"]
+    @moon_swash.Script::Gujarati => ["Gujarati Sangam MN"]
+    @moon_swash.Script::Gurmukhi => ["Gurmukhi Sangam MN"]
+    @moon_swash.Script::Han => han_unification_family_names(MacOS, locale)
+    @moon_swash.Script::Hangul => han_unification_family_names(MacOS, "ko")
+    @moon_swash.Script::Hanunoo => ["Noto Sans Hanunoo"]
+    @moon_swash.Script::Hebrew => ["Arial"]
+    @moon_swash.Script::Hiragana => han_unification_family_names(MacOS, "ja")
+    @moon_swash.Script::Javanese => ["Noto Sans Javanese"]
+    @moon_swash.Script::Kannada => ["Noto Sans Kannada"]
+    @moon_swash.Script::Katakana => han_unification_family_names(MacOS, "ja")
+    @moon_swash.Script::Khmer => ["Khmer Sangam MN"]
+    @moon_swash.Script::Lao => ["Lao Sangam MN"]
+    @moon_swash.Script::Malayalam => ["Malayalam Sangam MN"]
+    @moon_swash.Script::Mongolian => ["Noto Sans Mongolian"]
+    @moon_swash.Script::Myanmar => ["Noto Sans Myanmar"]
+    @moon_swash.Script::Oriya => ["Noto Sans Oriya"]
+    @moon_swash.Script::Sinhala => ["Sinhala Sangam MN"]
+    @moon_swash.Script::Syriac => ["Noto Sans Syriac"]
+    @moon_swash.Script::Tagalog => ["Noto Sans Tagalog"]
+    @moon_swash.Script::Tagbanwa => ["Noto Sans Tagbanwa"]
+    @moon_swash.Script::TaiLe => ["Noto Sans Tai Le"]
+    @moon_swash.Script::TaiTham => ["Noto Sans Tai Tham"]
+    @moon_swash.Script::TaiViet => ["Noto Sans Tai Viet"]
+    @moon_swash.Script::Tamil => ["InaiMathi"]
+    @moon_swash.Script::Telugu => ["Telugu Sangam MN"]
+    @moon_swash.Script::Thaana => ["Noto Sans Thaana"]
+    @moon_swash.Script::Thai => ["Ayuthaya"]
+    @moon_swash.Script::Tibetan => ["Kailasa"]
+    @moon_swash.Script::Tifinagh => ["Noto Sans Tifinagh"]
+    @moon_swash.Script::Vai => ["Noto Sans Vai"]
+    @moon_swash.Script::Yi => ["Noto Sans Yi", "PingFang SC"]
+    _ => []
+  }
+}
+
+///|
+fn script_fallback_family_names_windows(
+  script : @moon_swash.Script,
+  locale : String,
+) -> Array[String] {
+  match script {
+    @moon_swash.Script::Adlam => ["Ebrima"]
+    @moon_swash.Script::Bengali => ["Nirmala UI"]
+    @moon_swash.Script::CanadianAboriginal => ["Gadugi"]
+    @moon_swash.Script::Chakma => ["Nirmala UI"]
+    @moon_swash.Script::Cherokee => ["Gadugi"]
+    @moon_swash.Script::Devanagari => ["Nirmala UI"]
+    @moon_swash.Script::Ethiopic => ["Ebrima"]
+    @moon_swash.Script::Gujarati => ["Nirmala UI"]
+    @moon_swash.Script::Gurmukhi => ["Nirmala UI"]
+    @moon_swash.Script::Han => han_unification_family_names(Windows, locale)
+    @moon_swash.Script::Hangul => han_unification_family_names(Windows, "ko")
+    @moon_swash.Script::Hiragana => han_unification_family_names(Windows, "ja")
+    @moon_swash.Script::Javanese => ["Javanese Text"]
+    @moon_swash.Script::Kannada => ["Nirmala UI"]
+    @moon_swash.Script::Katakana => han_unification_family_names(Windows, "ja")
+    @moon_swash.Script::Khmer => ["Leelawadee UI"]
+    @moon_swash.Script::Lao => ["Leelawadee UI"]
+    @moon_swash.Script::Malayalam => ["Nirmala UI"]
+    @moon_swash.Script::Mongolian => ["Mongolian Baiti"]
+    @moon_swash.Script::Myanmar => ["Myanmar Text"]
+    @moon_swash.Script::Oriya => ["Nirmala UI"]
+    @moon_swash.Script::Sinhala => ["Nirmala UI"]
+    @moon_swash.Script::Tamil => ["Nirmala UI"]
+    @moon_swash.Script::Telugu => ["Nirmala UI"]
+    @moon_swash.Script::Thaana => ["MV Boli"]
+    @moon_swash.Script::Thai => ["Leelawadee UI"]
+    @moon_swash.Script::Tibetan => ["Microsoft Himalaya"]
+    @moon_swash.Script::Tifinagh => ["Ebrima"]
+    @moon_swash.Script::Vai => ["Ebrima"]
+    @moon_swash.Script::Yi => ["Microsoft Yi Baiti"]
+    _ => []
   }
 }
 
@@ -496,26 +674,13 @@ fn han_unification_family_names(locale : String) -> Array[String] {
 fn script_fallback_family_names(
   script : @moon_swash.Script,
   locale : String,
+  profile : FallbackProfile,
 ) -> Array[String] {
-  match script {
-    @moon_swash.Script::Han => han_unification_family_names(locale)
-    @moon_swash.Script::Hangul => han_unification_family_names("ko")
-    @moon_swash.Script::Hiragana | @moon_swash.Script::Katakana =>
-      han_unification_family_names("ja")
-    @moon_swash.Script::Arabic => ["Noto Sans Arabic", "Geeza Pro"]
-    @moon_swash.Script::Hebrew => ["Noto Sans Hebrew", "Arial"]
-    @moon_swash.Script::Thai => ["Noto Sans Thai", "Ayuthaya", "Leelawadee UI"]
-    @moon_swash.Script::Devanagari =>
-      ["Noto Sans Devanagari", "Nirmala UI", "Devanagari Sangam MN"]
-    @moon_swash.Script::Bengali => ["Noto Sans Bengali", "Bangla Sangam MN"]
-    @moon_swash.Script::Tamil => ["Noto Sans Tamil", "InaiMathi", "Nirmala UI"]
-    @moon_swash.Script::Telugu =>
-      ["Noto Sans Telugu", "Telugu Sangam MN", "Nirmala UI"]
-    @moon_swash.Script::Khmer =>
-      ["Noto Sans Khmer", "Khmer Sangam MN", "Leelawadee UI"]
-    @moon_swash.Script::Lao =>
-      ["Noto Sans Lao", "Lao Sangam MN", "Leelawadee UI"]
-    _ => []
+  match profile {
+    Unix => script_fallback_family_names_unix(script, locale)
+    MacOS => script_fallback_family_names_macos(script, locale)
+    Windows => script_fallback_family_names_windows(script, locale)
+    Other => []
   }
 }
 
@@ -807,27 +972,23 @@ pub fn FontSystem::font_matches_for_script(
 ) -> Array[Int] {
   let family = attrs.family_value()
   let req_weight = attrs.weight_value()
+  let profile = fallback_profile(self)
   let ids = get_font_matches(self, attrs)
-  let (defaults, script_hits, rest0) = split_script_stage_candidates(
-    self, family, req_weight, script, ids,
-  )
+  let (defaults, rest0) = split_default_stage_candidates(self, family, ids)
   let rest1 = move_named_fallback_candidates_forward(
     self,
     req_weight,
     rest0,
-    script_fallback_family_names(script, self.locale),
+    script_fallback_family_names(script, self.locale, profile),
   )
   let rest2 = move_named_fallback_candidates_forward(
     self,
     req_weight,
     rest1,
-    common_fallback_family_names(),
+    common_fallback_family_names(profile),
   )
   let staged : Array[Int] = []
   for id in defaults {
-    staged.push(id)
-  }
-  for id in script_hits {
     staged.push(id)
   }
   for id in rest2 {

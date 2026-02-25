@@ -358,16 +358,12 @@ pub struct FontMatchAttrs {
 pub impl Eq for FontMatchAttrs
 pub impl Hash for FontMatchAttrs
 
-type FontScriptKey
-pub impl Eq for FontScriptKey
-pub impl Hash for FontScriptKey
-
 pub struct FontSystem {
   locale : String
   fonts : Array[FontEntry]
   font_matches_cache : @hashmap.HashMap[FontMatchAttrs, Array[Int]]
-  script_support_cache : @hashmap.HashMap[FontScriptKey, Bool]
   codepoint_support_cache : @hashmap.HashMap[Int, FontCachedCodepointSupportInfo]
+  // private fields
 }
 pub fn FontSystem::count_supported_codepoints(Self, Int, Array[UInt]) -> Int
 pub fn FontSystem::font_matches(Self, Attrs) -> Array[Int]
