@@ -361,18 +361,16 @@ fn entry_supports_script(
 }
 
 ///|
-fn move_script_supported_candidates_forward(
+fn split_script_stage_candidates(
   fs : FontSystem,
   family : Family,
   script : @moon_swash.Script,
   ids : Array[Int],
-) -> Array[Int] {
-  if !script_needs_fallback_stage(script) {
-    return ids
-  }
+) -> (Array[Int], Array[Int], Array[Int]) {
   let defaults : Array[Int] = []
   let script_hits : Array[Int] = []
-  let others : Array[Int] = []
+  let rest : Array[Int] = []
+  let run_script_stage = script_needs_fallback_stage(script)
   for id in ids {
     if id < 0 || id >= fs.fonts.length() {
       continue
@@ -380,19 +378,99 @@ fn move_script_supported_candidates_forward(
     let entry = fs.fonts[id]
     if explicit_family_matches(entry, family) {
       defaults.push(id)
-    } else if entry_supports_script(entry, script) {
+    } else if run_script_stage && entry_supports_script(entry, script) {
       script_hits.push(id)
     } else {
-      others.push(id)
+      rest.push(id)
     }
   }
-  for id in script_hits {
-    defaults.push(id)
+  (defaults, script_hits, rest)
+}
+
+///|
+fn move_named_fallback_candidates_forward(
+  fs : FontSystem,
+  ids : Array[Int],
+  family_names : Array[String],
+) -> Array[Int] {
+  if family_names.length() == 0 || ids.length() <= 1 {
+    return ids
   }
-  for id in others {
-    defaults.push(id)
+  let used : Array[Bool] = Array::makei(ids.length(), _ => false)
+  let promoted : Array[Int] = []
+  for family_name in family_names {
+    for i in 0..<ids.length() {
+      if used[i] {
+        continue
+      }
+      let id = ids[i]
+      if id < 0 || id >= fs.fonts.length() {
+        continue
+      }
+      if entry_has_family_name(fs.fonts[id], family_name) {
+        promoted.push(id)
+        used.set(i, true)
+      }
+    }
   }
-  defaults
+  for i in 0..<ids.length() {
+    if !used[i] {
+      promoted.push(ids[i])
+    }
+  }
+  promoted
+}
+
+///|
+fn common_fallback_family_names() -> Array[String] {
+  [
+    ".SF NS", "Segoe UI", "Segoe UI Emoji", "Segoe UI Symbol", "Segoe UI Historic",
+    "Noto Sans", "DejaVu Sans", "FreeSans", "Noto Sans Mono", "DejaVu Sans Mono",
+    "FreeMono", "Menlo", "Apple Color Emoji", "Geneva", "Arial Unicode MS", "Noto Sans Symbols",
+    "Noto Sans Symbols2", "Noto Color Emoji",
+  ]
+}
+
+///|
+fn han_unification_family_names(locale : String) -> Array[String] {
+  if locale == "ja" {
+    ["Noto Sans CJK JP", "Hiragino Sans", "Yu Gothic"]
+  } else if locale == "ko" {
+    ["Noto Sans CJK KR", "Apple SD Gothic Neo", "Malgun Gothic"]
+  } else if locale == "zh-HK" {
+    ["Noto Sans CJK HK", "PingFang HK", "MingLiU_HKSCS"]
+  } else if locale == "zh-TW" {
+    ["Noto Sans CJK TC", "PingFang TC", "Microsoft JhengHei UI"]
+  } else {
+    ["Noto Sans CJK SC", "PingFang SC", "Microsoft YaHei UI"]
+  }
+}
+
+///|
+fn script_fallback_family_names(
+  script : @moon_swash.Script,
+  locale : String,
+) -> Array[String] {
+  match script {
+    @moon_swash.Script::Han => han_unification_family_names(locale)
+    @moon_swash.Script::Hangul => han_unification_family_names("ko")
+    @moon_swash.Script::Hiragana | @moon_swash.Script::Katakana =>
+      han_unification_family_names("ja")
+    @moon_swash.Script::Arabic => ["Noto Sans Arabic", "Geeza Pro"]
+    @moon_swash.Script::Hebrew => ["Noto Sans Hebrew", "Arial"]
+    @moon_swash.Script::Thai => ["Noto Sans Thai", "Ayuthaya", "Leelawadee UI"]
+    @moon_swash.Script::Devanagari =>
+      ["Noto Sans Devanagari", "Nirmala UI", "Devanagari Sangam MN"]
+    @moon_swash.Script::Bengali => ["Noto Sans Bengali", "Bangla Sangam MN"]
+    @moon_swash.Script::Tamil => ["Noto Sans Tamil", "InaiMathi", "Nirmala UI"]
+    @moon_swash.Script::Telugu =>
+      ["Noto Sans Telugu", "Telugu Sangam MN", "Nirmala UI"]
+    @moon_swash.Script::Khmer =>
+      ["Noto Sans Khmer", "Khmer Sangam MN", "Leelawadee UI"]
+    @moon_swash.Script::Lao =>
+      ["Noto Sans Lao", "Lao Sangam MN", "Leelawadee UI"]
+    _ => []
+  }
 }
 
 ///|
@@ -683,9 +761,29 @@ pub fn FontSystem::font_matches_for_script(
 ) -> Array[Int] {
   let family = attrs.family_value()
   let ids = get_font_matches(self, attrs)
-  let staged = move_script_supported_candidates_forward(
+  let (defaults, script_hits, rest0) = split_script_stage_candidates(
     self, family, script, ids,
   )
+  let rest1 = move_named_fallback_candidates_forward(
+    self,
+    rest0,
+    script_fallback_family_names(script, self.locale),
+  )
+  let rest2 = move_named_fallback_candidates_forward(
+    self,
+    rest1,
+    common_fallback_family_names(),
+  )
+  let staged : Array[Int] = []
+  for id in defaults {
+    staged.push(id)
+  }
+  for id in script_hits {
+    staged.push(id)
+  }
+  for id in rest2 {
+    staged.push(id)
+  }
   move_forbidden_candidates_to_end(self, family, staged)
 }
 

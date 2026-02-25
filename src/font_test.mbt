@@ -239,6 +239,25 @@ fn first_discriminating_script_for_test(
 }
 
 ///|
+fn is_permutation_of_ids_for_test(lhs : Array[Int], rhs : Array[Int]) -> Bool {
+  if lhs.length() != rhs.length() {
+    return false
+  }
+  for id in lhs {
+    let mut count = 0
+    for rid in rhs {
+      if rid == id {
+        count = count + 1
+      }
+    }
+    if count != 1 {
+      return false
+    }
+  }
+  true
+}
+
+///|
 test "FontSystem.resolve_for_codepoint prefers a font that supports the codepoint" {
   // Font0 supports U+0041 ('A'); Font1 supports U+0042 ('B').
   let a = mk_min_font_cmap4_single(b'\x00', b'\x41')
@@ -357,4 +376,20 @@ test "FontSystem.font_matches_for_script promotes script-supporting fonts" {
       inspect(violated, content="false")
     }
   }
+}
+
+///|
+test "FontSystem.font_matches_for_script keeps candidate set unchanged" {
+  let min_font = mk_min_font_cmap4_single(b'\x00', b'\x41')
+  let fs = FontSystem::new()
+    .load_font_data(min_font)
+    .load_font_data(test_font_inter_regular_ttf())
+  let attrs = Attrs::new()
+  let base = fs.font_matches(attrs)
+  let s1 = fs.font_matches_for_script(attrs, @moon_swash.Script::Arabic)
+  let s2 = fs.font_matches_for_script(attrs, @moon_swash.Script::Han)
+  let s3 = fs.font_matches_for_script(attrs, @moon_swash.Script::Devanagari)
+  inspect(is_permutation_of_ids_for_test(base, s1), content="true")
+  inspect(is_permutation_of_ids_for_test(base, s2), content="true")
+  inspect(is_permutation_of_ids_for_test(base, s3), content="true")
 }
