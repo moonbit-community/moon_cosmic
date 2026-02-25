@@ -319,6 +319,7 @@ fn explicit_family_matches(entry : FontEntry, family : Family) -> Bool {
 }
 
 ///|
+#cfg(target="native")
 fn profile_marker_hits(fs : FontSystem, markers : Array[String]) -> Int {
   let mut hits = 0
   for family_name in markers {
@@ -333,6 +334,7 @@ fn profile_marker_hits(fs : FontSystem, markers : Array[String]) -> Int {
 }
 
 ///|
+#cfg(target="native")
 fn detect_fallback_profile(fs : FontSystem) -> FallbackProfile {
   let mac_hits = profile_marker_hits(fs, [
     ".SF NS", "Menlo", "Apple Color Emoji", "PingFang SC", "Hiragino Sans",
@@ -356,11 +358,24 @@ fn detect_fallback_profile(fs : FontSystem) -> FallbackProfile {
 }
 
 ///|
+#cfg(not(target="native"))
+fn default_fallback_profile(_fs : FontSystem) -> FallbackProfile {
+  // Match reference non-native target behavior (`other.rs` fallback tables).
+  Other
+}
+
+///|
+#cfg(target="native")
+fn default_fallback_profile(fs : FontSystem) -> FallbackProfile {
+  detect_fallback_profile(fs)
+}
+
+///|
 fn fallback_profile(fs : FontSystem) -> FallbackProfile {
   match fs.fallback_profile_opt {
     Some(profile) => profile
     None => {
-      let profile = detect_fallback_profile(fs)
+      let profile = default_fallback_profile(fs)
       fs.fallback_profile_opt = Some(profile)
       profile
     }
