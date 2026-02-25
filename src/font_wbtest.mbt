@@ -205,6 +205,18 @@ test "default stage keeps only the primary zero-weight explicit-family candidate
 }
 
 ///|
+test "font_matches_for_scripts keeps full other-stage stream after default stage" {
+  let data = mk_min_font_cmap4_single(b'\x00', b'\x41')
+  let fs = FontSystem::new().load_font_data(data).load_font_data(data)
+  let family = match fs.get_font_entry(0) {
+    Some(entry) => Name(entry.family_name())
+    None => Name("")
+  }
+  let attrs = Attrs::new().family(family)
+  inspect(fs.font_matches_for_scripts(attrs, []), content="[0, 0, 1]")
+}
+
+///|
 test "named fallback stage promotes only first match for each family" {
   let min = mk_min_font_cmap4_single(b'\x00', b'\x41')
   let fs = FontSystem::new()
