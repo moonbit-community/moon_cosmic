@@ -663,12 +663,24 @@ fn shape_run_with_font(
     let shaped = gc.glyphs()
     let shaped_count = shaped.length()
     if shaped_count != 0 {
-      let starts = build_cluster_starts(
+      let starts_fallback = build_cluster_starts(
         source,
         gc.components(),
         shaped_count,
         run_rtl,
       )
+      let starts : Array[Int] = []
+      // Reference alignment:
+      // use per-glyph source marker first (analogous to HarfBuzz cluster index),
+      // and fall back to component-based starts only when marker is out of range.
+      for i in 0..<shaped_count {
+        let data_start = shaped[i].data().reinterpret_as_int()
+        if data_start >= source_start && data_start <= source_end {
+          starts.push(data_start)
+        } else {
+          starts.push(starts_fallback[i])
+        }
+      }
       let ends = build_cluster_ends(starts, source_end, run_rtl)
       for i in 0..<shaped_count {
         let g = shaped[i]
@@ -828,17 +840,10 @@ pub fn ShapeLine::build_with_font_system(
     let i = off.reinterpret_as_int()
     let level_i = if levels.get(i) is Some(v) { v } else if rtl { 1 } else { 0 }
     let run_rtl = level_i % 2 != 0
-    let attrs = attrs_list.get_span(i)
     // Tabs are shaped as spaces (upstream behavior).
     let ch = if ch0 == '\t' { ' ' } else { ch0 }
     let info = @moon_swash.CharInfo::from_char(ch)
-    let tok = @moon_swash.Token::new(
-      ch,
-      off,
-      len_u,
-      info,
-      attrs.metadata().reinterpret_as_uint(),
-    )
+    let tok = @moon_swash.Token::new(ch, off, len_u, info, off)
     let primary = shape_primary_script_seed(script0)
     if cur_tokens.length() == 0 {
       cur_primary_script = primary.0

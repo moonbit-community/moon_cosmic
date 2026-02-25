@@ -81,6 +81,33 @@ fn mk_min_font_cmap4_single_for_shape_range(
 }
 
 ///|
+fn source_range_has_non_ws(text : String, start : Int, end : Int) -> Bool {
+  let s = if start < 0 {
+    0
+  } else if start > text.length() {
+    text.length()
+  } else {
+    start
+  }
+  let e = if end < s {
+    s
+  } else if end > text.length() {
+    text.length()
+  } else {
+    end
+  }
+  let mut i = s
+  while i < e {
+    let cu = text.code_unit_at(i).to_int()
+    if cu != 32 && cu != 9 {
+      return true
+    }
+    i = i + 1
+  }
+  false
+}
+
+///|
 test "ShapeLine.build_with_font_system keeps space glyphs on whitespace source ranges" {
   let text = "Move the mouse to see the circle follow your cursor."
   let font_system = FontSystem::new().load_font_data(
@@ -115,6 +142,37 @@ test "ShapeLine.build_with_font_system keeps space glyphs on whitespace source r
     }
     if has_non_ws {
       bad = bad + 1
+    }
+  }
+  inspect(bad, content="0")
+}
+
+///|
+test "ShapeLine.build_with_font_system keeps visible ASCII renderable on physical cache path" {
+  let text = "Move the mouse to see the circle follow your cursor."
+  let font_system = FontSystem::new().load_font_data(
+    test_font_inter_regular_ttf(),
+  )
+  let shape = ShapeLine::build_with_font_system(
+    ShapeLine::empty(),
+    font_system,
+    text,
+    AttrsList::new(Attrs::new()),
+    Shaping::Advanced,
+    8,
+  )
+  let lines = layout_from_shape(text, shape, 18.0F, 18.0F, None, Wrap::None)
+  let cache = SwashCache::new()
+  let mut bad = 0
+  for line in lines {
+    for glyph in line.glyphs {
+      if !source_range_has_non_ws(text, glyph.start, glyph.end) {
+        continue
+      }
+      let physical = glyph.physical((0.0F, 0.0F), 1.0F)
+      if cache.get_image_uncached(font_system, physical.cache_key) is None {
+        bad = bad + 1
+      }
     }
   }
   inspect(bad, content="0")
@@ -205,5 +263,8 @@ test "ShapeLine.build_with_font_system replaces missing clusters incrementally" 
       font_at_c = Some(g.font_id)
     }
   }
-  inspect((font_at_a, font_at_b, font_at_c), content="(Some(0), Some(1), Some(2))")
+  inspect(
+    (font_at_a, font_at_b, font_at_c),
+    content="(Some(0), Some(1), Some(2))",
+  )
 }
