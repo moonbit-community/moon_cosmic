@@ -215,13 +215,55 @@ test "named fallback stage promotes only first match for each family" {
     Some(entry) => entry.family_name()
     None => ""
   }
-  let reordered = move_named_fallback_candidates_forward(
+  let selected = take_named_fallback_candidates(
     fs,
     Weight::normal(),
     [2, 99, 1, 0],
     [family_name],
   )
+  let reordered : Array[Int] = []
+  for id in selected.0 {
+    reordered.push(id)
+  }
+  for id in selected.1 {
+    reordered.push(id)
+  }
   inspect(reordered, content="[2, 99, 1, 0]")
+}
+
+///|
+test "take_named_fallback_candidates returns promoted and rest stages" {
+  let min = mk_min_font_cmap4_single(b'\x00', b'\x41')
+  let fs = FontSystem::new()
+    .load_font_data(min)
+    .load_font_data(min)
+    .load_font_data(min)
+  let family_name = match fs.get_font_entry(0) {
+    Some(entry) => entry.family_name()
+    None => ""
+  }
+  let selected = take_named_fallback_candidates(
+    fs,
+    Weight::normal(),
+    [2, 99, 1, 0],
+    [family_name],
+  )
+  inspect(selected.0, content="[2]")
+  inspect(selected.1, content="[99, 1, 0]")
+}
+
+///|
+test "forbidden filtering applies to other-stage candidates only" {
+  let min = mk_min_font_cmap4_single(b'\x00', b'\x41')
+  let fs = FontSystem::new().load_font_data(min)
+  let forbidden = match fs.get_font_entry(0) {
+    Some(entry) => [entry.family_name()]
+    None => []
+  }
+  inspect(
+    filter_forbidden_from_other_stage(fs, forbidden, [0, 99]),
+    content="[99]",
+  )
 }
 
 ///|
