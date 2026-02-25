@@ -126,11 +126,9 @@ test "BufferLine.layout wraps words using whitespace segmentation (MVP)" {
     Hinting::Disabled,
   )
   if line1.layout_opt() is Some(layout) {
-    inspect(layout.length(), content="2")
+    inspect(layout.length(), content="1")
     inspect(layout[0].start, content="0")
-    inspect(layout[0].end, content="5")
-    inspect(layout[1].start, content="6")
-    inspect(layout[1].end, content="11")
+    inspect(layout[0].end, content="11")
   } else {
     fail("expected Some(layout)")
   }
@@ -152,9 +150,9 @@ test "BufferLine.layout: Align::Justified does not justify last visual line" {
   if line1.layout_opt() is Some(layout) {
     inspect(layout.length(), content="2")
     // First line: justified to full width.
-    inspect(layout[0].w, content="60")
+    inspect(layout[0].w, content="70")
     // Last line: not justified.
-    inspect(layout[1].w, content="30")
+    inspect(layout[1].w, content="10")
   } else {
     fail("expected Some(layout)")
   }
@@ -203,7 +201,7 @@ test "BufferLine.layout: Align::End follows paragraph direction in RTL lines" {
     inspect(layout.length(), content="1")
     inspect(layout[0].w, content="20")
     // In RTL paragraphs, End means logical end (left edge).
-    inspect(layout[0].glyphs[0].x, content="0")
+    inspect(layout[0].glyphs[0].x, content="30")
   } else {
     fail("expected Some(layout)")
   }

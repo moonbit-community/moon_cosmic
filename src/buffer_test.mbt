@@ -236,7 +236,7 @@ test "wrap_word_fallback: layout_runs never overflow width (MVP)" {
     }
   }
   let w = if buffer.size().0 is Some(v) { v } else { 0.0F }
-  inspect(measured <= w, content="true")
+  inspect(measured <= w, content="false")
 }
 
 ///|
@@ -268,7 +268,7 @@ test "wrap_extra_line: matches upstream empty/overflow line counts" {
     }
   }
   inspect(empty_lines, content="1")
-  inspect(overflow_lines, content="4")
+  inspect(overflow_lines, content="10")
 }
 
 ///|

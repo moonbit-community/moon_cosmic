@@ -32,11 +32,7 @@ pub fn ShapeRunKey::new(text : String, attrs_list : AttrsList) -> ShapeRunKey {
       spans.push((s.start, s.end, s.attrs))
     }
   }
-  ShapeRunKey::{
-    text,
-    default_attrs,
-    attrs_spans: spans,
-  }
+  ShapeRunKey::{ text, default_attrs, attrs_spans: spans }
 }
 
 ///|

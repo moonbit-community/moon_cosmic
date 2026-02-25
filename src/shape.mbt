@@ -135,14 +135,19 @@ fn detect_base_rtl(text : String) -> Bool {
 fn compute_bidi_levels(text : String, rtl : Bool) -> Array[Int] {
   let base = if rtl { 1 } else { 0 }
   let levels : Array[Int] = Array::makei(text.length(), _ => base)
+  let strong_mask : Array[Bool] = Array::makei(text.length(), _ => false)
+  let segments : Array[(Int, Int, Bool)] = []
   for p in text.iter2() {
     let idx = p.0
     let ch = p.1
     let props = @moon_swash.CharInfo::from_char(ch).properties()
     let bidi = props.bidi_class()
-    let lev = if bidi_is_strong_rtl(bidi) {
+    let strong_rtl = bidi_is_strong_rtl(bidi)
+    let strong_ltr = bidi_is_strong_ltr(bidi)
+    let strong = strong_rtl || strong_ltr
+    let lev = if strong_rtl {
       1
-    } else if bidi_is_strong_ltr(bidi) {
+    } else if strong_ltr {
       if rtl {
         2
       } else {
@@ -155,6 +160,46 @@ fn compute_bidi_levels(text : String, rtl : Bool) -> Array[Int] {
     let mut i = idx
     while i < end && i < levels.length() {
       levels.set(i, lev)
+      strong_mask.set(i, strong)
+      i = i + 1
+    }
+    segments.push((idx, end, strong))
+  }
+
+  // Resolve neutral spans (e.g. spaces) toward surrounding strong runs.
+  for seg in segments {
+    let start = seg.0
+    let end = seg.1
+    if seg.2 {
+      continue
+    }
+    let mut prev_level : Int? = None
+    let mut j = start - 1
+    while j >= 0 {
+      if strong_mask[j] {
+        prev_level = Some(levels[j])
+        break
+      }
+      j = j - 1
+    }
+    let mut next_level : Int? = None
+    let mut k = end
+    while k < levels.length() {
+      if strong_mask[k] {
+        next_level = Some(levels[k])
+        break
+      }
+      k = k + 1
+    }
+    let neutral_level = match (prev_level, next_level) {
+      (Some(pl), Some(nl)) => if pl == nl { pl } else { base }
+      (Some(pl), None) => pl
+      (None, Some(nl)) => nl
+      (None, None) => base
+    }
+    let mut i = start
+    while i < end && i < levels.length() {
+      levels.set(i, neutral_level)
       i = i + 1
     }
   }
@@ -405,6 +450,108 @@ fn build_cluster_ends(
     }
   }
   ends
+}
+
+///|
+fn reverse_glyphs(glyphs : Array[ShapeGlyph]) -> Unit {
+  if glyphs.length() < 2 {
+    return
+  }
+  let mut i = 0
+  let mut j = glyphs.length() - 1
+  while i < j {
+    let a = glyphs[i]
+    let b = glyphs[j]
+    glyphs.set(i, b)
+    glyphs.set(j, a)
+    i = i + 1
+    j = j - 1
+  }
+}
+
+///|
+fn is_space_like_char(ch : Char) -> Bool {
+  if ch == '\t' {
+    return true
+  }
+  let cat = @moon_swash.CharInfo::from_char(ch).category()
+  cat is SpaceSeparator || cat is LineSeparator || cat is ParagraphSeparator
+}
+
+///|
+fn glyph_is_blank(text : String, glyph : ShapeGlyph) -> Bool {
+  let start = clamp_text_index(glyph.start, text.length())
+  let end0 = clamp_text_index(glyph.end, text.length())
+  let end = if end0 < start { start } else { end0 }
+  if end <= start {
+    return false
+  }
+  let run = slice_text_utf16(text, start, end)
+  let mut has_char = false
+  for ch in run {
+    has_char = true
+    if !is_space_like_char(ch) {
+      return false
+    }
+  }
+  has_char
+}
+
+///|
+priv struct RunGlyphChunk {
+  blank : Bool
+  glyphs : Array[ShapeGlyph]
+}
+
+///|
+fn reorder_run_glyphs_for_bidi(
+  text : String,
+  run_glyphs : Array[ShapeGlyph],
+  line_rtl : Bool,
+  run_rtl : Bool,
+) -> Array[ShapeGlyph] {
+  if run_glyphs.length() < 2 {
+    return run_glyphs
+  }
+
+  let chunks : Array[RunGlyphChunk] = []
+  for glyph in run_glyphs {
+    let blank = glyph_is_blank(text, glyph)
+    if !blank && chunks.length() > 0 && !chunks[chunks.length() - 1].blank {
+      chunks[chunks.length() - 1].glyphs.push(glyph)
+    } else {
+      chunks.push(RunGlyphChunk::{ blank, glyphs: [glyph] })
+    }
+  }
+
+  // Swash emits RTL clusters in logical order while reference HarfBuzz stream
+  // is visual. Adjust per-word glyph direction first, then apply word-order flip.
+  let need_reverse_word_glyphs = if run_rtl { !line_rtl } else { line_rtl }
+  if need_reverse_word_glyphs {
+    for i in 0..<chunks.length() {
+      reverse_glyphs(chunks[i].glyphs)
+    }
+  }
+  if line_rtl != run_rtl {
+    let mut i = 0
+    let mut j = chunks.length() - 1
+    while i < j {
+      let a = chunks[i]
+      let b = chunks[j]
+      chunks.set(i, b)
+      chunks.set(j, a)
+      i = i + 1
+      j = j - 1
+    }
+  }
+
+  let out : Array[ShapeGlyph] = []
+  for chunk in chunks {
+    for glyph in chunk.glyphs {
+      out.push(glyph)
+    }
+  }
+  out
 }
 
 ///|
@@ -938,9 +1085,11 @@ pub fn ShapeLine::build_with_font_system(
     )
     if font_system.shape_run_cache.get(cache_key) is Some(cache_glyphs) {
       for g in cache_glyphs {
-        glyphs.push(
-          ShapeGlyph::{ ..g, start: g.start + run_start, end: g.end + run_start },
-        )
+        glyphs.push(ShapeGlyph::{
+          ..g,
+          start: g.start + run_start,
+          end: g.end + run_start,
+        })
       }
       continue
     }
@@ -995,12 +1144,15 @@ pub fn ShapeLine::build_with_font_system(
         }
       }
     }
+    run_glyphs = reorder_run_glyphs_for_bidi(text, run_glyphs, rtl, run_rtl)
     let cached_run_glyphs : Array[ShapeGlyph] = []
     for g in run_glyphs {
       glyphs.push(g)
-      cached_run_glyphs.push(
-        ShapeGlyph::{ ..g, start: g.start - run_start, end: g.end - run_start },
-      )
+      cached_run_glyphs.push(ShapeGlyph::{
+        ..g,
+        start: g.start - run_start,
+        end: g.end - run_start,
+      })
     }
     font_system.shape_run_cache.insert(cache_key, cached_run_glyphs)
   }
