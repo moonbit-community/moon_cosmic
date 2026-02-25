@@ -1,7 +1,0 @@
-import {
-  "Milky2018/moon_cosmic" @lib,
-}
-
-options(
-  "is-main": true,
-)
