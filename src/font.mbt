@@ -404,16 +404,21 @@ fn move_forbidden_candidates_to_end(
 fn split_default_stage_candidates(
   fs : FontSystem,
   family : Family,
+  req_weight : Weight,
   ids : Array[Int],
 ) -> (Array[Int], Array[Int]) {
   let defaults : Array[Int] = []
   let rest : Array[Int] = []
+  let mut default_set = false
   for id in ids {
     if id < 0 || id >= fs.fonts.length() {
       continue
     }
     let entry = fs.fonts[id]
-    if explicit_family_matches(entry, family) {
+    if !default_set &&
+      explicit_family_matches(entry, family) &&
+      entry_weight_diff(entry, req_weight) == 0 {
+      default_set = true
       defaults.push(id)
     } else {
       rest.push(id)
@@ -920,11 +925,11 @@ fn build_font_matches(fs : FontSystem, attrs : Attrs) -> Array[Int] {
   }
 
   match preferred {
-    None => move_forbidden_candidates_to_end(fs, family, ids)
+    None => ids
     Some(best) => {
       let pid = best.0
       if ids.length() == 0 || ids[0] == pid {
-        return move_forbidden_candidates_to_end(fs, family, ids)
+        return ids
       }
       let reordered : Array[Int] = [pid]
       for id in ids {
@@ -932,7 +937,7 @@ fn build_font_matches(fs : FontSystem, attrs : Attrs) -> Array[Int] {
           reordered.push(id)
         }
       }
-      move_forbidden_candidates_to_end(fs, family, reordered)
+      reordered
     }
   }
 }
@@ -974,7 +979,9 @@ pub fn FontSystem::font_matches_for_script(
   let req_weight = attrs.weight_value()
   let profile = fallback_profile(self)
   let ids = get_font_matches(self, attrs)
-  let (defaults, rest0) = split_default_stage_candidates(self, family, ids)
+  let (defaults, rest0) = split_default_stage_candidates(
+    self, family, req_weight, ids,
+  )
   let rest1 = move_named_fallback_candidates_forward(
     self,
     req_weight,
