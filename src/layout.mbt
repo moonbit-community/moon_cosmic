@@ -626,6 +626,15 @@ pub fn layout_from_shape(
 ) -> Array[LayoutLine] {
   let lines : Array[LayoutLine] = []
   if text.length() == 0 {
+    lines.push(LayoutLine::{
+      start: 0,
+      end: 0,
+      w: 0.0F,
+      max_ascent: 0.0F,
+      max_descent: 0.0F,
+      line_height_opt: None,
+      glyphs: [],
+    })
     return finalize_layout_lines(lines, shape.rtl, width_opt)
   }
   let shape_for_wrap = match wrap {
@@ -674,7 +683,8 @@ pub fn layout_from_shape(
           font_size,
           cell_w,
         )
-        if w + adv_w > max_w && i > start {
+        let blank = layout_glyph_is_blank(text, shape_for_wrap.glyphs[i])
+        if w + adv_w > max_w && i > start && !(blank && w <= max_w) {
           push_layout_line_from_shape(
             lines, shape_for_wrap, start, i, font_size, cell_w,
           )
@@ -711,11 +721,6 @@ pub fn layout_from_shape(
   }
   let mut i = 0
   while i < segs.length() {
-    if wrap is WordOrGlyph {
-      while i < segs.length() && segs[i].blank {
-        i = i + 1
-      }
-    }
     if i >= segs.length() {
       break
     }
@@ -723,6 +728,9 @@ pub fn layout_from_shape(
     let mut line_start_g = segs[line_start_i].glyph_start
     let mut cur_end_g = line_start_g
     let mut before_last_blank_end_g = line_start_g
+    let mut kept_overflow_after_blank = false
+    let mut seen_nonblank = false
+    let mut seen_incongruent_nonblank = false
     let mut emitted = false
     // Track last "fitting" glyph end and the end position before the most recent
     // blank segment, mirroring upstream `width_before_last_blank` behavior.
@@ -730,12 +738,18 @@ pub fn layout_from_shape(
       let seg = segs[i]
       let blank = seg.blank
       let would_end_g = seg.glyph_end
+      let seg_rtl = shape_for_wrap.glyphs[seg.glyph_start].level % 2 != 0
       let would_w = prefix_range_w(prefix, line_start_g, would_end_g)
       let cur_w = prefix_range_w(prefix, line_start_g, cur_end_g)
       let fits = would_w <= max_w || (blank && cur_w <= max_w)
       if fits {
         if blank {
           before_last_blank_end_g = cur_end_g
+        } else if seg_rtl != shape_for_wrap.rtl {
+          seen_incongruent_nonblank = true
+        }
+        if !blank {
+          seen_nonblank = true
         }
         cur_end_g = would_end_g
         i = i + 1
@@ -773,6 +787,7 @@ pub fn layout_from_shape(
           line_start_g = chunk_start
           cur_end_g = word_end_g
           before_last_blank_end_g = cur_end_g
+          seen_nonblank = true
           i = i + 1
           continue
         } else {
@@ -780,6 +795,9 @@ pub fn layout_from_shape(
           push_layout_line_from_shape(
             lines, shape_for_wrap, word_start_g, word_end_g, font_size, cell_w,
           )
+          if !blank {
+            seen_nonblank = true
+          }
           i = i + 1
           emitted = true
         }
@@ -789,15 +807,26 @@ pub fn layout_from_shape(
       // Reference parity on word-wrap: if a non-blank segment overflows right
       // after a blank separator, keep it on the same line and allow overflow.
       // This matches span-transition behavior in upstream layout.
-      if wrap is Word && !blank && i > line_start_i && segs[i - 1].blank {
+      if (wrap is Word || wrap is WordOrGlyph) &&
+        !blank &&
+        i > line_start_i &&
+        segs[i - 1].blank &&
+        !kept_overflow_after_blank &&
+        !seen_incongruent_nonblank &&
+        seg_rtl != shape_for_wrap.rtl {
         cur_end_g = would_end_g
+        kept_overflow_after_blank = true
+        seen_nonblank = true
+        seen_incongruent_nonblank = true
         i = i + 1
         continue
       }
 
       // Emit current line, possibly trimming trailing blanks when wrapping.
       let emit_end = if i > line_start_i && segs[i - 1].blank {
-        if wrap is WordOrGlyph &&
+        if blank {
+          cur_end_g
+        } else if wrap is WordOrGlyph &&
           !blank &&
           prefix_range_w(prefix, seg.glyph_start, seg.glyph_end) > max_w {
           cur_end_g
@@ -814,7 +843,7 @@ pub fn layout_from_shape(
       }
       // When a blank segment triggers wrap, consume it so the next line does not
       // start with that overflowing blank (matches upstream word-wrap behavior).
-      if blank {
+      if blank && seen_nonblank {
         i = i + 1
       }
       emitted = true

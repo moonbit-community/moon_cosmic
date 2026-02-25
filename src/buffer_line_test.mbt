@@ -126,9 +126,11 @@ test "BufferLine.layout wraps words using whitespace segmentation (MVP)" {
     Hinting::Disabled,
   )
   if line1.layout_opt() is Some(layout) {
-    inspect(layout.length(), content="1")
+    inspect(layout.length(), content="2")
     inspect(layout[0].start, content="0")
-    inspect(layout[0].end, content="11")
+    inspect(layout[0].end, content="5")
+    inspect(layout[1].start, content="6")
+    inspect(layout[1].end, content="11")
   } else {
     fail("expected Some(layout)")
   }
@@ -150,9 +152,9 @@ test "BufferLine.layout: Align::Justified does not justify last visual line" {
   if line1.layout_opt() is Some(layout) {
     inspect(layout.length(), content="2")
     // First line: justified to full width.
-    inspect(layout[0].w, content="70")
+    inspect(layout[0].w, content="60")
     // Last line: not justified.
-    inspect(layout[1].w, content="10")
+    inspect(layout[1].w, content="30")
   } else {
     fail("expected Some(layout)")
   }
@@ -220,11 +222,15 @@ test "BufferLine.layout: whitespace-only word wrap keeps a trailing blank segmen
     Hinting::Disabled,
   )
   if line1.layout_opt() is Some(layout) {
-    inspect(layout.length(), content="1")
+    inspect(layout.length(), content="3")
     inspect(layout[0].w, content="10")
-    inspect(layout[0].start, content="2")
-    inspect(layout[0].end, content="3")
+    inspect(layout[0].start, content="0")
+    inspect(layout[0].end, content="1")
     inspect(layout[0].glyphs.length(), content="1")
+    inspect(layout[1].start, content="1")
+    inspect(layout[1].end, content="2")
+    inspect(layout[2].start, content="2")
+    inspect(layout[2].end, content="3")
   } else {
     fail("expected Some(layout)")
   }

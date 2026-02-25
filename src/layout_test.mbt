@@ -73,9 +73,11 @@ test "layout_from_shape: Wrap::Word breaks using text word boundaries" {
     Some(25.0F),
     Wrap::Word,
   )
-  inspect(lines.length(), content="1")
+  inspect(lines.length(), content="2")
   inspect(lines[0].start, content="0")
-  inspect(lines[0].end, content="5")
+  inspect(lines[0].end, content="2")
+  inspect(lines[1].start, content="3")
+  inspect(lines[1].end, content="5")
 }
 
 ///|

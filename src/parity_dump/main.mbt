@@ -16,6 +16,8 @@
 struct ParityCase {
   id : String
   text : String
+  family : String
+  font_size : Float
   wrap : @cosmic.Wrap
   width_opt : Float?
 }
@@ -76,38 +78,210 @@ fn mk_cases() -> Array[ParityCase] {
     ParityCase::{
       id: "ascii_sentence",
       text: "Move the mouse to see the circle follow your cursor.",
+      family: "Inter",
+      font_size: 16.0,
       wrap: @cosmic.Wrap::None,
       width_opt: None,
     },
     ParityCase::{
       id: "ascii_tabs",
       text: "A\tB\tC",
+      family: "Inter",
+      font_size: 16.0,
       wrap: @cosmic.Wrap::None,
       width_opt: None,
     },
     ParityCase::{
       id: "mix_hebrew",
       text: "Many computer programs fail to display bidirectional text correctly: שרה",
+      family: "Inter",
+      font_size: 16.0,
       wrap: @cosmic.Wrap::None,
       width_opt: None,
     },
     ParityCase::{
       id: "mix_arabic",
       text: "I like to render اللغة العربية in Rust!",
+      family: "Inter",
+      font_size: 16.0,
       wrap: @cosmic.Wrap::None,
       width_opt: None,
     },
     ParityCase::{
       id: "wrap_word_or_glyph",
       text: "Lorem ipsum dolor sit amet, qui minim labore adipisicing minim sint cillum sint consectetur cupidatat.",
+      family: "Inter",
+      font_size: 16.0,
       wrap: @cosmic.Wrap::WordOrGlyph,
       width_opt: Some(50.0),
     },
     ParityCase::{
       id: "wrap_word",
       text: "אב abc def",
+      family: "Inter",
+      font_size: 16.0,
       wrap: @cosmic.Wrap::Word,
       width_opt: Some(30.0),
+    },
+    ParityCase::{
+      id: "hebrew_word_noto",
+      text: "בדיקה",
+      family: "Noto Sans",
+      font_size: 36.0,
+      wrap: @cosmic.Wrap::None,
+      width_opt: None,
+    },
+    ParityCase::{
+      id: "hebrew_paragraph_noto",
+      text: "השועל החום המהיר קופץ מעל הכלב העצלן",
+      family: "Noto Sans",
+      font_size: 36.0,
+      wrap: @cosmic.Wrap::WordOrGlyph,
+      width_opt: Some(210.0),
+    },
+    ParityCase::{
+      id: "english_hebrew_paragraph_noto",
+      text: "Many computer programs fail to display bidirectional text correctly. For example, this page is mostly LTR English script, and here is the RTL Hebrew name Sarah: שרה, spelled sin (ש) on the right, resh (ר) in the middle, and heh (ה) on the left.",
+      family: "Noto Sans",
+      font_size: 16.0,
+      wrap: @cosmic.Wrap::WordOrGlyph,
+      width_opt: Some(200.0),
+    },
+    ParityCase::{
+      id: "arabic_word_noto",
+      text: "خالصة",
+      family: "Noto Sans",
+      font_size: 36.0,
+      wrap: @cosmic.Wrap::None,
+      width_opt: None,
+    },
+    ParityCase::{
+      id: "arabic_paragraph_noto",
+      text: "الثعلب البني السريع يقفز فوق الكلب الكسول",
+      family: "Noto Sans",
+      font_size: 36.0,
+      wrap: @cosmic.Wrap::WordOrGlyph,
+      width_opt: Some(210.0),
+    },
+    ParityCase::{
+      id: "english_arabic_paragraph_noto",
+      text: "I like to render اللغة العربية in Rust!",
+      family: "Noto Sans",
+      font_size: 36.0,
+      wrap: @cosmic.Wrap::WordOrGlyph,
+      width_opt: Some(190.0),
+    },
+    ParityCase::{
+      id: "stability_empty_wordorglyph_none",
+      text: "",
+      family: "Inter",
+      font_size: 18.0,
+      wrap: @cosmic.Wrap::WordOrGlyph,
+      width_opt: None,
+    },
+    ParityCase::{
+      id: "stability_space_wordorglyph_none",
+      text: " ",
+      family: "Inter",
+      font_size: 18.0,
+      wrap: @cosmic.Wrap::WordOrGlyph,
+      width_opt: None,
+    },
+    ParityCase::{
+      id: "stability_space_wordorglyph_4",
+      text: " ",
+      family: "Inter",
+      font_size: 18.0,
+      wrap: @cosmic.Wrap::WordOrGlyph,
+      width_opt: Some(4.0),
+    },
+    ParityCase::{
+      id: "stability_spaces7_wordorglyph_4",
+      text: "       ",
+      family: "Inter",
+      font_size: 18.0,
+      wrap: @cosmic.Wrap::WordOrGlyph,
+      width_opt: Some(4.0),
+    },
+    ParityCase::{
+      id: "stability_hello_word_word_80",
+      text: "hello world",
+      family: "Inter",
+      font_size: 18.0,
+      wrap: @cosmic.Wrap::Word,
+      width_opt: Some(80.0),
+    },
+    ParityCase::{
+      id: "stability_long_latin_wordorglyph_80",
+      text: "Lorem ipsum dolor sit amet, qui minim labore adipisicing minim sint cillum sint consectetur cupidatat.",
+      family: "Inter",
+      font_size: 18.0,
+      wrap: @cosmic.Wrap::WordOrGlyph,
+      width_opt: Some(80.0),
+    },
+    ParityCase::{
+      id: "stability_long_latin_glyph_20",
+      text: "Lorem ipsum dolor sit amet, qui minim labore adipisicing minim sint cillum sint consectetur cupidatat.",
+      family: "Inter",
+      font_size: 18.0,
+      wrap: @cosmic.Wrap::Glyph,
+      width_opt: Some(20.0),
+    },
+    ParityCase::{
+      id: "stability_hebrew_wordorglyph_none",
+      text: "שָׁלוֹם עָלֵיכֶם",
+      family: "Inter",
+      font_size: 18.0,
+      wrap: @cosmic.Wrap::WordOrGlyph,
+      width_opt: None,
+    },
+    ParityCase::{
+      id: "stability_hebrew_wordorglyph_80",
+      text: "שָׁלוֹם עָלֵיכֶם",
+      family: "Inter",
+      font_size: 18.0,
+      wrap: @cosmic.Wrap::WordOrGlyph,
+      width_opt: Some(80.0),
+    },
+    ParityCase::{
+      id: "stability_arabic_wordorglyph_none",
+      text: "السَّلَامُ عَلَيْكُمْ",
+      family: "Inter",
+      font_size: 18.0,
+      wrap: @cosmic.Wrap::WordOrGlyph,
+      width_opt: None,
+    },
+    ParityCase::{
+      id: "stability_arabic_wordorglyph_80",
+      text: "السَّلَامُ عَلَيْكُمْ",
+      family: "Inter",
+      font_size: 18.0,
+      wrap: @cosmic.Wrap::WordOrGlyph,
+      width_opt: Some(80.0),
+    },
+    ParityCase::{
+      id: "stability_mix_arabic_wordorglyph_80",
+      text: "I like to render اللغة العربية in Rust!",
+      family: "Inter",
+      font_size: 18.0,
+      wrap: @cosmic.Wrap::WordOrGlyph,
+      width_opt: Some(80.0),
+    },
+    ParityCase::{
+      id: "stability_mix_arabic_word_80",
+      text: "I like to render اللغة العربية in Rust!",
+      family: "Inter",
+      font_size: 18.0,
+      wrap: @cosmic.Wrap::Word,
+      width_opt: Some(80.0),
+    },
+    ParityCase::{
+      id: "stability_mix_arabic_word_198",
+      text: "I like to render اللغة العربية in Rust!",
+      family: "Inter",
+      font_size: 18.0,
+      wrap: @cosmic.Wrap::Word,
+      width_opt: Some(198.2132),
     },
   ]
 }
@@ -137,11 +311,13 @@ fn dump_case(
 ) -> Unit {
   let attrs_list = @cosmic.AttrsList::new(
     @cosmic.Attrs::new()
-    .family(@cosmic.Family::Name("Inter"))
+    .family(@cosmic.Family::Name(parity_case.family))
     .weight(@cosmic.Weight::normal()),
   )
   emit("CASE", [
     ("case", parity_case.id),
+    ("family", parity_case.family),
+    ("font_size", parity_case.font_size.to_string()),
     ("wrap", wrap_name(parity_case.wrap)),
     ("width", width_name(parity_case.width_opt)),
   ])
@@ -177,8 +353,8 @@ fn dump_case(
   let layout_lines = @cosmic.layout_from_shape(
     parity_case.text,
     shape,
-    16.0,
-    16.0,
+    parity_case.font_size,
+    parity_case.font_size,
     parity_case.width_opt,
     parity_case.wrap,
   )

@@ -25,7 +25,7 @@ ROOT = Path(__file__).resolve().parent.parent
 EPS = 1e-4
 
 TAG_SPECS = {
-    "CASE": {"str": ["wrap"], "int": [], "float": []},
+    "CASE": {"str": ["family", "wrap"], "int": [], "float": ["font_size"]},
     "SHAPE": {"str": ["rtl"], "int": ["count"], "float": []},
     "SG": {
         "str": [],

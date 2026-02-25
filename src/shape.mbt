@@ -860,7 +860,12 @@ fn shape_run_with_font(
       for i in 0..<shaped_count {
         let data_start = shaped[i].data().reinterpret_as_int()
         if data_start >= source_start && data_start <= source_end {
-          starts.push(data_start)
+          let fallback_start = starts_fallback[i]
+          if data_start < fallback_start {
+            starts.push(data_start)
+          } else {
+            starts.push(fallback_start)
+          }
         } else {
           starts.push(starts_fallback[i])
         }

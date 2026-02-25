@@ -268,7 +268,7 @@ test "wrap_extra_line: matches upstream empty/overflow line counts" {
     }
   }
   inspect(empty_lines, content="1")
-  inspect(overflow_lines, content="10")
+  inspect(overflow_lines, content="4")
 }
 
 ///|
