@@ -1007,9 +1007,10 @@ pub fn FontSystem::font_matches_for_scripts(
   let profile = fallback_profile(self)
   let ids = get_font_matches(self, attrs)
   let forbidden_families = forbidden_fallback_family_names(profile)
-  let (defaults, rest0) = split_default_stage_candidates(
+  let defaults_and_rest = split_default_stage_candidates(
     self, attrs.family_value(), req_weight, ids,
   )
+  let defaults = defaults_and_rest.0
 
   let seen_scripts : Array[@moon_swash.Script] = []
   let script_stage : Array[Int] = []
@@ -1021,7 +1022,7 @@ pub fn FontSystem::font_matches_for_scripts(
     seen_scripts.push(script)
     let families = script_fallback_family_names(script, self.locale, profile)
     for family_name in families {
-      match first_named_fallback_candidate(self, req_weight, rest0, family_name) {
+      match first_named_fallback_candidate(self, req_weight, ids, family_name) {
         None => ()
         Some(id) => script_stage.push(id)
       }
@@ -1029,7 +1030,7 @@ pub fn FontSystem::font_matches_for_scripts(
   }
   let common_stage : Array[Int] = []
   for family_name in common_fallback_family_names(profile) {
-    match first_named_fallback_candidate(self, req_weight, rest0, family_name) {
+    match first_named_fallback_candidate(self, req_weight, ids, family_name) {
       None => ()
       Some(id) => common_stage.push(id)
     }
