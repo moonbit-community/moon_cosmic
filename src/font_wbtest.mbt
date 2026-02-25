@@ -173,12 +173,13 @@ test "named fallback stage promotes only first match for each family" {
   }
   let promoted : Array[Int] = []
   for _ in 0..<2 {
-    match first_named_fallback_candidate(
-      fs,
-      Weight::normal(),
-      [2, 99, 1, 0],
-      family_name,
-    ) {
+    match
+      first_named_fallback_candidate(
+        fs,
+        Weight::normal(),
+        [2, 99, 1, 0],
+        family_name,
+      ) {
       None => ()
       Some(id) => promoted.push(id)
     }

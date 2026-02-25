@@ -440,6 +440,7 @@ fn split_default_stage_candidates(
   (defaults, rest)
 }
 
+///|
 fn first_named_fallback_candidate(
   fs : FontSystem,
   req_weight : Weight,
@@ -1008,7 +1009,10 @@ pub fn FontSystem::font_matches_for_scripts(
   let ids = get_font_matches(self, attrs)
   let forbidden_families = forbidden_fallback_family_names(profile)
   let defaults_and_rest = split_default_stage_candidates(
-    self, attrs.family_value(), req_weight, ids,
+    self,
+    attrs.family_value(),
+    req_weight,
+    ids,
   )
   let defaults = defaults_and_rest.0
 
@@ -1036,9 +1040,7 @@ pub fn FontSystem::font_matches_for_scripts(
     }
   }
   let other_stage = filter_forbidden_from_other_stage(
-    self,
-    forbidden_families,
-    ids,
+    self, forbidden_families, ids,
   )
 
   let staged : Array[Int] = []

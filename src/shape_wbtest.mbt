@@ -112,8 +112,14 @@ test "shape_primary_script_seed keeps latin when explicitly latin" {
   let latin = shape_primary_script_seed(@moon_swash.Script::Latin)
   let common = shape_primary_script_seed(@moon_swash.Script::Common)
   let arabic = shape_primary_script_seed(@moon_swash.Script::Arabic)
-  inspect(script_eq(latin.0, @moon_swash.Script::Latin) && !latin.1, content="true")
-  inspect(script_eq(common.0, @moon_swash.Script::Latin) && common.1, content="true")
+  inspect(
+    script_eq(latin.0, @moon_swash.Script::Latin) && !latin.1,
+    content="true",
+  )
+  inspect(
+    script_eq(common.0, @moon_swash.Script::Latin) && common.1,
+    content="true",
+  )
   inspect(
     script_eq(arabic.0, @moon_swash.Script::Arabic) && !arabic.1,
     content="true",
