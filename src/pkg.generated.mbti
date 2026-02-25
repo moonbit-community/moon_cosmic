@@ -363,6 +363,7 @@ pub struct FontSystem {
   fonts : Array[FontEntry]
   font_matches_cache : @hashmap.HashMap[FontMatchAttrs, Array[Int]]
   codepoint_support_cache : @hashmap.HashMap[Int, FontCachedCodepointSupportInfo]
+  shape_run_cache : ShapeRunCache
   // private fields
 }
 pub fn FontSystem::count_supported_codepoints(Self, Int, Array[UInt]) -> Int
@@ -559,6 +560,7 @@ pub struct ShapeRunCache {
   mut age : UInt64
   cache : @hashmap.HashMap[ShapeRunKey, (UInt64, Array[ShapeGlyph])]
 }
+pub fn ShapeRunCache::clear(Self) -> Unit
 pub fn ShapeRunCache::get(Self, ShapeRunKey) -> Array[ShapeGlyph]?
 pub fn ShapeRunCache::insert(Self, ShapeRunKey, Array[ShapeGlyph]) -> Unit
 pub fn ShapeRunCache::new() -> Self

@@ -156,6 +156,12 @@ pub fn ShapeRunCache::insert(
 }
 
 ///|
+/// Clear all cached runs.
+pub fn ShapeRunCache::clear(self : ShapeRunCache) -> Unit {
+  self.cache.clear()
+}
+
+///|
 /// Remove anything in the cache with an age older than `keep_ages`.
 pub fn ShapeRunCache::trim(self : ShapeRunCache, keep_ages : UInt64) -> Unit {
   let entries = self.cache.to_array()

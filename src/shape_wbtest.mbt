@@ -132,3 +132,29 @@ test "shape_levels_require_new_run splits on any level change" {
   inspect(shape_levels_require_new_run(0, 2), content="true")
   inspect(shape_levels_require_new_run(1, 2), content="true")
 }
+
+///|
+test "shape run cache is cleared when fonts are loaded" {
+  let fs = FontSystem::new().load_font_data(
+    mk_min_font_cmap4_single(b'\x00', b'\x41'),
+  )
+  let attrs = AttrsList::new(Attrs::new())
+  ShapeLine::build_with_font_system(
+    ShapeLine::empty(),
+    fs,
+    "B",
+    attrs,
+    Shaping::Advanced,
+    8,
+  )
+  |> ignore
+  inspect(
+    fs.shape_run_cache.peek(ShapeRunKey::new("B", attrs)) is Some(_),
+    content="true",
+  )
+  fs.load_font_data(mk_min_font_cmap4_single(b'\x00', b'\x42')) |> ignore
+  inspect(
+    fs.shape_run_cache.peek(ShapeRunKey::new("B", attrs)) is Some(_),
+    content="false",
+  )
+}

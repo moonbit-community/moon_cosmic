@@ -78,6 +78,7 @@ pub struct FontSystem {
     Int,
     FontCachedCodepointSupportInfo,
   ]
+  shape_run_cache : ShapeRunCache
 }
 
 ///|
@@ -110,6 +111,7 @@ pub fn FontSystem::new_with_locale(locale : String) -> FontSystem {
     fallback_profile_opt: None,
     font_matches_cache: @hashmap.HashMap::default(),
     codepoint_support_cache: @hashmap.HashMap::default(),
+    shape_run_cache: ShapeRunCache::new(),
   }
 }
 
@@ -239,6 +241,7 @@ pub fn FontSystem::load_font_data(
       }
       // New fonts change candidate ordering; clear match cache.
       self.font_matches_cache.clear()
+      self.shape_run_cache.clear()
       self.fallback_profile_opt = None
       FontSystem::{ ..self, fonts, }
     }

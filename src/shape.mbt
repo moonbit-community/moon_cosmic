@@ -293,6 +293,43 @@ fn clamp_range_to_source(
 }
 
 ///|
+fn clamp_text_index(v : Int, text_len : Int) -> Int {
+  if v < 0 {
+    0
+  } else if v > text_len {
+    text_len
+  } else {
+    v
+  }
+}
+
+///|
+fn slice_text_utf16(text : String, start : Int, end : Int) -> String {
+  let text_len = text.length()
+  let s = clamp_text_index(start, text_len)
+  let e = clamp_text_index(end, text_len)
+  let to = if e < s { s } else { e }
+  let sb = StringBuilder::new(size_hint=(to - s) * 2)
+  sb.write_view(text[:].view(start_offset=s, end_offset=to))
+  sb.to_string()
+}
+
+///|
+fn attrs_list_for_utf16_range(
+  attrs_list : AttrsList,
+  start : Int,
+  end : Int,
+  text_len : Int,
+) -> AttrsList {
+  let s = clamp_text_index(start, text_len)
+  let e0 = clamp_text_index(end, text_len)
+  let e = if e0 < s { s } else { e0 }
+  let (_, right) = attrs_list.split_off(s)
+  let (mid, _) = right.split_off(e - s)
+  mid
+}
+
+///|
 fn build_cluster_starts(
   source : @moon_swash.SourceRange,
   components : ArrayView[@moon_swash.SourceRange],
@@ -889,6 +926,25 @@ pub fn ShapeLine::build_with_font_system(
     } else {
       run_tokens[0].offset().reinterpret_as_int()
     }
+    let run_end = if run_tokens.length() == 0 {
+      run_start
+    } else {
+      let last = run_tokens[run_tokens.length() - 1]
+      (last.offset() + last.len()).reinterpret_as_int()
+    }
+    let cache_key = ShapeRunKey::new(
+      slice_text_utf16(text, run_start, run_end),
+      attrs_list_for_utf16_range(attrs_list, run_start, run_end, text.length()),
+    )
+    if font_system.shape_run_cache.get(cache_key) is Some(cache_glyphs) {
+      for g in cache_glyphs {
+        glyphs.push(
+          ShapeGlyph::{ ..g, start: g.start + run_start, end: g.end + run_start },
+        )
+      }
+      continue
+    }
+
     let run_attrs = attrs_for_position(attrs_list, run_start, text.length())
     let run_font_id = match font_system.resolve(run_attrs) {
       None => default_font_id
@@ -939,9 +995,14 @@ pub fn ShapeLine::build_with_font_system(
         }
       }
     }
+    let cached_run_glyphs : Array[ShapeGlyph] = []
     for g in run_glyphs {
       glyphs.push(g)
+      cached_run_glyphs.push(
+        ShapeGlyph::{ ..g, start: g.start - run_start, end: g.end - run_start },
+      )
     }
+    font_system.shape_run_cache.insert(cache_key, cached_run_glyphs)
   }
 
   // If shaping produces no glyphs, fall back to the simple shaper to keep layout stable.
