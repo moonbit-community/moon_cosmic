@@ -205,6 +205,26 @@ test "default stage keeps only the primary zero-weight explicit-family candidate
 }
 
 ///|
+test "named fallback stage promotes only first match for each family" {
+  let min = mk_min_font_cmap4_single(b'\x00', b'\x41')
+  let fs = FontSystem::new()
+    .load_font_data(min)
+    .load_font_data(min)
+    .load_font_data(min)
+  let family_name = match fs.get_font_entry(2) {
+    Some(entry) => entry.family_name()
+    None => ""
+  }
+  let reordered = move_named_fallback_candidates_forward(
+    fs,
+    Weight::normal(),
+    [2, 99, 1, 0],
+    [family_name],
+  )
+  inspect(reordered, content="[2, 99, 1, 0]")
+}
+
+///|
 #cfg(not(target="native"))
 test "non-native fallback profile defaults to Other" {
   let data = mk_min_font_cmap4_single(b'\x00', b'\x41')

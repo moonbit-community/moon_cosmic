@@ -455,8 +455,9 @@ fn move_named_fallback_candidates_forward(
   let used : Array[Bool] = Array::makei(ids.length(), _ => false)
   let promoted : Array[Int] = []
   for family_name in family_names {
+    let mut promoted_one = false
     for i in 0..<ids.length() {
-      if used[i] {
+      if used[i] || promoted_one {
         continue
       }
       let id = ids[i]
@@ -468,6 +469,7 @@ fn move_named_fallback_candidates_forward(
         entry_has_family_name(entry, family_name) {
         promoted.push(id)
         used.set(i, true)
+        promoted_one = true
       }
     }
   }
