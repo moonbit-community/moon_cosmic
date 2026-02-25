@@ -155,6 +155,90 @@ fn find_alt_family_name(entry : FontEntry) -> String? {
 }
 
 ///|
+fn script_needs_stage_for_test(script : @moon_swash.Script) -> Bool {
+  match script {
+    @moon_swash.Script::Common
+    | @moon_swash.Script::Inherited
+    | @moon_swash.Script::Latin
+    | @moon_swash.Script::Unknown => false
+    _ => true
+  }
+}
+
+///|
+fn entry_supports_script_for_test(
+  entry : FontEntry,
+  script : @moon_swash.Script,
+) -> Bool {
+  let systems = entry.font().writing_systems()
+  for ws in systems.iter() {
+    match ws.script() {
+      None => ()
+      Some(s) => if s.to_opentype() == script.to_opentype() { return true }
+    }
+  }
+  false
+}
+
+///|
+fn script_in_array_for_test(
+  scripts : Array[@moon_swash.Script],
+  script : @moon_swash.Script,
+) -> Bool {
+  for s in scripts {
+    if s.to_opentype() == script.to_opentype() {
+      return true
+    }
+  }
+  false
+}
+
+///|
+fn first_discriminating_script_for_test(
+  fs : FontSystem,
+  ids : Array[Int],
+) -> @moon_swash.Script? {
+  let scripts : Array[@moon_swash.Script] = []
+  for id in ids {
+    match fs.get_font_entry(id) {
+      None => ()
+      Some(entry) => {
+        let systems = entry.font().writing_systems()
+        for ws in systems.iter() {
+          match ws.script() {
+            None => ()
+            Some(s) =>
+              if script_needs_stage_for_test(s) &&
+                !script_in_array_for_test(scripts, s) {
+                scripts.push(s)
+              }
+          }
+        }
+      }
+    }
+  }
+  for script in scripts {
+    let mut has_support = false
+    let mut has_no_support = false
+    for id in ids {
+      match fs.get_font_entry(id) {
+        None => ()
+        Some(entry) =>
+          if entry_supports_script_for_test(entry, script) {
+            has_support = true
+          } else {
+            has_no_support = true
+          }
+      }
+    }
+    if has_support && has_no_support {
+      return Some(script)
+    }
+  }
+  None
+}
+
+///|
 test "FontSystem.resolve_for_codepoint prefers a font that supports the codepoint" {
   // Font0 supports U+0041 ('A'); Font1 supports U+0042 ('B').
   let a = mk_min_font_cmap4_single(b'\x00', b'\x41')
@@ -192,6 +276,17 @@ test "FontSystem.font_matches is stable across cache hits" {
 }
 
 ///|
+test "FontSystem.font_matches cache is not externally mutable" {
+  let a = mk_min_font_cmap4_single(b'\x00', b'\x41')
+  let b = mk_min_font_cmap4_single(b'\x00', b'\x42')
+  let fs = FontSystem::new().load_font_data(a).load_font_data(b)
+  let attrs = Attrs::new()
+  let first = fs.font_matches(attrs)
+  first.set(0, 99)
+  inspect(fs.font_matches(attrs), content="[0, 1]")
+}
+
+///|
 test "FontSystem.resolve_for_codepoint remains stable across cache boundary clears" {
   let a = mk_min_font_cmap4_single(b'\x00', b'\x41')
   let b = mk_min_font_cmap4_single(b'\x00', b'\x42')
@@ -219,5 +314,37 @@ test "FontSystem.select_family Name matches family aliases from name table" {
         Some(family_alias) =>
           inspect(fs.select_family(Name(family_alias)), content="Some(0)")
       }
+  }
+}
+
+///|
+test "FontSystem.font_matches_for_script promotes script-supporting fonts" {
+  let min_font = mk_min_font_cmap4_single(b'\x00', b'\x41')
+  let fs = FontSystem::new()
+    .load_font_data(min_font)
+    .load_font_data(test_font_inter_regular_ttf())
+  let attrs = Attrs::new()
+  let base = fs.font_matches(attrs)
+  match first_discriminating_script_for_test(fs, base) {
+    None => inspect(true, content="true")
+    Some(script) => {
+      let staged = fs.font_matches_for_script(attrs, script)
+      let mut seen_unsupported = false
+      let mut violated = false
+      for id in staged {
+        match fs.get_font_entry(id) {
+          None => ()
+          Some(entry) =>
+            if entry_supports_script_for_test(entry, script) {
+              if seen_unsupported {
+                violated = true
+              }
+            } else {
+              seen_unsupported = true
+            }
+        }
+      }
+      inspect(violated, content="false")
+    }
   }
 }

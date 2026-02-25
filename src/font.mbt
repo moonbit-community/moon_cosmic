@@ -294,6 +294,15 @@ fn family_matches(entry : FontEntry, family : Family) -> Bool {
 }
 
 ///|
+fn explicit_family_matches(entry : FontEntry, family : Family) -> Bool {
+  match family {
+    Name(name) => entry_has_family_name(entry, name)
+    Monospace => entry.is_monospace
+    _ => false
+  }
+}
+
+///|
 fn move_forbidden_candidates_to_end(
   fs : FontSystem,
   family : Family,
@@ -307,7 +316,8 @@ fn move_forbidden_candidates_to_end(
     }
     let entry = fs.fonts[id]
     // Keep explicitly requested family candidates in front.
-    if entry_in_forbidden_fallback(entry) && !family_matches(entry, family) {
+    if entry_in_forbidden_fallback(entry) &&
+      !explicit_family_matches(entry, family) {
       tail.push(id)
     } else {
       head.push(id)
@@ -317,6 +327,72 @@ fn move_forbidden_candidates_to_end(
     head.push(id)
   }
   head
+}
+
+///|
+fn font_script_eq(a : @moon_swash.Script, b : @moon_swash.Script) -> Bool {
+  a.to_opentype() == b.to_opentype()
+}
+
+///|
+fn script_needs_fallback_stage(script : @moon_swash.Script) -> Bool {
+  match script {
+    @moon_swash.Script::Common
+    | @moon_swash.Script::Inherited
+    | @moon_swash.Script::Latin
+    | @moon_swash.Script::Unknown => false
+    _ => true
+  }
+}
+
+///|
+fn entry_supports_script(
+  entry : FontEntry,
+  script : @moon_swash.Script,
+) -> Bool {
+  let systems = entry.font.writing_systems()
+  for ws in systems.iter() {
+    match ws.script() {
+      None => ()
+      Some(s) => if font_script_eq(s, script) { return true }
+    }
+  }
+  false
+}
+
+///|
+fn move_script_supported_candidates_forward(
+  fs : FontSystem,
+  family : Family,
+  script : @moon_swash.Script,
+  ids : Array[Int],
+) -> Array[Int] {
+  if !script_needs_fallback_stage(script) {
+    return ids
+  }
+  let defaults : Array[Int] = []
+  let script_hits : Array[Int] = []
+  let others : Array[Int] = []
+  for id in ids {
+    if id < 0 || id >= fs.fonts.length() {
+      continue
+    }
+    let entry = fs.fonts[id]
+    if explicit_family_matches(entry, family) {
+      defaults.push(id)
+    } else if entry_supports_script(entry, script) {
+      script_hits.push(id)
+    } else {
+      others.push(id)
+    }
+  }
+  for id in script_hits {
+    defaults.push(id)
+  }
+  for id in others {
+    defaults.push(id)
+  }
+  defaults
 }
 
 ///|
@@ -584,11 +660,11 @@ fn get_font_matches(fs : FontSystem, attrs : Attrs) -> Array[Int] {
     style: attrs.style_value(),
   }
   match fs.font_matches_cache.get(key) {
-    Some(ids) => ids
+    Some(ids) => ids.copy()
     None => {
       let ids = build_font_matches(fs, attrs)
       fs.font_matches_cache.set(key, ids)
-      ids
+      ids.copy()
     }
   }
 }
@@ -597,6 +673,20 @@ fn get_font_matches(fs : FontSystem, attrs : Attrs) -> Array[Int] {
 /// Get ordered font match candidates for attrs (cached).
 pub fn FontSystem::font_matches(self : FontSystem, attrs : Attrs) -> Array[Int] {
   get_font_matches(self, attrs)
+}
+
+///|
+pub fn FontSystem::font_matches_for_script(
+  self : FontSystem,
+  attrs : Attrs,
+  script : @moon_swash.Script,
+) -> Array[Int] {
+  let family = attrs.family_value()
+  let ids = get_font_matches(self, attrs)
+  let staged = move_script_supported_candidates_forward(
+    self, family, script, ids,
+  )
+  move_forbidden_candidates_to_end(self, family, staged)
 }
 
 ///|

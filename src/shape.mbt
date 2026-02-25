@@ -666,7 +666,7 @@ pub fn ShapeLine::build_with_font_system(
     let mut run_glyphs = default_glyphs
     let missing = default_missing
     if missing.length() > 0 {
-      let ordered = font_system.font_matches(run_attrs)
+      let ordered = font_system.font_matches_for_script(run_attrs, script)
       for alt_font_id in ordered {
         if alt_font_id == run_font_id {
           continue
