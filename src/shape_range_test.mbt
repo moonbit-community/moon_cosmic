@@ -18,120 +18,64 @@ fn mk_min_font_cmap4_single_for_shape_range(
   cp_lo_byte : Byte,
 ) -> Bytes {
   Bytes::makei(76, i => {
-    if i == 0 {
-      b'\x00'
-    } else if i == 1 {
-      b'\x01'
-    } else if i == 2 {
-      b'\x00'
-    } else if i == 3 {
-      b'\x00'
-    } else if i == 4 {
-      b'\x00'
-    } else if i == 5 {
-      b'\x01'
-    } else if i == 12 {
-      b'c'
-    } else if i == 13 {
-      b'm'
-    } else if i == 14 {
-      b'a'
-    } else if i == 15 {
-      b'p'
-    } else if i == 20 {
-      b'\x00'
-    } else if i == 21 {
-      b'\x00'
-    } else if i == 22 {
-      b'\x00'
-    } else if i == 23 {
-      b'\x20'
-    } else if i == 24 {
-      b'\x00'
-    } else if i == 25 {
-      b'\x00'
-    } else if i == 26 {
-      b'\x00'
-    } else if i == 27 {
-      b'\x2C'
-    } else if i == 32 {
-      b'\x00'
-    } else if i == 33 {
-      b'\x00'
-    } else if i == 34 {
-      b'\x00'
-    } else if i == 35 {
-      b'\x01'
-    } else if i == 36 {
-      b'\x00'
-    } else if i == 37 {
-      b'\x03'
-    } else if i == 38 {
-      b'\x00'
-    } else if i == 39 {
-      b'\x01'
-    } else if i == 40 {
-      b'\x00'
-    } else if i == 41 {
-      b'\x00'
-    } else if i == 42 {
-      b'\x00'
-    } else if i == 43 {
-      b'\x0C'
-    } else if i == 44 {
-      b'\x00'
-    } else if i == 45 {
-      b'\x04'
-    } else if i == 46 {
-      b'\x00'
-    } else if i == 47 {
-      b'\x20'
-    } else if i == 48 {
-      b'\x00'
-    } else if i == 49 {
-      b'\x00'
-    } else if i == 50 {
-      b'\x00'
-    } else if i == 51 {
-      b'\x04'
-    } else if i == 58 {
-      cp_hi_byte
-    } else if i == 59 {
-      cp_lo_byte
-    } else if i == 60 {
-      b'\xFF'
-    } else if i == 61 {
-      b'\xFF'
-    } else if i == 62 {
-      b'\x00'
-    } else if i == 63 {
-      b'\x00'
-    } else if i == 64 {
-      cp_hi_byte
-    } else if i == 65 {
-      cp_lo_byte
-    } else if i == 66 {
-      b'\xFF'
-    } else if i == 67 {
-      b'\xFF'
-    } else if i == 68 {
-      b'\xFF'
-    } else if i == 69 {
-      b'\xC2'
-    } else if i == 70 {
-      b'\x00'
-    } else if i == 71 {
-      b'\x01'
-    } else if i == 72 {
-      b'\x00'
-    } else if i == 73 {
-      b'\x00'
-    } else if i == 74 {
-      b'\x00'
-    } else if i == 75 {
-      b'\x00'
-    } else {
-      b'\x00'
+    match i {
+      0 => b'\x00'
+      1 => b'\x01'
+      2 => b'\x00'
+      3 => b'\x00'
+      4 => b'\x00'
+      5 => b'\x01'
+      12 => b'c'
+      13 => b'm'
+      14 => b'a'
+      15 => b'p'
+      20 => b'\x00'
+      21 => b'\x00'
+      22 => b'\x00'
+      23 => b'\x20'
+      24 => b'\x00'
+      25 => b'\x00'
+      26 => b'\x00'
+      27 => b'\x2C'
+      32 => b'\x00'
+      33 => b'\x00'
+      34 => b'\x00'
+      35 => b'\x01'
+      36 => b'\x00'
+      37 => b'\x03'
+      38 => b'\x00'
+      39 => b'\x01'
+      40 => b'\x00'
+      41 => b'\x00'
+      42 => b'\x00'
+      43 => b'\x0C'
+      44 => b'\x00'
+      45 => b'\x04'
+      46 => b'\x00'
+      47 => b'\x20'
+      48 => b'\x00'
+      49 => b'\x00'
+      50 => b'\x00'
+      51 => b'\x04'
+      58 => cp_hi_byte
+      59 => cp_lo_byte
+      60 => b'\xFF'
+      61 => b'\xFF'
+      62 => b'\x00'
+      63 => b'\x00'
+      64 => cp_hi_byte
+      65 => cp_lo_byte
+      66 => b'\xFF'
+      67 => b'\xFF'
+      68 => b'\xFF'
+      69 => b'\xC2'
+      70 => b'\x00'
+      71 => b'\x01'
+      72 => b'\x00'
+      73 => b'\x00'
+      74 => b'\x00'
+      75 => b'\x00'
+      _ => b'\x00'
     }
   })
 }
