@@ -424,6 +424,31 @@ pub impl Hash for AttrsList with hash_combine(self, hasher) {
 }
 
 ///|
+fn merge_adjacent_spans(spans : Array[AttrsSpan]) -> Array[AttrsSpan] {
+  if spans.length() <= 1 {
+    return spans
+  }
+  let merged : Array[AttrsSpan] = []
+  for span in spans {
+    if merged.length() == 0 {
+      merged.push(span)
+      continue
+    }
+    let last = merged[merged.length() - 1]
+    if last.end == span.start && last.attrs == span.attrs {
+      merged.set(merged.length() - 1, AttrsSpan::{
+        start: last.start,
+        end: span.end,
+        attrs: last.attrs,
+      })
+    } else {
+      merged.push(span)
+    }
+  }
+  merged
+}
+
+///|
 pub fn AttrsList::add_span(
   self : AttrsList,
   start : Int,
@@ -433,19 +458,47 @@ pub fn AttrsList::add_span(
   if end <= start {
     return self
   }
-  // MVP: keep a sorted array by `start` (stable), no merging yet.
-  let spans : Array[AttrsSpan] = []
+
+  // Align with RangeMap insert semantics:
+  // new span overwrites overlapping ranges and preserves non-overlapping pieces.
+  let spans0 : Array[AttrsSpan] = []
   let mut inserted = false
   for span in self.spans {
-    if !inserted && start < span.start {
-      spans.push(AttrsSpan::{ start, end, attrs })
-      inserted = true
+    // Fully before new range.
+    if span.end <= start {
+      spans0.push(span)
+      continue
     }
-    spans.push(span)
+    // Fully after new range.
+    if span.start >= end {
+      if !inserted {
+        spans0.push(AttrsSpan::{ start, end, attrs })
+        inserted = true
+      }
+      spans0.push(span)
+      continue
+    }
+    // Overlap: keep left remainder.
+    if span.start < start {
+      spans0.push(AttrsSpan::{
+        start: span.start,
+        end: start,
+        attrs: span.attrs,
+      })
+    }
+    // Overlap with right remainder means this old span crosses `end`.
+    if span.end > end {
+      if !inserted {
+        spans0.push(AttrsSpan::{ start, end, attrs })
+        inserted = true
+      }
+      spans0.push(AttrsSpan::{ start: end, end: span.end, attrs: span.attrs })
+    }
   }
   if !inserted {
-    spans.push(AttrsSpan::{ start, end, attrs })
+    spans0.push(AttrsSpan::{ start, end, attrs })
   }
+  let spans = merge_adjacent_spans(spans0)
   AttrsList::{ ..self, spans, }
 }
 

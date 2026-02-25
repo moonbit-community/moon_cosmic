@@ -49,30 +49,79 @@ pub fn word_indices_whitespace(s : String) -> Array[(Int, Int)] {
 /// Returns segments separated by `Boundary::Word`/`Line`/`Mandatory`.
 pub fn word_indices_uax29(s : String) -> Array[(Int, Int)] {
   let chars = s.to_array()
+  if chars.length() == 0 {
+    return []
+  }
   let analyze = @moon_swash.analyze(chars.iter())
   analyze.set_break_strength(@moon_swash.WordBreakStrength::Normal)
-  let ranges : Array[(Int, Int)] = []
-  let mut start = 0
+  let offs : Array[Int] = []
   let mut pos = 0
   for ch in chars {
+    offs.push(pos)
+    pos = pos + ch.utf16_len()
+  }
+  fn category_is_word_like(category : @moon_swash.Category) -> Bool {
+    match category {
+      @moon_swash.Category::CasedLetter
+      | @moon_swash.Category::DecimalNumber
+      | @moon_swash.Category::EnclosingMark
+      | @moon_swash.Category::Letter
+      | @moon_swash.Category::LetterNumber
+      | @moon_swash.Category::LowercaseLetter
+      | @moon_swash.Category::Mark
+      | @moon_swash.Category::ModifierLetter
+      | @moon_swash.Category::NonspacingMark
+      | @moon_swash.Category::Number
+      | @moon_swash.Category::OtherLetter
+      | @moon_swash.Category::OtherNumber
+      | @moon_swash.Category::SpacingMark
+      | @moon_swash.Category::TitlecaseLetter
+      | @moon_swash.Category::UppercaseLetter
+      | @moon_swash.Category::ConnectorPunctuation => true
+      _ => false
+    }
+  }
+  fn segment_contains_word_like(
+    chars : Array[Char],
+    start_char_i : Int,
+    end_char_i : Int,
+  ) -> Bool {
+    if end_char_i < start_char_i {
+      return false
+    }
+    for i in start_char_i..<(end_char_i + 1) {
+      let cat = @moon_swash.CharInfo::from_char(chars[i]).category()
+      if category_is_word_like(cat) {
+        return true
+      }
+    }
+    false
+  }
+  let ranges : Array[(Int, Int)] = []
+  let mut start_pos = 0
+  let mut start_char_i = 0
+  for i in 0..<chars.length() {
     match analyze.next() {
       None => break
-      Some((_props, boundary)) => {
-        pos = pos + ch.utf16_len()
+      Some((_props, boundary)) =>
         match boundary {
           Word | Line | Mandatory => {
-            if pos > start {
-              ranges.push((start, pos))
+            // `Boundary::*` means break before current char.
+            let break_pos = offs[i]
+            if break_pos > start_pos &&
+              segment_contains_word_like(chars, start_char_i, i - 1) {
+              ranges.push((start_pos, break_pos))
             }
-            start = pos
+            start_pos = break_pos
+            start_char_i = i
           }
           None => ()
         }
-      }
     }
   }
-  if pos > start {
-    ranges.push((start, pos))
+  if pos > start_pos &&
+    segment_contains_word_like(chars, start_char_i, chars.length() - 1) {
+    ranges.push((start_pos, pos))
   }
   ranges
 }

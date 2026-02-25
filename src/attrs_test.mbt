@@ -43,6 +43,35 @@ test "AttrsList: split_off shifts right spans" {
 }
 
 ///|
+test "AttrsList: add_span overwrites overlap like RangeMap insert" {
+  let defaults = Attrs::new()
+  let list = AttrsList::new(defaults)
+    .add_span(0, 5, Attrs::with_metadata(1))
+    .add_span(2, 4, Attrs::with_metadata(2))
+  inspect(list.get_span(0).metadata(), content="1")
+  inspect(list.get_span(1).metadata(), content="1")
+  inspect(list.get_span(2).metadata(), content="2")
+  inspect(list.get_span(3).metadata(), content="2")
+  inspect(list.get_span(4).metadata(), content="1")
+  inspect(list.get_span(5).metadata(), content="0")
+}
+
+///|
+test "AttrsList: add_span keeps right remainder and merges adjacent equals" {
+  let defaults = Attrs::new()
+  let a1 = Attrs::with_metadata(1)
+  let list = AttrsList::new(defaults)
+    .add_span(0, 2, a1)
+    .add_span(2, 4, a1)
+    .add_span(1, 3, Attrs::with_metadata(2))
+  inspect(list.get_span(0).metadata(), content="1")
+  inspect(list.get_span(1).metadata(), content="2")
+  inspect(list.get_span(2).metadata(), content="2")
+  inspect(list.get_span(3).metadata(), content="1")
+  inspect(list.get_span(4).metadata(), content="0")
+}
+
+///|
 test "Family/Weight constructors are usable" {
   ignore(Family::Name("Inter"))
   ignore(Family::Serif)

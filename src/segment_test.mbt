@@ -37,8 +37,11 @@ test "wrap_word_segments uses UAX#14 opportunities (hyphen)" {
 
 ///|
 test "word_indices_uax29 basic ASCII" {
-  inspect(
-    word_indices_uax29("hello world"),
-    content="[(0, 1), (1, 6), (6, 7), (7, 11)]",
-  )
+  inspect(word_indices_uax29("hello world"), content="[(0, 5), (6, 11)]")
+}
+
+///|
+test "word_indices_uax29 ignores punctuation-only segments" {
+  inspect(word_indices_uax29("a-b"), content="[(0, 1), (2, 3)]")
+  inspect(word_indices_uax29("..."), content="[]")
 }
