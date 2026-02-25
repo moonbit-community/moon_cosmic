@@ -206,6 +206,16 @@ fn collect_run_fallback_scripts(
 }
 
 ///|
+fn shape_primary_script_seed(
+  script : @moon_swash.Script,
+) -> (@moon_swash.Script, Bool) {
+  match script {
+    Common | Inherited | Unknown => (@moon_swash.Script::Latin, true)
+    _ => (script, false)
+  }
+}
+
+///|
 fn entry_supports_any_run_script(
   entry : FontEntry,
   scripts : Array[@moon_swash.Script],
@@ -802,6 +812,7 @@ pub fn ShapeLine::build_with_font_system(
   ] = []
   let mut off = 0U
   let mut cur_primary_script = @moon_swash.Script::Latin
+  let mut cur_primary_pending = true
   let mut cur_rtl = rtl
   let mut cur_scripts : Array[@moon_swash.Script] = []
   let mut cur_tokens : Array[@moon_swash.Token] = []
@@ -822,28 +833,23 @@ pub fn ShapeLine::build_with_font_system(
       info,
       attrs.metadata().reinterpret_as_uint(),
     )
-    let primary = match script0 {
-      Common | Inherited | Unknown =>
-        if cur_tokens.length() == 0 {
-          @moon_swash.Script::Latin
-        } else {
-          cur_primary_script
-        }
-      _ => script0
-    }
+    let primary = shape_primary_script_seed(script0)
     if cur_tokens.length() == 0 {
-      cur_primary_script = primary
+      cur_primary_script = primary.0
+      cur_primary_pending = primary.1
       cur_rtl = run_rtl
       cur_scripts = []
     } else if run_rtl != cur_rtl {
       runs.push((cur_primary_script, cur_scripts, cur_rtl, cur_tokens))
       cur_tokens = []
-      cur_primary_script = primary
+      cur_primary_script = primary.0
+      cur_primary_pending = primary.1
       cur_rtl = run_rtl
       cur_scripts = []
-    } else if cur_primary_script is @moon_swash.Script::Latin &&
+    } else if cur_primary_pending &&
       !(script0 is Common || script0 is Inherited || script0 is Unknown) {
       cur_primary_script = script0
+      cur_primary_pending = false
     }
     if shape_script_needs_fallback_stage(script0) &&
       !shape_script_in_array(cur_scripts, script0) {
