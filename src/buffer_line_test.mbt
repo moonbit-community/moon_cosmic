@@ -210,7 +210,7 @@ test "BufferLine.layout: Align::End follows paragraph direction in RTL lines" {
 }
 
 ///|
-test "BufferLine.layout: whitespace-only word wrap keeps a trailing blank segment" {
+test "BufferLine.layout: whitespace-only word wrap keeps only final blank segment" {
   let attrs = AttrsList::new(Attrs::new())
   let line0 = BufferLine::new("   ", Lf, attrs, Advanced)
   let line1 = line0.layout(
@@ -222,15 +222,11 @@ test "BufferLine.layout: whitespace-only word wrap keeps a trailing blank segmen
     Hinting::Disabled,
   )
   if line1.layout_opt() is Some(layout) {
-    inspect(layout.length(), content="3")
+    inspect(layout.length(), content="1")
     inspect(layout[0].w, content="10")
-    inspect(layout[0].start, content="0")
-    inspect(layout[0].end, content="1")
+    inspect(layout[0].start, content="2")
+    inspect(layout[0].end, content="3")
     inspect(layout[0].glyphs.length(), content="1")
-    inspect(layout[1].start, content="1")
-    inspect(layout[1].end, content="2")
-    inspect(layout[2].start, content="2")
-    inspect(layout[2].end, content="3")
   } else {
     fail("expected Some(layout)")
   }

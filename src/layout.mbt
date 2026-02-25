@@ -638,7 +638,8 @@ pub fn layout_from_shape(
     return finalize_layout_lines(lines, shape.rtl, width_opt)
   }
   let shape_for_wrap = match wrap {
-    Word | WordOrGlyph => reorder_shape_glyphs_for_word_wrap(text, shape)
+    Word | WordOrGlyph | Glyph =>
+      reorder_shape_glyphs_for_word_wrap(text, shape)
     _ => shape
   }
   let glyph_len = shape_for_wrap.glyphs.length()
@@ -762,46 +763,73 @@ pub fn layout_from_shape(
         let word_start_g = seg.glyph_start
         let word_end_g = seg.glyph_end
         if fallback_to_glyph &&
-          !blank &&
           prefix_range_w(prefix, word_start_g, word_end_g) > max_w {
           // Match reference behavior: commit wrapped chunks except the final one.
           // Keep the final chunk as the current in-progress line so trailing blanks
           // can still attach before the next wrap decision.
-          let mut chunk_start = word_start_g
-          let mut chunk_w = 0.0F
-          for gi in word_start_g..<word_end_g {
-            let glyph_w = glyph_layout_width(
-              shape_for_wrap.glyphs[gi],
-              font_size,
-              cell_w,
-            )
-            if chunk_w + glyph_w > max_w && gi > chunk_start {
-              push_layout_line_from_shape(
-                lines, shape_for_wrap, chunk_start, gi, font_size, cell_w,
+          if seg_rtl != shape_for_wrap.rtl {
+            let mut chunk_end = word_end_g
+            let mut chunk_w = 0.0F
+            let mut gi = word_end_g
+            while gi > word_start_g {
+              let gidx = gi - 1
+              let glyph_w = glyph_layout_width(
+                shape_for_wrap.glyphs[gidx],
+                font_size,
+                cell_w,
               )
-              chunk_start = gi
-              chunk_w = 0.0F
+              if chunk_w + glyph_w > max_w && gidx + 1 < chunk_end {
+                push_layout_line_from_shape(
+                  lines,
+                  shape_for_wrap,
+                  gidx + 1,
+                  chunk_end,
+                  font_size,
+                  cell_w,
+                )
+                chunk_end = gidx + 1
+                chunk_w = 0.0F
+              }
+              chunk_w = chunk_w + glyph_w
+              gi = gidx
             }
-            chunk_w = chunk_w + glyph_w
+            line_start_g = word_start_g
+            cur_end_g = chunk_end
+          } else {
+            let mut chunk_start = word_start_g
+            let mut chunk_w = 0.0F
+            for gi in word_start_g..<word_end_g {
+              let glyph_w = glyph_layout_width(
+                shape_for_wrap.glyphs[gi],
+                font_size,
+                cell_w,
+              )
+              if chunk_w + glyph_w > max_w && gi > chunk_start {
+                push_layout_line_from_shape(
+                  lines, shape_for_wrap, chunk_start, gi, font_size, cell_w,
+                )
+                chunk_start = gi
+                chunk_w = 0.0F
+              }
+              chunk_w = chunk_w + glyph_w
+            }
+            line_start_g = chunk_start
+            cur_end_g = word_end_g
           }
-          line_start_g = chunk_start
-          cur_end_g = word_end_g
           before_last_blank_end_g = cur_end_g
           seen_nonblank = true
           i = i + 1
           continue
         } else {
-          // Place the word anyway (may overflow).
-          push_layout_line_from_shape(
-            lines, shape_for_wrap, word_start_g, word_end_g, font_size, cell_w,
-          )
+          // Word wrap parity: keep the overflowing word as the in-progress line,
+          // and let the next segment decide whether trailing blank should be dropped.
+          cur_end_g = word_end_g
           if !blank {
             seen_nonblank = true
           }
           i = i + 1
-          emitted = true
+          continue
         }
-        break
       }
 
       // Reference parity on word-wrap: if a non-blank segment overflows right
@@ -824,10 +852,11 @@ pub fn layout_from_shape(
 
       // Emit current line, possibly trimming trailing blanks when wrapping.
       let emit_end = if i > line_start_i && segs[i - 1].blank {
-        if blank {
+        if wrap is Word {
+          before_last_blank_end_g
+        } else if blank {
           cur_end_g
         } else if wrap is WordOrGlyph &&
-          !blank &&
           prefix_range_w(prefix, seg.glyph_start, seg.glyph_end) > max_w {
           cur_end_g
         } else {
@@ -843,7 +872,7 @@ pub fn layout_from_shape(
       }
       // When a blank segment triggers wrap, consume it so the next line does not
       // start with that overflowing blank (matches upstream word-wrap behavior).
-      if blank && seen_nonblank {
+      if blank && (wrap is Word || seen_nonblank) {
         i = i + 1
       }
       emitted = true
