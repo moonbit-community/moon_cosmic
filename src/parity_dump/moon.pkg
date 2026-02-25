@@ -1,0 +1,8 @@
+import {
+  "Milky2018/moon_cosmic" @cosmic,
+  "moonbitlang/x/fs" @fs,
+}
+
+options(
+  "is-main": true,
+)
