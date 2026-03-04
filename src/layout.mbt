@@ -282,6 +282,8 @@ fn build_layout_line_from_shape(
   }
   let mut x = 0.0F
   let mut max_line_height : Float? = Option::None
+  let mut max_ascent = 0.0F
+  let mut max_descent = 0.0F
   for i in glyph_start..<glyph_end {
     let g = shape.glyphs[i]
     let glyph_font_size = match g.metrics_opt {
@@ -300,6 +302,14 @@ fn build_layout_line_from_shape(
           max_line_height = Option::Some(b)
         }
       _ => ()
+    }
+    let glyph_ascent = glyph_font_size * g.ascent
+    if glyph_ascent > max_ascent {
+      max_ascent = glyph_ascent
+    }
+    let glyph_descent = glyph_font_size * g.descent
+    if glyph_descent > max_descent {
+      max_descent = glyph_descent
     }
     glyphs.push(LayoutGlyph::{
       start: g.start,
@@ -325,8 +335,8 @@ fn build_layout_line_from_shape(
     start: text_start,
     end: text_end,
     w: x,
-    max_ascent: 0.0F,
-    max_descent: 0.0F,
+    max_ascent,
+    max_descent,
     line_height_opt: max_line_height,
     glyphs,
   }
@@ -743,6 +753,8 @@ fn build_layout_lines_from_visual_ranges(
     let mut text_start : Int? = None
     let mut text_end : Int? = None
     let mut max_line_height : Float? = None
+    let mut max_ascent = 0.0F
+    let mut max_descent = 0.0F
     fn process_range(
       shape : ShapeLine,
       spans : Array[WrapSpanLayout],
@@ -753,13 +765,17 @@ fn build_layout_lines_from_visual_ranges(
       text_start : Int?,
       text_end : Int?,
       max_line_height : Float?,
+      max_ascent : Float,
+      max_descent : Float,
       font_size : Float,
       cell_w : Float,
-    ) -> (Float, Int?, Int?, Float?) {
+    ) -> (Float, Int?, Int?, Float?, Float, Float) {
       let mut x2 = x
       let mut ts = text_start
       let mut te = text_end
       let mut max_h = max_line_height
+      let mut max_a = max_ascent
+      let mut max_d = max_descent
       let vr = ranges[ridx]
       let span = spans[vr.span_index]
       let end_add = if vr.end_glyph == 0 { 0 } else { 1 }
@@ -784,6 +800,14 @@ fn build_layout_lines_from_visual_ranges(
             (None, Some(h)) => max_h = Some(h)
             (Some(a), Some(b)) => if b > a { max_h = Some(b) }
             _ => ()
+          }
+          let glyph_ascent = glyph_font_size * g.ascent
+          if glyph_ascent > max_a {
+            max_a = glyph_ascent
+          }
+          let glyph_descent = glyph_font_size * g.descent
+          if glyph_descent > max_d {
+            max_d = glyph_descent
           }
           match ts {
             None => ts = Some(g.start)
@@ -814,35 +838,39 @@ fn build_layout_lines_from_visual_ranges(
           x2 = x2 + w
         }
       }
-      (x2, ts, te, max_h)
+      (x2, ts, te, max_h, max_a, max_d)
     }
     if shape.rtl {
       let mut ri = runs.length()
       while ri > 0 {
         let run = runs[ri - 1]
         for ridx in run.0..<run.1 {
-          let (x2, ts, te, max_h) = process_range(
+          let (x2, ts, te, max_h, max_a, max_d) = process_range(
             shape, spans, ranges, ridx, glyphs, x, text_start, text_end, max_line_height,
-            font_size, cell_w,
+            max_ascent, max_descent, font_size, cell_w,
           )
           x = x2
           text_start = ts
           text_end = te
           max_line_height = max_h
+          max_ascent = max_a
+          max_descent = max_d
         }
         ri = ri - 1
       }
     } else {
       for run in runs {
         for ridx in run.0..<run.1 {
-          let (x2, ts, te, max_h) = process_range(
+          let (x2, ts, te, max_h, max_a, max_d) = process_range(
             shape, spans, ranges, ridx, glyphs, x, text_start, text_end, max_line_height,
-            font_size, cell_w,
+            max_ascent, max_descent, font_size, cell_w,
           )
           x = x2
           text_start = ts
           text_end = te
           max_line_height = max_h
+          max_ascent = max_a
+          max_descent = max_d
         }
       }
     }
@@ -852,8 +880,8 @@ fn build_layout_lines_from_visual_ranges(
       start: s,
       end: e,
       w: visual_widths[li],
-      max_ascent: 0.0F,
-      max_descent: 0.0F,
+      max_ascent,
+      max_descent,
       line_height_opt: max_line_height,
       glyphs,
     })

@@ -9,6 +9,8 @@ Both dump tools use the same synthetic minimal fonts and test cases, then `diff.
 
 - shaping records (`SHAPE`, `SG`)
 - layout records (`LL`, `LG`)
+- line metrics (`LL.max_asc`, `LL.max_dsc`, `LL.lh_*`)
+- glyph metrics/offsets (`SG.asc/dsc`, `LG.fs/fw/xoff/yoff/lh_*`)
 - physical cache key fields and image existence (`LG.ck_*`, `LG.img`)
 
 ## Run

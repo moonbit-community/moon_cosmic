@@ -55,6 +55,68 @@ test "layout_from_shape: supports non-1:1 glyph coverage (ligature)" {
 }
 
 ///|
+test "layout_from_shape: Wrap::None computes max_ascent/max_descent from glyph metrics" {
+  fn absf(v : Float) -> Float {
+    if v < 0.0F {
+      0.0F - v
+    } else {
+      v
+    }
+  }
+
+  let text = "ab"
+  let shape = ShapeLine::new(false, [
+    ShapeGlyph::new(0, 1, 1.0F, 0.0F, 0.0F, 0.0F, 0, 1, 0).with_ascent_descent(
+      0.4F, 0.1F,
+    ),
+    ShapeGlyph::new(1, 2, 1.0F, 0.0F, 0.0F, 0.0F, 0, 2, 0).with_ascent_descent(
+      0.7F, 0.3F,
+    ),
+  ])
+  let lines = layout_from_shape(text, shape, 10.0F, 10.0F, None, Wrap::None)
+  inspect(lines.length(), content="1")
+  inspect(absf(lines[0].max_ascent - 7.0F) < 0.001F, content="true")
+  inspect(absf(lines[0].max_descent - 3.0F) < 0.001F, content="true")
+}
+
+///|
+test "layout_from_shape: Wrap::Word computes per-line max_ascent/max_descent" {
+  fn absf(v : Float) -> Float {
+    if v < 0.0F {
+      0.0F - v
+    } else {
+      v
+    }
+  }
+
+  let text = "ab cd"
+  let shape = ShapeLine::new(false, [
+    ShapeGlyph::new(0, 2, 2.0F, 0.0F, 0.0F, 0.0F, 0, 1, 0).with_ascent_descent(
+      0.6F, 0.2F,
+    ),
+    ShapeGlyph::new(2, 3, 1.0F, 0.0F, 0.0F, 0.0F, 0, 2, 0).with_ascent_descent(
+      0.1F, 0.1F,
+    ),
+    ShapeGlyph::new(3, 5, 2.0F, 0.0F, 0.0F, 0.0F, 0, 3, 0).with_ascent_descent(
+      0.8F, 0.3F,
+    ),
+  ])
+  let lines = layout_from_shape(
+    text,
+    shape,
+    10.0F,
+    10.0F,
+    Some(25.0F),
+    Wrap::Word,
+  )
+  inspect(lines.length(), content="2")
+  inspect(absf(lines[0].max_ascent - 6.0F) < 0.001F, content="true")
+  inspect(absf(lines[0].max_descent - 2.0F) < 0.001F, content="true")
+  inspect(absf(lines[1].max_ascent - 8.0F) < 0.001F, content="true")
+  inspect(absf(lines[1].max_descent - 3.0F) < 0.001F, content="true")
+}
+
+///|
 test "layout_from_shape: Wrap::Word breaks using text word boundaries" {
   let text = "ab cd"
   let shape = ShapeLine::new(false, [

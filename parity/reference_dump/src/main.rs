@@ -431,6 +431,21 @@ fn width_name(width_opt: Option<f32>) -> String {
     }
 }
 
+fn opt_float_set(v: Option<f32>) -> &'static str {
+    if v.is_some() {
+        "1"
+    } else {
+        "0"
+    }
+}
+
+fn opt_float_value(v: Option<f32>) -> String {
+    match v {
+        None => "0".to_string(),
+        Some(x) => format!("{x:.6}"),
+    }
+}
+
 fn emit(tag: &str, fields: Vec<(&str, String)>) {
     print!("{tag}");
     for (k, v) in fields {
@@ -511,13 +526,7 @@ fn dump_case(
         ],
     );
 
-    let shape = ShapeLine::new(
-        font_system,
-        parity_case.text,
-        &attrs,
-        Shaping::Advanced,
-        8,
-    );
+    let shape = ShapeLine::new(font_system, parity_case.text, &attrs, Shaping::Advanced, 8);
     let shape_glyphs = flatten_shape(&shape);
     emit(
         "SHAPE",
@@ -539,10 +548,13 @@ fn dump_case(
                 ("end", end_utf16.to_string()),
                 ("font", id_index(font_ids, glyph.font_id).to_string()),
                 ("glyph", glyph.glyph_id.to_string()),
+                ("fw", glyph.font_weight.0.to_string()),
                 ("xa", format!("{:.6}", glyph.x_advance)),
                 ("ya", format!("{:.6}", glyph.y_advance)),
                 ("xo", format!("{:.6}", glyph.x_offset)),
                 ("yo", format!("{:.6}", glyph.y_offset)),
+                ("asc", format!("{:.6}", glyph.ascent)),
+                ("dsc", format!("{:.6}", glyph.descent)),
                 ("meta", glyph.metadata.to_string()),
             ],
         );
@@ -564,6 +576,10 @@ fn dump_case(
                 ("case", parity_case.id.to_string()),
                 ("line", line_index.to_string()),
                 ("w", format!("{:.6}", line.w)),
+                ("max_asc", format!("{:.6}", line.max_ascent)),
+                ("max_dsc", format!("{:.6}", line.max_descent)),
+                ("lh_set", opt_float_set(line.line_height_opt).to_string()),
+                ("lh", opt_float_value(line.line_height_opt)),
                 ("count", line.glyphs.len().to_string()),
             ],
         );
@@ -585,9 +601,15 @@ fn dump_case(
                     ("end", end_utf16.to_string()),
                     ("font", id_index(font_ids, glyph.font_id).to_string()),
                     ("glyph", glyph.glyph_id.to_string()),
+                    ("fw", glyph.font_weight.0.to_string()),
+                    ("fs", format!("{:.6}", glyph.font_size)),
                     ("x", format!("{:.6}", glyph.x)),
                     ("y", format!("{:.6}", glyph.y)),
                     ("w", format!("{:.6}", glyph.w)),
+                    ("xoff", format!("{:.6}", glyph.x_offset)),
+                    ("yoff", format!("{:.6}", glyph.y_offset)),
+                    ("lh_set", opt_float_set(glyph.line_height_opt).to_string()),
+                    ("lh", opt_float_value(glyph.line_height_opt)),
                     ("level", u8::from(glyph.level).to_string()),
                     ("meta", glyph.metadata.to_string()),
                     ("ck_font", id_index(font_ids, cache_key.font_id).to_string()),

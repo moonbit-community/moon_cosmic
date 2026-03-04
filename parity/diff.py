@@ -29,13 +29,13 @@ TAG_SPECS = {
     "SHAPE": {"str": ["rtl"], "int": ["count"], "float": []},
     "SG": {
         "str": [],
-        "int": ["index", "start", "end", "font", "glyph", "meta"],
-        "float": ["xa", "ya", "xo", "yo"],
+        "int": ["index", "start", "end", "font", "glyph", "fw", "meta"],
+        "float": ["xa", "ya", "xo", "yo", "asc", "dsc"],
     },
     "LL": {
         "str": [],
-        "int": ["line", "count"],
-        "float": ["w"],
+        "int": ["line", "lh_set", "count"],
+        "float": ["w", "max_asc", "max_dsc", "lh"],
     },
     "LG": {
         "str": ["img"],
@@ -46,6 +46,8 @@ TAG_SPECS = {
             "end",
             "font",
             "glyph",
+            "fw",
+            "lh_set",
             "level",
             "meta",
             "ck_font",
@@ -54,7 +56,7 @@ TAG_SPECS = {
             "ck_weight",
             "ck_flags",
         ],
-        "float": ["x", "y", "w", "ck_x_bin", "ck_y_bin"],
+        "float": ["fs", "x", "y", "w", "xoff", "yoff", "lh", "ck_x_bin", "ck_y_bin"],
     },
 }
 

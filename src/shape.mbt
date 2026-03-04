@@ -30,6 +30,10 @@ pub struct ShapeGlyph {
   y_advance : Float
   x_offset : Float
   y_offset : Float
+  /// Normalized ascent in em units.
+  ascent : Float
+  /// Normalized descent in em units.
+  descent : Float
   font_id : Int
   font_weight : Int
   glyph_id : Int
@@ -59,6 +63,8 @@ pub fn ShapeGlyph::new(
     y_advance,
     x_offset,
     y_offset,
+    ascent: 0.0F,
+    descent: 0.0F,
     font_id,
     font_weight: 400,
     glyph_id,
@@ -66,6 +72,15 @@ pub fn ShapeGlyph::new(
     level: 0,
     metrics_opt: None,
   }
+}
+
+///|
+pub fn ShapeGlyph::with_ascent_descent(
+  self : ShapeGlyph,
+  ascent : Float,
+  descent : Float,
+) -> ShapeGlyph {
+  ShapeGlyph::{ ..self, ascent, descent }
 }
 
 ///|
@@ -892,6 +907,19 @@ fn shape_run_with_font(
     Some(f) => f
   }
   let cmap = @moon_swash.Charmap::from_font(font)
+  let (font_ascent, font_descent) = {
+    let metrics = font.metrics([])
+    let upem = metrics.units_per_em.to_int()
+    if upem <= 0 {
+      (0.0F, 0.0F)
+    } else {
+      let scale = 1.0 / upem.to_double()
+      (
+        Float::from_double(metrics.ascent * scale),
+        Float::from_double(metrics.descent * scale),
+      )
+    }
+  }
   let empty_features : Array[@moon_swash.Setting[UInt16]] = []
   let empty_variations : Array[@moon_swash.Setting[Double]] = []
   let shaper = cx
@@ -977,6 +1005,8 @@ fn shape_run_with_font(
           y_advance: 0.0F,
           x_offset: Float::from_double(g.x()),
           y_offset: Float::from_double(g.y()),
+          ascent: font_ascent,
+          descent: font_descent,
           font_id,
           font_weight: attrs.weight_value().value(),
           glyph_id: g.id().to_int(),
@@ -1023,6 +1053,8 @@ pub fn ShapeLine::build(
       y_advance: 0.0F,
       x_offset: 0.0F,
       y_offset: 0.0F,
+      ascent: 0.0F,
+      descent: 0.0F,
       font_id: 0,
       font_weight: attrs.weight_value().value(),
       glyph_id: code,

@@ -50,6 +50,22 @@ fn width_name(width_opt : Float?) -> String {
 }
 
 ///|
+fn opt_float_set(v : Float?) -> String {
+  match v {
+    None => "0"
+    Some(_) => "1"
+  }
+}
+
+///|
+fn opt_float_value(v : Float?) -> String {
+  match v {
+    None => "0"
+    Some(x) => x.to_string()
+  }
+}
+
+///|
 fn emit(tag : String, fields : Array[(String, String)]) -> Unit {
   let sb = StringBuilder::new()
   sb.write_string(tag)
@@ -511,10 +527,13 @@ fn dump_case(
       ("end", g.end.to_string()),
       ("font", font_index(font_ids, g.font_id).to_string()),
       ("glyph", g.glyph_id.to_string()),
+      ("fw", g.font_weight.to_string()),
       ("xa", g.x_advance.to_string()),
       ("ya", g.y_advance.to_string()),
       ("xo", g.x_offset.to_string()),
       ("yo", g.y_offset.to_string()),
+      ("asc", g.ascent.to_string()),
+      ("dsc", g.descent.to_string()),
       ("meta", g.metadata.to_string()),
     ])
   }
@@ -533,6 +552,10 @@ fn dump_case(
       ("case", parity_case.id),
       ("line", line_i.to_string()),
       ("w", line.w.to_string()),
+      ("max_asc", line.max_ascent.to_string()),
+      ("max_dsc", line.max_descent.to_string()),
+      ("lh_set", opt_float_set(line.line_height_opt)),
+      ("lh", opt_float_value(line.line_height_opt)),
       ("count", line.glyphs.length().to_string()),
     ])
     for glyph_i in 0..<line.glyphs.length() {
@@ -551,9 +574,15 @@ fn dump_case(
         ("end", glyph.end.to_string()),
         ("font", font_index(font_ids, glyph.font_id).to_string()),
         ("glyph", glyph.glyph_id.to_string()),
+        ("fw", glyph.font_weight.to_string()),
+        ("fs", glyph.font_size.to_string()),
         ("x", glyph.x.to_string()),
         ("y", glyph.y.to_string()),
         ("w", glyph.w.to_string()),
+        ("xoff", glyph.x_offset.to_string()),
+        ("yoff", glyph.y_offset.to_string()),
+        ("lh_set", opt_float_set(glyph.line_height_opt)),
+        ("lh", opt_float_value(glyph.line_height_opt)),
         ("level", glyph.level.to_string()),
         ("meta", glyph.metadata.to_string()),
         ("ck_font", font_index(font_ids, key.font_id).to_string()),

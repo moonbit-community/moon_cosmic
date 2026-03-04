@@ -538,6 +538,8 @@ pub struct ShapeGlyph {
   y_advance : Float
   x_offset : Float
   y_offset : Float
+  ascent : Float
+  descent : Float
   font_id : Int
   font_weight : Int
   glyph_id : Int
@@ -546,6 +548,7 @@ pub struct ShapeGlyph {
   metrics_opt : Metrics?
 }
 pub fn ShapeGlyph::new(Int, Int, Float, Float, Float, Float, Int, Int, Int) -> Self
+pub fn ShapeGlyph::with_ascent_descent(Self, Float, Float) -> Self
 
 pub struct ShapeLine {
   rtl : Bool
