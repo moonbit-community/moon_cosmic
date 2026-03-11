@@ -15,7 +15,7 @@
 ///|
 /// Port scaffold for `cosmic-text` (MIT OR Apache-2.0).
 ///
-/// The port will be implemented incrementally, keeping Bevy/cosmic-text data-flow parity.
+/// The port is implemented incrementally while keeping data-flow behavior aligned.
 pub fn cosmic_text_version() -> String {
   "0.16.0 (upstream)"
 }

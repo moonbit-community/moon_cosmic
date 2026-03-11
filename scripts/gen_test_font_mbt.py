@@ -31,7 +31,7 @@ LICENSE_HEADER = """// Copyright 2025 International Digital Economy Academy
 
 def main() -> None:
     repo = Path(__file__).resolve().parents[1]
-    font_path = repo / "cosmic-text-reference" / "fonts" / "Inter-Regular.ttf"
+    font_path = repo / "fonts" / "Inter-Regular.ttf"
     out_path = repo / "src" / "test_fonts_test.mbt"
 
     b64 = base64.b64encode(font_path.read_bytes()).decode("ascii")

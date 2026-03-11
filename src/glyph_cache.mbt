@@ -94,7 +94,7 @@ pub fn SubpixelBin::new(pos : Float) -> (Int, SubpixelBin) {
   let trunc = pos.to_int()
   let fract = pos - Float::from_double(trunc.to_double())
 
-  // Note: treat -0.0 as negative for parity with upstream.
+  // Note: treat -0.0 as negative to match upstream behavior.
   let is_neg = if pos == 0.0F { 1.0F / pos < 0.0F } else { pos < 0.0F }
   if is_neg {
     if fract > -0.125F {
@@ -129,7 +129,7 @@ pub fn SubpixelBin::new(pos : Float) -> (Int, SubpixelBin) {
 pub struct CacheKey {
   /// Font ID (implementation-defined; see FontSystem)
   font_id : Int
-  /// Glyph ID (normalized to UInt16 domain for swash parity)
+  /// Glyph ID (normalized to UInt16 domain for swash behavior)
   glyph_id : Int
   /// `f32` bits of font size
   font_size_bits : UInt

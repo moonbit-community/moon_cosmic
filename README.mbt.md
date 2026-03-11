@@ -2,7 +2,7 @@
 
 MoonBit port of Rust `cosmic-text` (text shaping, layout, and editor primitives), built on top of `Milky2018/moon_swash`.
 
-This repo includes `./cosmic-text-reference` (the upstream Rust reference) and keeps behavior aligned via tests where feasible.
+The project keeps behavior aligned with upstream `cosmic-text` through automated tests where feasible.
 
 ## Features
 
@@ -99,9 +99,9 @@ moon info && moon fmt
 
 ## Test Font Blob
 
-Some parity tests require real font metrics. This repo embeds `Inter-Regular.ttf` into `src/test_fonts_test.mbt` (base64).
+Some tests require real font metrics. This repo embeds `Inter-Regular.ttf` into `src/test_fonts_test.mbt` (base64).
 
-To regenerate it (if the reference font changes):
+To regenerate it (if test font data changes):
 
 ```bash
 python3 scripts/gen_test_font_mbt.py
@@ -111,4 +111,4 @@ moon test
 
 ## License
 
-Apache-2.0. Upstream `cosmic-text` is MIT OR Apache-2.0; see `./cosmic-text-reference` for details.
+Apache-2.0. Upstream `cosmic-text` is dual-licensed MIT OR Apache-2.0.

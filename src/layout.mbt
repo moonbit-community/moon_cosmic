@@ -223,7 +223,7 @@ fn layout_glyph_is_blank(text : String, glyph : ShapeGlyph) -> Bool {
   if end <= start {
     return false
   }
-  let run = try! text[start:end]
+  let run = text[start:end]
   let mut has_char = false
   for ch in run {
     has_char = true
@@ -1333,7 +1333,7 @@ pub fn layout_from_shape(
           i = i + 1
           continue
         } else {
-          // Word wrap parity: keep the overflowing word as the in-progress line,
+          // Keep the overflowing word as the in-progress line,
           // and let the next segment decide whether trailing blank should be dropped.
           cur_end_g = word_end_g
           if !blank {
@@ -1344,9 +1344,9 @@ pub fn layout_from_shape(
         }
       }
 
-      // Reference parity on word-wrap: if a non-blank segment overflows right
+      // On word-wrap, if a non-blank segment overflows right
       // after a blank separator, keep it on the same line and allow overflow.
-      // This matches span-transition behavior in upstream layout.
+      // This follows upstream span-transition behavior.
       if (wrap is Word || wrap is WordOrGlyph) &&
         !blank &&
         i > line_start_i &&

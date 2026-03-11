@@ -240,9 +240,9 @@ test "wrap_word_fallback: layout_runs never overflow width (MVP)" {
 }
 
 ///|
-/// Reference: `cosmic-text-reference/tests/wrap_stability.rs` (wrap_extra_line).
+/// Based on upstream `wrap_stability.rs` semantics (`wrap_extra_line`).
 ///
-/// This requires real font metrics (Inter-Regular.ttf). We embed the font bytes for parity.
+/// This requires real font metrics (Inter-Regular.ttf). We embed the font bytes.
 test "wrap_extra_line: matches upstream empty/overflow line counts" {
   let metrics = Metrics::new(14.0F, 20.0F)
   let mut buffer = Buffer::new(metrics)
