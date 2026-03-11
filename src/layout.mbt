@@ -1078,6 +1078,14 @@ pub fn layout_from_shape(
                   current_w = 0.0F
                 }
               }
+              // Match reference: if the current visual line already has content,
+              // commit it before starting a new overflowing word at span boundary.
+              if current_ranges.length() > 0 {
+                visual_ranges.push(current_ranges)
+                visual_widths.push(current_w)
+                current_ranges = []
+                current_w = 0.0F
+              }
               if word.blank {
                 word_range_w = 0.0F
                 fitting_word = i
@@ -1176,6 +1184,14 @@ pub fn layout_from_shape(
                   current_w = 0.0F
                 }
               }
+              // Match reference: if the current visual line already has content,
+              // commit it before starting a new overflowing word at span boundary.
+              if current_ranges.length() > 0 {
+                visual_ranges.push(current_ranges)
+                visual_widths.push(current_w)
+                current_ranges = []
+                current_w = 0.0F
+              }
               if word.blank {
                 word_range_w = 0.0F
                 fitting_word = i + 1
@@ -1241,9 +1257,7 @@ pub fn layout_from_shape(
     let mut line_start_g = segs[line_start_i].glyph_start
     let mut cur_end_g = line_start_g
     let mut before_last_blank_end_g = line_start_g
-    let mut kept_overflow_after_blank = false
     let mut seen_nonblank = false
-    let mut seen_incongruent_nonblank = false
     let mut emitted = false
     // Track last "fitting" glyph end and the end position before the most recent
     // blank segment, mirroring upstream `width_before_last_blank` behavior.
@@ -1258,8 +1272,6 @@ pub fn layout_from_shape(
       if fits {
         if blank {
           before_last_blank_end_g = cur_end_g
-        } else if seg_rtl != shape_for_wrap.rtl {
-          seen_incongruent_nonblank = true
         }
         if !blank {
           seen_nonblank = true
@@ -1342,26 +1354,6 @@ pub fn layout_from_shape(
           i = i + 1
           continue
         }
-      }
-
-      // On word-wrap, if a non-blank segment overflows right
-      // after a blank separator, keep it on the same line and allow overflow.
-      // This follows upstream span-transition behavior.
-      if (wrap is Word || wrap is WordOrGlyph) &&
-        !blank &&
-        i > line_start_i &&
-        segs[i - 1].blank &&
-        !kept_overflow_after_blank &&
-        !seen_incongruent_nonblank &&
-        !(wrap is WordOrGlyph &&
-        prefix_range_w(prefix, seg.glyph_start, seg.glyph_end) > max_w) &&
-        seg_rtl != shape_for_wrap.rtl {
-        cur_end_g = would_end_g
-        kept_overflow_after_blank = true
-        seen_nonblank = true
-        seen_incongruent_nonblank = true
-        i = i + 1
-        continue
       }
 
       // Emit current line, possibly trimming trailing blanks when wrapping.
