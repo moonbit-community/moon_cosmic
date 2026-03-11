@@ -90,3 +90,38 @@ test "Family/Weight constructors are usable" {
     content="(true, italic)",
   )
 }
+
+///|
+test "Attrs extended fields: color/cache-key/spacing/features/decoration" {
+  let features = FontFeatures::new()
+    .enable(FeatureTag::new("liga"))
+    .set(FeatureTag::new("kern"), 0U)
+  let flags = CACHE_KEY_FLAG_FAKE_ITALIC | CACHE_KEY_FLAG_DISABLE_HINTING
+  let attrs = Attrs::new()
+    .color(Color::rgb(1, 2, 3))
+    .cache_key_flags(flags)
+    .letter_spacing(0.25F)
+    .font_features(features)
+    .underline(UnderlineStyle::Double)
+    .underline_color(Color::rgb(8, 7, 6))
+    .strikethrough()
+    .overline()
+
+  inspect(attrs.color_opt_value() is Some(_), content="true")
+  inspect(attrs.cache_key_flags_value() == flags, content="true")
+  inspect(attrs.font_features_value().features().length(), content="2")
+  inspect(attrs.text_decoration_value().has_decoration(), content="true")
+  inspect(
+    attrs.text_decoration_value().underline == UnderlineStyle::Double,
+    content="true",
+  )
+  inspect(
+    attrs.compatible(Attrs::new().color(Color::rgb(255, 0, 0))),
+    content="true",
+  )
+
+  match attrs.letter_spacing_opt() {
+    Some(v) => inspect(v == 0.25F, content="true")
+    None => fail("expected letter spacing")
+  }
+}

@@ -29,6 +29,7 @@ test "per-span metrics override affects glyph font_size, widths, and line_height
     default_metrics.font_size,
     None,
     Wrap::None,
+    Ellipsize::None,
     None,
     8,
     Hinting::Disabled,

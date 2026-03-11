@@ -63,7 +63,15 @@ test "BufferLine.set_ending invalidates shaping cache" {
   let line0 = BufferLine::new("abc", Lf, attrs, Advanced)
   let line1 = line0
     .shape(4)
-    .layout(10.0F, Some(100.0F), Wrap::None, None, 4, Hinting::Disabled)
+    .layout(
+      10.0F,
+      Some(100.0F),
+      Wrap::None,
+      Ellipsize::None,
+      None,
+      4,
+      Hinting::Disabled,
+    )
   inspect(
     match line1.shape_opt() {
       Some(_) => true
@@ -121,6 +129,7 @@ test "BufferLine.layout wraps words using whitespace segmentation (MVP)" {
     10.0F,
     Some(60.0F),
     Wrap::Word,
+    Ellipsize::None,
     None,
     4,
     Hinting::Disabled,
@@ -145,6 +154,7 @@ test "BufferLine.layout: Align::Justified does not justify last visual line" {
     10.0F,
     Some(60.0F),
     Wrap::Word,
+    Ellipsize::None,
     None,
     4,
     Hinting::Disabled,
@@ -168,11 +178,20 @@ test "BufferLine.layout: Hinting::Enabled rounds advances" {
     10.5F,
     None,
     Wrap::None,
+    Ellipsize::None,
     None,
     4,
     Hinting::Disabled,
   )
-  let enabled = line0.layout(10.5F, None, Wrap::None, None, 4, Hinting::Enabled)
+  let enabled = line0.layout(
+    10.5F,
+    None,
+    Wrap::None,
+    Ellipsize::None,
+    None,
+    4,
+    Hinting::Enabled,
+  )
   if disabled.layout_opt() is Some(l0) && enabled.layout_opt() is Some(l1) {
     inspect(l0[0].w, content="21")
     inspect(l1[0].w, content="22")
@@ -190,6 +209,7 @@ test "BufferLine.layout: Align::End follows paragraph direction in RTL lines" {
     10.0F,
     Some(40.0F),
     Wrap::None,
+    Ellipsize::None,
     None,
     4,
     Hinting::Disabled,
@@ -217,6 +237,7 @@ test "BufferLine.layout: whitespace-only word wrap keeps only final blank segmen
     10.0F,
     Some(5.0F),
     Wrap::Word,
+    Ellipsize::None,
     None,
     4,
     Hinting::Disabled,
@@ -236,7 +257,15 @@ test "BufferLine.layout: whitespace-only word wrap keeps only final blank segmen
 test "BufferLine.layout: whitespace-only word wrap keeps blanks when unbounded" {
   let attrs = AttrsList::new(Attrs::new())
   let line0 = BufferLine::new("   ", Lf, attrs, Advanced)
-  let line1 = line0.layout(10.0F, None, Wrap::Word, None, 4, Hinting::Disabled)
+  let line1 = line0.layout(
+    10.0F,
+    None,
+    Wrap::Word,
+    Ellipsize::None,
+    None,
+    4,
+    Hinting::Disabled,
+  )
   if line1.layout_opt() is Some(layout) {
     inspect(layout.length(), content="1")
     inspect(layout[0].w, content="30")
@@ -246,4 +275,44 @@ test "BufferLine.layout: whitespace-only word wrap keeps blanks when unbounded" 
   } else {
     fail("expected Some(layout)")
   }
+}
+
+///|
+test "BufferLine.set_attrs_list resets shaping cache when changed" {
+  let attrs0 = AttrsList::new(Attrs::new())
+  let attrs1 = AttrsList::new(Attrs::with_metadata(42))
+  let line0 = BufferLine::new("ab", Lf, attrs0, Advanced).shape(4)
+  let (line1, changed) = line0.set_attrs_list(attrs1)
+  inspect(changed, content="true")
+  inspect(line1.shape_opt() is None, content="true")
+}
+
+///|
+test "BufferLine.metadata and into_text helpers" {
+  let attrs = AttrsList::new(Attrs::new())
+  let line0 = BufferLine::new("hello", None, attrs, Basic)
+  let line1 = line0.set_metadata(7)
+  inspect(line1.metadata(), content="Some(7)")
+  inspect(line1.into_text(), content="hello")
+}
+
+///|
+test "BufferLine.layout_runs returns visible runs for a laid-out line" {
+  let attrs = AttrsList::new(Attrs::new())
+  let line = BufferLine::new("ab", None, attrs, Basic).layout(
+    10.0F,
+    Some(100.0F),
+    Wrap::None,
+    Ellipsize::None,
+    None,
+    4,
+    Hinting::Disabled,
+  )
+  let runs : Array[LayoutRun] = []
+  for run in line.layout_runs(None, 12.0F) {
+    runs.push(run)
+  }
+  inspect(runs.length(), content="1")
+  inspect(runs[0].line_i, content="0")
+  inspect(runs[0].glyphs.length(), content="2")
 }

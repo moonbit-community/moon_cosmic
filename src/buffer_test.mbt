@@ -293,3 +293,41 @@ test "Buffer.draw is a naming-aligned wrapper (smoke)" {
   }
   inspect(has_layout, content="true")
 }
+
+///|
+test "Buffer line helpers: line_shape/line_layout/layout_cursor/shape_until_scroll" {
+  let attrs = AttrsList::new(Attrs::new())
+  let buf0 = Buffer::new(Metrics::new(12.0F, 14.0F))
+    .set_text("ab", attrs, Basic)
+    .set_size(Some(100.0F), Some(100.0F))
+  inspect(buf0.line_shape(FontSystem::new(), 0) is Some(_), content="true")
+  inspect(buf0.line_layout(FontSystem::new(), 0) is Some(_), content="true")
+  inspect(
+    buf0.layout_cursor(
+      FontSystem::new(),
+      Cursor::new_with_affinity(0, 0, After),
+    )
+    is Some(_),
+    content="true",
+  )
+  let buf1 = buf0.shape_until_scroll(FontSystem::new(), false)
+  inspect(buf1.lines()[0].layout_opt() is Some(_), content="true")
+}
+
+///|
+test "LayoutRun.highlight returns intersection width for cursor span" {
+  let attrs = AttrsList::new(Attrs::new())
+  let buffer = Buffer::new(Metrics::new(12.0F, 14.0F))
+    .set_text("ab", attrs, Basic)
+    .set_size(Some(100.0F), None)
+    .layout_all()
+  let mut got = false
+  for run in buffer.layout_runs() {
+    let start = Cursor::new_with_affinity(0, 0, After)
+    let end = Cursor::new_with_affinity(0, 1, Before)
+    if run.highlight(start, end) is Some((_, w)) {
+      got = w >= 0.0F
+    }
+  }
+  inspect(got, content="true")
+}

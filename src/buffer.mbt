@@ -24,6 +24,7 @@ pub struct Buffer {
   scroll : Scroll
   redraw : Bool
   wrap : Wrap
+  ellipsize : Ellipsize
   monospace_width : Float?
   tab_width : Int
   hinting : Hinting
@@ -50,6 +51,7 @@ pub fn Buffer::new_empty(metrics : Metrics) -> Buffer {
     scroll: Scroll::default(),
     redraw: false,
     wrap: Wrap::WordOrGlyph,
+    ellipsize: Ellipsize::None,
     monospace_width: None,
     tab_width: 8,
     hinting: Hinting::Disabled,
@@ -102,6 +104,11 @@ pub fn Buffer::wrap(self : Buffer) -> Wrap {
 }
 
 ///|
+pub fn Buffer::ellipsize(self : Buffer) -> Ellipsize {
+  self.ellipsize
+}
+
+///|
 pub fn Buffer::hinting(self : Buffer) -> Hinting {
   self.hinting
 }
@@ -113,6 +120,29 @@ fn wrap_eq(a : Wrap, b : Wrap) -> Bool {
     (Glyph, Glyph) => true
     (Word, Word) => true
     (WordOrGlyph, WordOrGlyph) => true
+    _ => false
+  }
+}
+
+///|
+fn ellipsize_height_limit_eq(
+  a : EllipsizeHeightLimit,
+  b : EllipsizeHeightLimit,
+) -> Bool {
+  match (a, b) {
+    (Lines(a0), Lines(b0)) => a0 == b0
+    (Height(a0), Height(b0)) => a0 == b0
+    _ => false
+  }
+}
+
+///|
+fn ellipsize_eq(a : Ellipsize, b : Ellipsize) -> Bool {
+  match (a, b) {
+    (None, None) => true
+    (Start(a0), Start(b0)) => ellipsize_height_limit_eq(a0, b0)
+    (Middle(a0), Middle(b0)) => ellipsize_height_limit_eq(a0, b0)
+    (End(a0), End(b0)) => ellipsize_height_limit_eq(a0, b0)
     _ => false
   }
 }
@@ -192,6 +222,20 @@ pub fn Buffer::set_wrap(self : Buffer, wrap : Wrap) -> Buffer {
 }
 
 ///|
+pub fn Buffer::set_ellipsize(self : Buffer, ellipsize : Ellipsize) -> Buffer {
+  if ellipsize_eq(self.ellipsize, ellipsize) {
+    self
+  } else {
+    Buffer::{
+      ..self,
+      ellipsize,
+      lines: reset_layout_lines(self.lines),
+      redraw: true,
+    }
+  }
+}
+
+///|
 pub fn Buffer::set_tab_width(self : Buffer, tab_width : Int) -> Buffer {
   if tab_width <= 0 || self.tab_width == tab_width {
     self
@@ -238,22 +282,37 @@ pub fn Buffer::set_monospace_width(
 
 ///|
 pub fn Buffer::set_metrics(self : Buffer, metrics : Metrics) -> Buffer {
+  self.set_metrics_and_size(metrics, self.width_opt, self.height_opt)
+}
+
+///|
+pub fn Buffer::set_metrics_and_size(
+  self : Buffer,
+  metrics : Metrics,
+  width_opt : Float?,
+  height_opt : Float?,
+) -> Buffer {
   if metrics.font_size == 0.0F {
     abort("font size cannot be 0")
   }
   if metrics.line_height == 0.0F {
     abort("line height cannot be 0")
   }
+  let clamped_width_opt = clamp_nonneg_opt(width_opt)
+  let clamped_height_opt = clamp_nonneg_opt(height_opt)
   if self.metrics.font_size == metrics.font_size &&
-    self.metrics.line_height == metrics.line_height {
-    self
-  } else {
-    Buffer::{
-      ..self,
-      metrics,
-      lines: reset_layout_lines(self.lines),
-      redraw: true,
-    }
+    self.metrics.line_height == metrics.line_height &&
+    float_opt_eq(self.width_opt, clamped_width_opt) &&
+    float_opt_eq(self.height_opt, clamped_height_opt) {
+    return self
+  }
+  Buffer::{
+    ..self,
+    metrics,
+    width_opt: clamped_width_opt,
+    height_opt: clamped_height_opt,
+    lines: reset_layout_lines(self.lines),
+    redraw: true,
   }
 }
 
@@ -263,20 +322,7 @@ pub fn Buffer::set_size(
   width_opt : Float?,
   height_opt : Float?,
 ) -> Buffer {
-  let clamped_width_opt = clamp_nonneg_opt(width_opt)
-  let clamped_height_opt = clamp_nonneg_opt(height_opt)
-  if float_opt_eq(self.width_opt, clamped_width_opt) &&
-    float_opt_eq(self.height_opt, clamped_height_opt) {
-    self
-  } else {
-    Buffer::{
-      ..self,
-      width_opt: clamped_width_opt,
-      height_opt: clamped_height_opt,
-      lines: reset_layout_lines(self.lines),
-      redraw: true,
-    }
-  }
+  self.set_metrics_and_size(self.metrics, width_opt, height_opt)
 }
 
 ///|
@@ -445,6 +491,7 @@ pub fn Buffer::layout_all_with_font_system(
         self.metrics.font_size,
         self.width_opt,
         self.wrap,
+        self.ellipsize,
         self.monospace_width,
         self.tab_width,
         self.hinting,
@@ -464,6 +511,7 @@ pub fn Buffer::layout_all(self : Buffer) -> Buffer {
         self.metrics.font_size,
         self.width_opt,
         self.wrap,
+        self.ellipsize,
         self.monospace_width,
         self.tab_width,
         self.hinting,
@@ -471,6 +519,177 @@ pub fn Buffer::layout_all(self : Buffer) -> Buffer {
     )
   }
   Buffer::{ ..self, lines, }
+}
+
+///|
+pub fn Buffer::line_shape(
+  self : Buffer,
+  font_system : FontSystem,
+  line_i : Int,
+) -> ShapeLine? {
+  if line_i < 0 || line_i >= self.lines.length() {
+    return None
+  }
+  self.lines[line_i]
+  .shape_with_font_system(font_system, self.tab_width)
+  .shape_opt()
+}
+
+///|
+pub fn Buffer::line_layout(
+  self : Buffer,
+  font_system : FontSystem,
+  line_i : Int,
+) -> Array[LayoutLine]? {
+  if line_i < 0 || line_i >= self.lines.length() {
+    return None
+  }
+  self.lines[line_i]
+  .layout_with_font_system(
+    font_system,
+    self.metrics.font_size,
+    self.width_opt,
+    self.wrap,
+    self.ellipsize,
+    self.monospace_width,
+    self.tab_width,
+    self.hinting,
+  )
+  .layout_opt()
+}
+
+///|
+pub fn Buffer::shape_until_scroll(
+  self : Buffer,
+  font_system : FontSystem,
+  prune : Bool,
+) -> Buffer {
+  ignore(prune)
+  self
+  .shape_all_with_font_system(font_system)
+  .layout_all_with_font_system(font_system)
+}
+
+///|
+pub fn Buffer::layout_cursor(
+  self : Buffer,
+  font_system : FontSystem,
+  cursor : Cursor,
+) -> LayoutCursor? {
+  let layout = self.line_layout(font_system, cursor.line)
+  if layout is None {
+    return None
+  }
+  let lines = if layout is Some(v) { v } else { [] }
+  for p in lines.iter2() {
+    let layout_i = p.0
+    let layout_line = p.1
+    for gp in layout_line.glyphs.iter2() {
+      let glyph_i = gp.0
+      let glyph = gp.1
+      let cursor_end = Cursor::new_with_affinity(cursor.line, glyph.end, Before)
+      let cursor_start = Cursor::new_with_affinity(
+        cursor.line,
+        glyph.start,
+        After,
+      )
+      let glyph_ltr = glyph.level % 2 == 0
+      let cursor_left = if glyph_ltr { cursor_start } else { cursor_end }
+      let cursor_right = if glyph_ltr { cursor_end } else { cursor_start }
+      if cursor == cursor_left {
+        return Some(LayoutCursor::new(cursor.line, layout_i, glyph_i))
+      }
+      if cursor == cursor_right {
+        return Some(LayoutCursor::new(cursor.line, layout_i, glyph_i + 1))
+      }
+    }
+  }
+  Some(LayoutCursor::new(cursor.line, 0, 0))
+}
+
+///|
+pub fn Buffer::shape_until_cursor(
+  self : Buffer,
+  font_system : FontSystem,
+  cursor : Cursor,
+  prune : Bool,
+) -> Buffer {
+  if cursor.line < 0 || cursor.line >= self.lines.length() {
+    return self.shape_until_scroll(font_system, prune)
+  }
+  let mut buffer = self.shape_until_scroll(font_system, prune)
+  let mut scroll = buffer.scroll
+  if cursor.line < scroll.line {
+    scroll = Scroll::{ ..scroll, line: cursor.line, vertical: 0.0F }
+  } else if buffer.height_opt is Some(_) {
+    let mut visible = false
+    for run in buffer.layout_runs() {
+      if run.line_i == cursor.line {
+        visible = true
+      }
+    }
+    if !visible {
+      scroll = Scroll::{ ..scroll, line: cursor.line, vertical: 0.0F }
+    }
+  }
+  if scroll.line != buffer.scroll.line ||
+    scroll.vertical != buffer.scroll.vertical ||
+    scroll.horizontal != buffer.scroll.horizontal {
+    buffer = Buffer::{ ..buffer, scroll, redraw: true }
+  }
+
+  let layout_cursor_opt = buffer.layout_cursor(font_system, cursor)
+  match layout_cursor_opt {
+    None => buffer
+    Some(layout_cursor) => {
+      let lines_opt = buffer.line_layout(font_system, layout_cursor.line)
+      match lines_opt {
+        None => buffer
+        Some(layout_lines) => {
+          let layout_line_opt = layout_lines.get(layout_cursor.layout)
+          if layout_line_opt is None {
+            return buffer
+          }
+          let layout_line = if layout_line_opt is Some(v) {
+            v
+          } else {
+            layout_lines[0]
+          }
+          let glyph = if layout_line.glyphs.get(layout_cursor.glyph) is Some(v) {
+            Some(v)
+          } else if layout_line.glyphs.length() > 0 {
+            Some(layout_line.glyphs[layout_line.glyphs.length() - 1])
+          } else {
+            None
+          }
+          if glyph is None {
+            return buffer
+          }
+          let g = if glyph is Some(v) { v } else { layout_line.glyphs[0] }
+          let x_a = g.x
+          let x_b = g.x + g.w
+          let x_min = if x_a < x_b { x_a } else { x_b }
+          let x_max = if x_a > x_b { x_a } else { x_b }
+          if x_min < buffer.scroll.horizontal {
+            buffer = Buffer::{
+              ..buffer,
+              scroll: Scroll::{ ..buffer.scroll, horizontal: x_min },
+              redraw: true,
+            }
+          }
+          if buffer.width_opt is Some(width) &&
+            x_max > buffer.scroll.horizontal + width {
+            buffer = Buffer::{
+              ..buffer,
+              scroll: Scroll::{ ..buffer.scroll, horizontal: x_max - width },
+              redraw: true,
+            }
+          }
+          buffer
+        }
+      }
+    }
+  }
 }
 
 ///|
@@ -483,7 +702,105 @@ pub struct LayoutRun {
   text : String
   rtl : Bool
   glyphs : Array[LayoutGlyph]
+  decorations : Array[DecorationSpan]
   line_w : Float
+}
+
+///|
+fn affinity_rank(a : Affinity) -> Int {
+  match a {
+    Before => 0
+    After => 1
+  }
+}
+
+///|
+fn cursor_compare(a : Cursor, b : Cursor) -> Int {
+  if a.line != b.line {
+    if a.line < b.line {
+      -1
+    } else {
+      1
+    }
+  } else if a.index != b.index {
+    if a.index < b.index {
+      -1
+    } else {
+      1
+    }
+  } else {
+    let ar = affinity_rank(a.affinity)
+    let br = affinity_rank(b.affinity)
+    if ar < br {
+      -1
+    } else if ar > br {
+      1
+    } else {
+      0
+    }
+  }
+}
+
+///|
+fn cursor_in_range(cursor : Cursor, start : Cursor, end : Cursor) -> Bool {
+  cursor_compare(cursor, start) >= 0 && cursor_compare(cursor, end) <= 0
+}
+
+///|
+fn run_cursor_from_glyph_left(run : LayoutRun, glyph : LayoutGlyph) -> Cursor {
+  if run.rtl {
+    Cursor::new_with_affinity(run.line_i, glyph.end, Before)
+  } else {
+    Cursor::new_with_affinity(run.line_i, glyph.start, After)
+  }
+}
+
+///|
+fn run_cursor_from_glyph_right(run : LayoutRun, glyph : LayoutGlyph) -> Cursor {
+  if run.rtl {
+    Cursor::new_with_affinity(run.line_i, glyph.start, After)
+  } else {
+    Cursor::new_with_affinity(run.line_i, glyph.end, Before)
+  }
+}
+
+///|
+/// Return highlighted x-span `(x_left, width)` intersecting this run.
+pub fn LayoutRun::highlight(
+  self : LayoutRun,
+  cursor_start : Cursor,
+  cursor_end : Cursor,
+) -> (Float, Float)? {
+  let mut x_start : Float? = None
+  let mut x_end : Float? = None
+  let rtl_factor = if self.rtl { 1.0F } else { 0.0F }
+  let ltr_factor = 1.0F - rtl_factor
+  for glyph in self.glyphs {
+    let cursor_left = run_cursor_from_glyph_left(self, glyph)
+    if cursor_in_range(cursor_left, cursor_start, cursor_end) {
+      let x = glyph.x + glyph.w * rtl_factor
+      if x_start is None {
+        x_start = Some(x)
+      }
+      x_end = Some(x)
+    }
+    let cursor_right = run_cursor_from_glyph_right(self, glyph)
+    if cursor_in_range(cursor_right, cursor_start, cursor_end) {
+      let x = glyph.x + glyph.w * ltr_factor
+      if x_start is None {
+        x_start = Some(x)
+      }
+      x_end = Some(x)
+    }
+  }
+  match (x_start, x_end) {
+    (Some(a), Some(b)) => {
+      let min_x = if a < b { a } else { b }
+      let max_x = if a > b { a } else { b }
+      Some((min_x, max_x - min_x))
+    }
+    _ => None
+  }
 }
 
 ///|
@@ -536,6 +853,7 @@ pub fn Buffer::layout_runs(self : Buffer) -> Iter[LayoutRun] {
         text: line.text(),
         rtl,
         glyphs: l.glyphs,
+        decorations: l.decorations,
         line_w: l.w,
       })
     }
@@ -1179,19 +1497,16 @@ pub fn Buffer::draw_with_font_system(
   f : (Int, Int, UInt, UInt, Color) -> Unit,
 ) -> (Buffer, SwashCache) {
   let buffer = self.layout_all_with_font_system(font_system)
+  let renderer = LegacyRenderer::new(font_system, swash_cache, f)
   for run in buffer.layout_runs() {
     for glyph in run.glyphs {
       let physical = glyph.physical((0.0F, run.line_y), 1.0F)
-      swash_cache.with_pixels(font_system, physical.cache_key, text_color, fn(
-        px,
-        py,
-        color,
-      ) {
-        f(physical.x + px, physical.y + py, 1U, 1U, color)
-      })
+      let color = if glyph.color_opt is Some(c) { c } else { text_color }
+      renderer.glyph(physical, color)
     }
+    render_decoration(renderer, run, text_color)
   }
-  (buffer, swash_cache)
+  (buffer, renderer.cache)
 }
 
 ///|

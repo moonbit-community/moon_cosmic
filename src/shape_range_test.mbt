@@ -268,3 +268,37 @@ test "ShapeLine.build_with_font_system replaces missing clusters incrementally" 
     content="(Some(0), Some(1), Some(2))",
   )
 }
+
+///|
+test "ShapeLine layout helpers: width/layout/layout_to_buffer" {
+  let shape = ShapeLine::build(
+    ShapeLine::empty(),
+    "ab",
+    AttrsList::new(Attrs::new()),
+    Shaping::Basic,
+    8,
+  )
+  inspect(shape.width(10.0F), content="20")
+  let lines = shape.layout(
+    10.0F,
+    Some(100.0F),
+    Wrap::None,
+    Ellipsize::None,
+    None,
+    None,
+    Hinting::Disabled,
+  )
+  inspect(lines.length(), content="1")
+  let lines2 : Array[LayoutLine] = []
+  shape.layout_to_buffer(
+    10.0F,
+    Some(100.0F),
+    Wrap::None,
+    Ellipsize::None,
+    None,
+    lines2,
+    None,
+    Hinting::Disabled,
+  )
+  inspect(lines2.length(), content="1")
+}

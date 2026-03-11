@@ -55,53 +55,12 @@ pub impl Eq for ShapeRunKey with equal(self, other) {
 ///|
 pub impl Hash for ShapeRunKey with hash_combine(self, hasher) {
   hasher.combine_string(self.text)
-  hasher.combine_int(self.default_attrs.metadata())
-  match self.default_attrs.family_value() {
-    Name(name) => {
-      hasher.combine_int(0)
-      hasher.combine_string(name)
-    }
-    Serif => hasher.combine_int(1)
-    SansSerif => hasher.combine_int(2)
-    Cursive => hasher.combine_int(3)
-    Fantasy => hasher.combine_int(4)
-    Monospace => hasher.combine_int(5)
-  }
-  hasher.combine_int(self.default_attrs.weight_value().value())
-  match self.default_attrs.metrics_opt() {
-    Option::None => hasher.combine_int(0)
-    Option::Some(m) => {
-      hasher.combine_int(1)
-      // Hash f32 bits (stable) via CacheMetrics.
-      let cm = CacheMetrics::from_metrics(m)
-      cm.hash_combine(hasher)
-    }
-  }
+  self.default_attrs.hash_combine(hasher)
   hasher.combine_int(self.attrs_spans.length())
   for s in self.attrs_spans {
     hasher.combine_int(s.0)
     hasher.combine_int(s.1)
-    hasher.combine_int(s.2.metadata())
-    match s.2.family_value() {
-      Name(name) => {
-        hasher.combine_int(0)
-        hasher.combine_string(name)
-      }
-      Serif => hasher.combine_int(1)
-      SansSerif => hasher.combine_int(2)
-      Cursive => hasher.combine_int(3)
-      Fantasy => hasher.combine_int(4)
-      Monospace => hasher.combine_int(5)
-    }
-    hasher.combine_int(s.2.weight_value().value())
-    match s.2.metrics_opt() {
-      Option::None => hasher.combine_int(0)
-      Option::Some(m) => {
-        hasher.combine_int(1)
-        let cm = CacheMetrics::from_metrics(m)
-        cm.hash_combine(hasher)
-      }
-    }
+    s.2.hash_combine(hasher)
   }
 }
 

@@ -33,6 +33,8 @@ pub fn layout_from_shape(String, ShapeLine, Float, Float, Float?, Wrap) -> Array
 
 pub fn line_break_to_wrap(LineBreak) -> Wrap
 
+pub fn[R : Renderer] render_decoration(R, LayoutRun, Color) -> Unit
+
 pub fn roundf(Float) -> Float
 
 pub fn truncf(Float) -> Float
@@ -81,23 +83,45 @@ pub(all) enum Align {
 }
 
 pub struct Attrs {
+  color_opt : Color?
   metadata : Int
   family : Family
   weight : Weight
   stretch : @moon_swash.Stretch
   style : @moon_swash.Style
+  cache_key_flags : UInt
   metrics_opt : CacheMetrics?
+  letter_spacing_opt : LetterSpacing?
+  font_features : FontFeatures
+  text_decoration : TextDecoration
 }
+pub fn Attrs::cache_key_flags(Self, UInt) -> Self
+pub fn Attrs::cache_key_flags_value(Self) -> UInt
+pub fn Attrs::color(Self, Color) -> Self
+pub fn Attrs::color_opt_value(Self) -> Color?
+pub fn Attrs::compatible(Self, Self) -> Bool
 pub fn Attrs::family(Self, Family) -> Self
 pub fn Attrs::family_value(Self) -> Family
+pub fn Attrs::font_features(Self, FontFeatures) -> Self
+pub fn Attrs::font_features_value(Self) -> FontFeatures
+pub fn Attrs::letter_spacing(Self, Float) -> Self
+pub fn Attrs::letter_spacing_opt(Self) -> Float?
 pub fn Attrs::metadata(Self) -> Int
 pub fn Attrs::metrics(Self, Metrics) -> Self
 pub fn Attrs::metrics_opt(Self) -> Metrics?
 pub fn Attrs::new() -> Self
+pub fn Attrs::overline(Self) -> Self
+pub fn Attrs::overline_color(Self, Color) -> Self
 pub fn Attrs::stretch(Self, @moon_swash.Stretch) -> Self
 pub fn Attrs::stretch_value(Self) -> @moon_swash.Stretch
+pub fn Attrs::strikethrough(Self) -> Self
+pub fn Attrs::strikethrough_color(Self, Color) -> Self
 pub fn Attrs::style(Self, @moon_swash.Style) -> Self
 pub fn Attrs::style_value(Self) -> @moon_swash.Style
+pub fn Attrs::text_decoration(Self, TextDecoration) -> Self
+pub fn Attrs::text_decoration_value(Self) -> TextDecoration
+pub fn Attrs::underline(Self, UnderlineStyle) -> Self
+pub fn Attrs::underline_color(Self, Color) -> Self
 pub fn Attrs::weight(Self, Weight) -> Self
 pub fn Attrs::weight_value(Self) -> Weight
 pub fn Attrs::with_metadata(Int) -> Self
@@ -143,6 +167,7 @@ pub struct Buffer {
   scroll : Scroll
   redraw : Bool
   wrap : Wrap
+  ellipsize : Ellipsize
   monospace_width : Float?
   tab_width : Int
   hinting : Hinting
@@ -150,19 +175,25 @@ pub struct Buffer {
 pub fn Buffer::cursor_motion(Self, Cursor, Int?, Motion) -> (Cursor, Int?)?
 pub fn Buffer::draw(Self, FontSystem, SwashCache, Color, (Int, Int, UInt, UInt, Color) -> Unit) -> (Self, SwashCache)
 pub fn Buffer::draw_with_font_system(Self, FontSystem, SwashCache, Color, (Int, Int, UInt, UInt, Color) -> Unit) -> (Self, SwashCache)
+pub fn Buffer::ellipsize(Self) -> Ellipsize
 pub fn Buffer::hinting(Self) -> Hinting
 pub fn Buffer::hit(Self, Float, Float) -> Cursor?
 pub fn Buffer::layout_all(Self) -> Self
 pub fn Buffer::layout_all_with_font_system(Self, FontSystem) -> Self
+pub fn Buffer::layout_cursor(Self, FontSystem, Cursor) -> LayoutCursor?
 pub fn Buffer::layout_runs(Self) -> Iter[LayoutRun]
+pub fn Buffer::line_layout(Self, FontSystem, Int) -> Array[LayoutLine]?
+pub fn Buffer::line_shape(Self, FontSystem, Int) -> ShapeLine?
 pub fn Buffer::lines(Self) -> Array[BufferLine]
 pub fn Buffer::metrics(Self) -> Metrics
 pub fn Buffer::new(Metrics) -> Self
 pub fn Buffer::new_empty(Metrics) -> Self
 pub fn Buffer::redraw(Self) -> Bool
 pub fn Buffer::scroll(Self) -> Scroll
+pub fn Buffer::set_ellipsize(Self, Ellipsize) -> Self
 pub fn Buffer::set_hinting(Self, Hinting) -> Self
 pub fn Buffer::set_metrics(Self, Metrics) -> Self
+pub fn Buffer::set_metrics_and_size(Self, Metrics, Float?, Float?) -> Self
 pub fn Buffer::set_monospace_width(Self, Float?) -> Self
 pub fn Buffer::set_redraw(Self, Bool) -> Self
 pub fn Buffer::set_rich_text(Self, Array[(String, Attrs)], Attrs, Shaping, Align?) -> Self
@@ -172,6 +203,8 @@ pub fn Buffer::set_tab_width(Self, Int) -> Self
 pub fn Buffer::set_text(Self, String, AttrsList, Shaping) -> Self
 pub fn Buffer::set_wrap(Self, Wrap) -> Self
 pub fn Buffer::shape_all_with_font_system(Self, FontSystem) -> Self
+pub fn Buffer::shape_until_cursor(Self, FontSystem, Cursor, Bool) -> Self
+pub fn Buffer::shape_until_scroll(Self, FontSystem, Bool) -> Self
 pub fn Buffer::size(Self) -> (Float?, Float?)
 pub fn Buffer::wrap(Self) -> Wrap
 
@@ -189,15 +222,20 @@ pub fn BufferLine::align(Self) -> Align?
 pub fn BufferLine::append(Self, Self) -> Self
 pub fn BufferLine::attrs_list(Self) -> AttrsList
 pub fn BufferLine::ending(Self) -> LineEnding
-pub fn BufferLine::layout(Self, Float, Float?, Wrap, Float?, Int, Hinting) -> Self
+pub fn BufferLine::into_text(Self) -> String
+pub fn BufferLine::layout(Self, Float, Float?, Wrap, Ellipsize, Float?, Int, Hinting) -> Self
 pub fn BufferLine::layout_opt(Self) -> Array[LayoutLine]?
-pub fn BufferLine::layout_with_font_system(Self, FontSystem, Float, Float?, Wrap, Float?, Int, Hinting) -> Self
+pub fn BufferLine::layout_runs(Self, Float?, Float) -> Iter[LayoutRun]
+pub fn BufferLine::layout_with_font_system(Self, FontSystem, Float, Float?, Wrap, Ellipsize, Float?, Int, Hinting) -> Self
+pub fn BufferLine::metadata(Self) -> Int?
 pub fn BufferLine::new(String, LineEnding, AttrsList, Shaping) -> Self
 pub fn BufferLine::reset(Self) -> Self
 pub fn BufferLine::reset_layout(Self) -> Self
 pub fn BufferLine::reset_shaping(Self) -> Self
 pub fn BufferLine::set_align(Self, Align?) -> (Self, Bool)
+pub fn BufferLine::set_attrs_list(Self, AttrsList) -> (Self, Bool)
 pub fn BufferLine::set_ending(Self, LineEnding) -> Self
+pub fn BufferLine::set_metadata(Self, Int) -> Self
 pub fn BufferLine::set_text(Self, String, LineEnding, AttrsList) -> (Self, Bool)
 pub fn BufferLine::shape(Self, Int) -> Self
 pub fn BufferLine::shape_opt(Self) -> ShapeLine?
@@ -274,6 +312,7 @@ pub fn Color::r(Self) -> Byte
 pub fn Color::rgb(Byte, Byte, Byte) -> Self
 pub fn Color::rgba(Byte, Byte, Byte, Byte) -> Self
 pub impl Eq for Color
+pub impl Hash for Color
 
 pub struct Cursor {
   line : Int
@@ -283,6 +322,22 @@ pub struct Cursor {
 pub fn Cursor::new(Int, Int) -> Self
 pub fn Cursor::new_with_affinity(Int, Int, Affinity) -> Self
 pub impl Eq for Cursor
+
+pub struct DecorationMetrics {
+  offset : Float
+  thickness : Float
+}
+pub fn DecorationMetrics::new(Float, Float) -> Self
+pub impl Eq for DecorationMetrics
+pub impl Hash for DecorationMetrics
+
+pub struct DecorationSpan {
+  glyph_start : Int
+  glyph_end : Int
+  data : GlyphDecorationData
+  color_opt : Color?
+  font_size : Float
+}
 
 pub struct Editor {
   buffer : Buffer
@@ -316,6 +371,18 @@ pub fn Editor::set_tab_width(Self, Int) -> Self
 pub fn Editor::start_change(Self) -> Self
 pub fn Editor::tab_width(Self) -> Int
 
+pub(all) enum Ellipsize {
+  None
+  Start(EllipsizeHeightLimit)
+  Middle(EllipsizeHeightLimit)
+  End(EllipsizeHeightLimit)
+}
+
+pub(all) enum EllipsizeHeightLimit {
+  Lines(Int)
+  Height(Float)
+}
+
 pub(all) enum Family {
   Name(String)
   Serif
@@ -327,6 +394,25 @@ pub(all) enum Family {
 pub impl Eq for Family
 pub impl Hash for Family
 pub impl Show for Family
+
+pub struct Feature {
+  tag : FeatureTag
+  value : UInt
+}
+pub fn Feature::new(FeatureTag, UInt) -> Self
+pub fn Feature::tag(Self) -> FeatureTag
+pub fn Feature::value(Self) -> UInt
+pub impl Eq for Feature
+pub impl Hash for Feature
+
+pub struct FeatureTag {
+  value : UInt
+}
+pub fn FeatureTag::as_tag(Self) -> UInt
+pub fn FeatureTag::from_tag(UInt) -> Self
+pub fn FeatureTag::new(String) -> Self
+pub impl Eq for FeatureTag
+pub impl Hash for FeatureTag
 
 type FontCachedCodepointSupportInfo
 
@@ -348,6 +434,17 @@ pub fn FontEntry::id(Self) -> Int
 pub fn FontEntry::is_monospace(Self) -> Bool
 pub fn FontEntry::not_emoji(Self) -> Bool
 pub fn FontEntry::postscript_name(Self) -> String
+
+pub struct FontFeatures {
+  features : Array[Feature]
+}
+pub fn FontFeatures::disable(Self, FeatureTag) -> Self
+pub fn FontFeatures::enable(Self, FeatureTag) -> Self
+pub fn FontFeatures::features(Self) -> Array[Feature]
+pub fn FontFeatures::new() -> Self
+pub fn FontFeatures::set(Self, FeatureTag, UInt) -> Self
+pub impl Eq for FontFeatures
+pub impl Hash for FontFeatures
 
 pub struct FontMatchAttrs {
   family : Family
@@ -380,6 +477,15 @@ pub fn FontSystem::new_with_locale(String) -> Self
 pub fn FontSystem::resolve(Self, Attrs) -> Int?
 pub fn FontSystem::resolve_for_codepoint(Self, Attrs, UInt) -> Int?
 pub fn FontSystem::select_family(Self, Family) -> Int?
+
+pub struct GlyphDecorationData {
+  text_decoration : TextDecoration
+  underline_metrics : DecorationMetrics
+  strikethrough_metrics : DecorationMetrics
+  ascent : Float
+}
+pub impl Eq for GlyphDecorationData
+pub impl Hash for GlyphDecorationData
 
 pub(all) enum Hinting {
   Disabled
@@ -430,6 +536,7 @@ pub struct LayoutLine {
   max_descent : Float
   line_height_opt : Float?
   glyphs : Array[LayoutGlyph]
+  decorations : Array[DecorationSpan]
 }
 
 pub struct LayoutRun {
@@ -440,8 +547,10 @@ pub struct LayoutRun {
   text : String
   rtl : Bool
   glyphs : Array[LayoutGlyph]
+  decorations : Array[DecorationSpan]
   line_w : Float
 }
+pub fn LayoutRun::highlight(Self, Cursor, Cursor) -> (Float, Float)?
 
 pub struct LegacyRenderer {
   font_system : FontSystem
@@ -450,6 +559,14 @@ pub struct LegacyRenderer {
 }
 pub fn LegacyRenderer::new(FontSystem, SwashCache, (Int, Int, UInt, UInt, Color) -> Unit) -> Self
 pub impl Renderer for LegacyRenderer
+
+pub struct LetterSpacing {
+  bits : UInt
+}
+pub fn LetterSpacing::new(Float) -> Self
+pub fn LetterSpacing::value(Self) -> Float
+pub impl Eq for LetterSpacing
+pub impl Hash for LetterSpacing
 
 pub(all) enum LineBreak {
   NoWrap
@@ -543,21 +660,31 @@ pub struct ShapeGlyph {
   font_id : Int
   font_weight : Int
   glyph_id : Int
+  color_opt : Color?
   metadata : Int
+  cache_key_flags : UInt
+  text_decoration : TextDecoration
+  underline_metrics : DecorationMetrics
+  strikethrough_metrics : DecorationMetrics
   level : Int
   metrics_opt : Metrics?
 }
 pub fn ShapeGlyph::new(Int, Int, Float, Float, Float, Float, Int, Int, Int) -> Self
+pub fn ShapeGlyph::width(Self, Float) -> Float
 pub fn ShapeGlyph::with_ascent_descent(Self, Float, Float) -> Self
 
 pub struct ShapeLine {
+  text : String
   rtl : Bool
   glyphs : Array[ShapeGlyph]
 }
 pub fn ShapeLine::build(Self, String, AttrsList, Shaping, Int) -> Self
 pub fn ShapeLine::build_with_font_system(Self, FontSystem, String, AttrsList, Shaping, Int) -> Self
 pub fn ShapeLine::empty() -> Self
+pub fn ShapeLine::layout(Self, Float, Float?, Wrap, Ellipsize, Align?, Float?, Hinting) -> Array[LayoutLine]
+pub fn ShapeLine::layout_to_buffer(Self, Float, Float?, Wrap, Ellipsize, Align?, Array[LayoutLine], Float?, Hinting) -> Unit
 pub fn ShapeLine::new(Bool, Array[ShapeGlyph]) -> Self
+pub fn ShapeLine::width(Self, Float) -> Float
 
 pub struct ShapeRunCache {
   mut age : UInt64
@@ -608,6 +735,27 @@ pub fn SwashCache::get_outline_commands(Self, FontSystem, CacheKey) -> (Array[@m
 pub fn SwashCache::get_outline_commands_uncached(Self, FontSystem, CacheKey) -> (Array[@moon_zeno.Vector], Array[@moon_zeno.Verb])?
 pub fn SwashCache::new() -> Self
 pub fn SwashCache::with_pixels(Self, FontSystem, CacheKey, Color, (Int, Int, Color) -> Unit) -> Unit
+
+pub struct TextDecoration {
+  underline : UnderlineStyle
+  underline_color_opt : Color?
+  strikethrough : Bool
+  strikethrough_color_opt : Color?
+  overline : Bool
+  overline_color_opt : Color?
+}
+pub fn TextDecoration::has_decoration(Self) -> Bool
+pub fn TextDecoration::new() -> Self
+pub impl Eq for TextDecoration
+pub impl Hash for TextDecoration
+
+pub(all) enum UnderlineStyle {
+  None
+  Single
+  Double
+}
+pub impl Eq for UnderlineStyle
+pub impl Hash for UnderlineStyle
 
 pub struct Weight {
   value : Int

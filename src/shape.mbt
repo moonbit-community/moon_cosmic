@@ -37,7 +37,12 @@ pub struct ShapeGlyph {
   font_id : Int
   font_weight : Int
   glyph_id : Int
+  color_opt : Color?
   metadata : Int
+  cache_key_flags : CacheKeyFlags
+  text_decoration : TextDecoration
+  underline_metrics : DecorationMetrics
+  strikethrough_metrics : DecorationMetrics
   /// BiDi embedding level (LTR if divisible by 2).
   level : Int
   /// Optional Metrics override (font size / line height) for this glyph's span.
@@ -68,7 +73,12 @@ pub fn ShapeGlyph::new(
     font_id,
     font_weight: 400,
     glyph_id,
+    color_opt: None,
     metadata,
+    cache_key_flags: 0U,
+    text_decoration: TextDecoration::new(),
+    underline_metrics: DecorationMetrics::new(-0.125F, 1.0F / 14.0F),
+    strikethrough_metrics: DecorationMetrics::new(0.3F, 1.0F / 14.0F),
     level: 0,
     metrics_opt: None,
   }
@@ -85,18 +95,19 @@ pub fn ShapeGlyph::with_ascent_descent(
 
 ///|
 pub struct ShapeLine {
+  text : String
   rtl : Bool
   glyphs : Array[ShapeGlyph]
 }
 
 ///|
 pub fn ShapeLine::new(rtl : Bool, glyphs : Array[ShapeGlyph]) -> ShapeLine {
-  ShapeLine::{ rtl, glyphs }
+  ShapeLine::{ text: "", rtl, glyphs }
 }
 
 ///|
 pub fn ShapeLine::empty() -> ShapeLine {
-  ShapeLine::{ rtl: false, glyphs: [] }
+  ShapeLine::{ text: "", rtl: false, glyphs: [] }
 }
 
 ///|
@@ -883,6 +894,37 @@ fn reorder_monospace_fallback_candidates(
 }
 
 ///|
+fn clamp_feature_value(value : UInt) -> UInt16 {
+  if value > 0xFFFFU {
+    0xFFFF
+  } else {
+    value.to_uint16()
+  }
+}
+
+///|
+fn attrs_feature_settings(attrs : Attrs) -> Array[@moon_swash.FeatureSetting] {
+  let settings : Array[@moon_swash.FeatureSetting] = []
+  for feature in attrs.font_features_value().features() {
+    settings.push(
+      @moon_swash.Setting::new(
+        feature.tag().as_tag(),
+        clamp_feature_value(feature.value()),
+      ),
+    )
+  }
+  settings
+}
+
+///|
+fn attrs_letter_spacing(attrs : Attrs) -> Float {
+  match attrs.letter_spacing_opt() {
+    None => 0.0F
+    Some(v) => v
+  }
+}
+
+///|
 fn shape_run_with_font(
   font_system : FontSystem,
   attrs_list : AttrsList,
@@ -907,20 +949,48 @@ fn shape_run_with_font(
     Some(f) => f
   }
   let cmap = @moon_swash.Charmap::from_font(font)
-  let (font_ascent, font_descent) = {
+  let (font_ascent, font_descent, underline_metrics, strikethrough_metrics) = {
     let metrics = font.metrics([])
     let upem = metrics.units_per_em.to_int()
     if upem <= 0 {
-      (0.0F, 0.0F)
+      (
+        0.0F,
+        0.0F,
+        DecorationMetrics::new(-0.125F, 1.0F / 14.0F),
+        DecorationMetrics::new(0.3F, 1.0F / 14.0F),
+      )
     } else {
-      let scale = 1.0 / upem.to_double()
+      let upem_d = upem.to_double()
+      let scale = 1.0 / upem_d
+      let stroke = if metrics.stroke_size == 0.0 {
+        1.0 / 14.0
+      } else {
+        metrics.stroke_size / upem_d
+      }
       (
         Float::from_double(metrics.ascent * scale),
         Float::from_double(metrics.descent * scale),
+        DecorationMetrics::new(
+          Float::from_double(metrics.underline_offset / upem_d),
+          Float::from_double(stroke),
+        ),
+        DecorationMetrics::new(
+          Float::from_double(metrics.strikeout_offset / upem_d),
+          Float::from_double(stroke),
+        ),
       )
     }
   }
-  let empty_features : Array[@moon_swash.Setting[UInt16]] = []
+  let run_attrs = if run_tokens.length() == 0 {
+    attrs_list.defaults()
+  } else {
+    attrs_for_position(
+      attrs_list,
+      run_tokens[0].offset().reinterpret_as_int(),
+      text_len,
+    )
+  }
+  let feature_settings = attrs_feature_settings(run_attrs)
   let empty_variations : Array[@moon_swash.Setting[Double]] = []
   let shaper = cx
     .builder(font)
@@ -934,7 +1004,7 @@ fn shape_run_with_font(
     )
     .language(None)
     .size(1.0)
-    .features(empty_features.iter())
+    .features(feature_settings.iter())
     .variations(empty_variations.iter())
     .build()
 
@@ -998,10 +1068,11 @@ fn shape_run_with_font(
         if g.id().to_int() == 0 {
           missing.push(start)
         }
+        let letter_spacing = attrs_letter_spacing(attrs)
         out.push(ShapeGlyph::{
           start,
           end,
-          x_advance: Float::from_double(g.advance()),
+          x_advance: Float::from_double(g.advance()) + letter_spacing,
           y_advance: 0.0F,
           x_offset: Float::from_double(g.x()),
           y_offset: Float::from_double(g.y()),
@@ -1010,7 +1081,12 @@ fn shape_run_with_font(
           font_id,
           font_weight: attrs.weight_value().value(),
           glyph_id: g.id().to_int(),
+          color_opt: attrs.color_opt_value(),
           metadata: attrs.metadata(),
+          cache_key_flags: attrs.cache_key_flags_value(),
+          text_decoration: attrs.text_decoration_value(),
+          underline_metrics,
+          strikethrough_metrics,
           level: lev,
           metrics_opt: attrs.metrics_opt(),
         })
@@ -1040,12 +1116,13 @@ pub fn ShapeLine::build(
   let len = text.length()
   for i in 0..<len {
     let code = text.code_unit_at(i).to_int()
-    let advance = if is_tab(code) {
+    let base_advance = if is_tab(code) {
       Float::from_double(tab_width.to_double())
     } else {
       1.0F
     }
     let attrs = attrs_list.get_span(i)
+    let advance = base_advance + attrs_letter_spacing(attrs)
     glyphs.push(ShapeGlyph::{
       start: i,
       end: i + 1,
@@ -1058,7 +1135,12 @@ pub fn ShapeLine::build(
       font_id: 0,
       font_weight: attrs.weight_value().value(),
       glyph_id: code,
+      color_opt: attrs.color_opt_value(),
       metadata: attrs.metadata(),
+      cache_key_flags: attrs.cache_key_flags_value(),
+      text_decoration: attrs.text_decoration_value(),
+      underline_metrics: DecorationMetrics::new(-0.125F, 1.0F / 14.0F),
+      strikethrough_metrics: DecorationMetrics::new(0.3F, 1.0F / 14.0F),
       level: if levels.get(i) is Some(v) {
         v
       } else {
@@ -1067,7 +1149,7 @@ pub fn ShapeLine::build(
       metrics_opt: attrs.metrics_opt(),
     })
   }
-  ShapeLine::{ rtl, glyphs }
+  ShapeLine::{ text, rtl, glyphs }
 }
 
 ///|
@@ -1308,5 +1390,140 @@ pub fn ShapeLine::build_with_font_system(
       x = x + g0.x_advance.to_double()
     }
   }
-  ShapeLine::{ rtl, glyphs }
+  ShapeLine::{ text, rtl, glyphs }
+}
+
+///|
+pub fn ShapeGlyph::width(self : ShapeGlyph, font_size : Float) -> Float {
+  let glyph_font_size = match self.metrics_opt {
+    None => font_size
+    Some(m) => m.font_size
+  }
+  glyph_font_size * self.x_advance
+}
+
+///|
+pub fn ShapeLine::width(self : ShapeLine, font_size : Float) -> Float {
+  let mut width = 0.0F
+  for glyph in self.glyphs {
+    width = width + glyph.width(font_size)
+  }
+  width
+}
+
+///|
+fn shape_line_source_text(line : ShapeLine) -> String {
+  if line.text.length() > 0 {
+    return line.text
+  }
+  let mut max_end = 0
+  for g in line.glyphs {
+    if g.end > max_end {
+      max_end = g.end
+    }
+  }
+  let sb = StringBuilder::new(size_hint=max_end)
+  for _ in 0..<max_end {
+    sb.write_char(' ')
+  }
+  sb.to_string()
+}
+
+///|
+fn shape_hint_layout_line(line : LayoutLine) -> LayoutLine {
+  if line.glyphs.length() == 0 {
+    return line
+  }
+  let glyphs : Array[LayoutGlyph] = []
+  let mut x = roundf(line.glyphs[0].x)
+  let start_x = x
+  for g in line.glyphs {
+    let w = roundf(g.w)
+    glyphs.push(LayoutGlyph::{ ..g, x, w })
+    x = x + w
+  }
+  LayoutLine::{ ..line, w: x - start_x, glyphs }
+}
+
+///|
+fn shape_max_layout_width(lines : Array[LayoutLine]) -> Float? {
+  if lines.length() == 0 {
+    return None
+  }
+  let mut max_w = lines[0].w
+  for line in lines {
+    if line.w > max_w {
+      max_w = line.w
+    }
+  }
+  Some(max_w)
+}
+
+///|
+fn shape_postprocess_layout(
+  text : String,
+  lines0 : Array[LayoutLine],
+  rtl : Bool,
+  align_opt : Align?,
+  width_opt : Float?,
+  hinting : Hinting,
+) -> Array[LayoutLine] {
+  let mut lines = lines0
+  let default_align = if rtl { Align::Right } else { Align::Left }
+  let align = if align_opt is Some(a) { a } else { default_align }
+  let line_width_opt = if width_opt is Some(width) {
+    Some(width)
+  } else {
+    shape_max_layout_width(lines)
+  }
+  if line_width_opt is Some(width) {
+    lines = apply_align_with_rtl(text, lines, width, align, rtl)
+  }
+  if hinting is Hinting::Enabled {
+    let hinted : Array[LayoutLine] = []
+    for line in lines {
+      hinted.push(shape_hint_layout_line(line))
+    }
+    lines = hinted
+  }
+  lines
+}
+
+///|
+pub fn ShapeLine::layout(
+  self : ShapeLine,
+  font_size : Float,
+  width_opt : Float?,
+  wrap : Wrap,
+  ellipsize : Ellipsize,
+  align : Align?,
+  match_mono_width : Float?,
+  hinting : Hinting,
+) -> Array[LayoutLine] {
+  let cell_w = if match_mono_width is Some(w) { w } else { font_size }
+  let text = shape_line_source_text(self)
+  let lines = layout_from_shape(text, self, font_size, cell_w, width_opt, wrap)
+  ignore(ellipsize)
+  shape_postprocess_layout(text, lines, self.rtl, align, width_opt, hinting)
+}
+
+///|
+pub fn ShapeLine::layout_to_buffer(
+  self : ShapeLine,
+  font_size : Float,
+  width_opt : Float?,
+  wrap : Wrap,
+  ellipsize : Ellipsize,
+  align : Align?,
+  layout_lines : Array[LayoutLine],
+  match_mono_width : Float?,
+  hinting : Hinting,
+) -> Unit {
+  layout_lines.clear()
+  for
+    line in self.layout(
+      font_size, width_opt, wrap, ellipsize, align, match_mono_width, hinting,
+    ) {
+    layout_lines.push(line)
+  }
 }

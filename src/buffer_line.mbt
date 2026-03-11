@@ -42,6 +42,7 @@ fn empty_layout_line() -> LayoutLine {
     max_descent: 0.0F,
     line_height_opt: None,
     glyphs: [],
+    decorations: [],
   }
 }
 
@@ -222,6 +223,11 @@ pub fn BufferLine::text(self : BufferLine) -> String {
 }
 
 ///|
+pub fn BufferLine::into_text(self : BufferLine) -> String {
+  self.text
+}
+
+///|
 pub fn BufferLine::ending(self : BufferLine) -> LineEnding {
   self.ending
 }
@@ -241,6 +247,18 @@ pub fn BufferLine::set_ending(
 ///|
 pub fn BufferLine::attrs_list(self : BufferLine) -> AttrsList {
   self.attrs_list
+}
+
+///|
+pub fn BufferLine::set_attrs_list(
+  self : BufferLine,
+  attrs_list : AttrsList,
+) -> (BufferLine, Bool) {
+  if attrs_list == self.attrs_list {
+    (self, false)
+  } else {
+    (BufferLine::{ ..self, attrs_list, }.reset_shaping(), true)
+  }
 }
 
 ///|
@@ -326,6 +344,7 @@ pub fn BufferLine::layout(
   font_size : Float,
   width_opt : Float?,
   wrap : Wrap,
+  ellipsize : Ellipsize,
   match_mono_width : Float?,
   tab_width : Int,
   hinting : Hinting,
@@ -343,6 +362,7 @@ pub fn BufferLine::layout(
         width_opt,
         wrap,
       )
+      ignore(ellipsize)
       let layout = apply_layout_postprocess(
         line.text,
         layout,
@@ -370,6 +390,7 @@ pub fn BufferLine::layout_with_font_system(
   font_size : Float,
   width_opt : Float?,
   wrap : Wrap,
+  ellipsize : Ellipsize,
   match_mono_width : Float?,
   tab_width : Int,
   hinting : Hinting,
@@ -387,6 +408,7 @@ pub fn BufferLine::layout_with_font_system(
         width_opt,
         wrap,
       )
+      ignore(ellipsize)
       let layout = apply_layout_postprocess(
         line.text,
         layout,
@@ -436,6 +458,67 @@ pub fn BufferLine::set_align(
   } else {
     (BufferLine::{ ..self, align, }.reset_layout(), true)
   }
+}
+
+///|
+pub fn BufferLine::layout_runs(
+  self : BufferLine,
+  height_opt : Float?,
+  line_height : Float,
+) -> Iter[LayoutRun] {
+  let runs : Array[LayoutRun] = []
+  let shape = match self.shape_opt() {
+    None => return runs.iter()
+    Some(v) => v
+  }
+  let layout = match self.layout_opt() {
+    None => return runs.iter()
+    Some(v) => v
+  }
+  let mut line_top_acc = 0.0F
+  for l in layout {
+    let this_line_height = if l.line_height_opt is Some(h) {
+      h
+    } else {
+      line_height
+    }
+    let line_top = line_top_acc
+    let glyph_height = l.max_ascent + l.max_descent
+    let centering_offset = (this_line_height - glyph_height) / 2.0F
+    let line_y = line_top + centering_offset + l.max_ascent
+    if height_opt is Some(h) && line_y - l.max_ascent > h {
+      return runs.iter()
+    }
+    line_top_acc = line_top_acc + this_line_height
+    if line_y + l.max_descent < 0.0F {
+      continue
+    }
+    runs.push(LayoutRun::{
+      line_i: 0,
+      line_y,
+      line_top,
+      line_height: this_line_height,
+      text: self.text,
+      rtl: shape.rtl,
+      glyphs: l.glyphs,
+      decorations: l.decorations,
+      line_w: l.w,
+    })
+  }
+  runs.iter()
+}
+
+///|
+pub fn BufferLine::metadata(self : BufferLine) -> Int? {
+  self.metadata
+}
+
+///|
+pub fn BufferLine::set_metadata(
+  self : BufferLine,
+  metadata : Int,
+) -> BufferLine {
+  BufferLine::{ ..self, metadata: Some(metadata) }
 }
 
 ///|

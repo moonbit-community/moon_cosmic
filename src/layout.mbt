@@ -66,6 +66,16 @@ pub struct LayoutGlyph {
 }
 
 ///|
+/// A span of consecutive glyphs sharing the same text decoration.
+pub struct DecorationSpan {
+  glyph_start : Int
+  glyph_end : Int
+  data : GlyphDecorationData
+  color_opt : Color?
+  font_size : Float
+}
+
+///|
 /// Convenience constructor (fills optional fields with defaults).
 pub fn LayoutGlyph::new(
   start : Int,
@@ -109,6 +119,21 @@ pub struct LayoutLine {
   max_descent : Float
   line_height_opt : Float?
   glyphs : Array[LayoutGlyph]
+  decorations : Array[DecorationSpan]
+}
+
+///|
+pub(all) enum Ellipsize {
+  None
+  Start(EllipsizeHeightLimit)
+  Middle(EllipsizeHeightLimit)
+  End(EllipsizeHeightLimit)
+}
+
+///|
+pub(all) enum EllipsizeHeightLimit {
+  Lines(Int)
+  Height(Float)
 }
 
 ///|
@@ -165,6 +190,42 @@ fn glyph_layout_width(
     }
   }
   w
+}
+
+///|
+fn push_decoration_for_layout_glyph(
+  decorations : Array[DecorationSpan],
+  glyph_i : Int,
+  shape_glyph : ShapeGlyph,
+  glyph_font_size : Float,
+) -> Unit {
+  if !shape_glyph.text_decoration.has_decoration() {
+    return
+  }
+  let data = GlyphDecorationData::{
+    text_decoration: shape_glyph.text_decoration,
+    underline_metrics: shape_glyph.underline_metrics,
+    strikethrough_metrics: shape_glyph.strikethrough_metrics,
+    ascent: shape_glyph.ascent,
+  }
+  if decorations.length() > 0 {
+    let last_i = decorations.length() - 1
+    let last = decorations[last_i]
+    if last.glyph_end == glyph_i &&
+      last.data == data &&
+      last.color_opt == shape_glyph.color_opt &&
+      last.font_size == glyph_font_size {
+      decorations.set(last_i, DecorationSpan::{ ..last, glyph_end: glyph_i + 1 })
+      return
+    }
+  }
+  decorations.push(DecorationSpan::{
+    glyph_start: glyph_i,
+    glyph_end: glyph_i + 1,
+    data,
+    color_opt: shape_glyph.color_opt,
+    font_size: glyph_font_size,
+  })
 }
 
 ///|
@@ -268,6 +329,7 @@ fn build_layout_line_from_shape(
   cell_w : Float,
 ) -> LayoutLine {
   let glyphs : Array[LayoutGlyph] = []
+  let decorations : Array[DecorationSpan] = []
   // Compute the source text span for this visual line from glyph coverage.
   let mut text_start = shape.glyphs[glyph_start].start
   let mut text_end = shape.glyphs[glyph_start].end
@@ -311,6 +373,7 @@ fn build_layout_line_from_shape(
     if glyph_descent > max_descent {
       max_descent = glyph_descent
     }
+    let glyph_i = glyphs.length()
     glyphs.push(LayoutGlyph::{
       start: g.start,
       end: g.end,
@@ -325,10 +388,11 @@ fn build_layout_line_from_shape(
       line_height_opt: glyph_line_height_opt,
       x_offset: g.x_offset,
       y_offset: g.y_offset,
-      color_opt: None,
+      color_opt: g.color_opt,
       metadata: g.metadata,
-      cache_key_flags: 0U,
+      cache_key_flags: g.cache_key_flags,
     })
+    push_decoration_for_layout_glyph(decorations, glyph_i, g, glyph_font_size)
     x = x + w
   }
   LayoutLine::{
@@ -339,6 +403,7 @@ fn build_layout_line_from_shape(
     max_descent,
     line_height_opt: max_line_height,
     glyphs,
+    decorations,
   }
 }
 
@@ -400,6 +465,7 @@ fn push_line(
     max_descent: 0.0F,
     line_height_opt: None,
     glyphs,
+    decorations: [],
   })
 }
 
@@ -749,6 +815,7 @@ fn build_layout_lines_from_visual_ranges(
     }
     let runs = reorder_visual_range_runs(spans, ranges)
     let glyphs : Array[LayoutGlyph] = []
+    let decorations : Array[DecorationSpan] = []
     let mut x = 0.0F
     let mut text_start : Int? = None
     let mut text_end : Int? = None
@@ -761,6 +828,7 @@ fn build_layout_lines_from_visual_ranges(
       ranges : Array[VisualRangeLayout],
       ridx : Int,
       glyphs : Array[LayoutGlyph],
+      decorations : Array[DecorationSpan],
       x : Float,
       text_start : Int?,
       text_end : Int?,
@@ -817,6 +885,7 @@ fn build_layout_lines_from_visual_ranges(
             None => te = Some(g.end)
             Some(v) => if g.end > v { te = Some(g.end) }
           }
+          let glyph_i = glyphs.length()
           glyphs.push(LayoutGlyph::{
             start: g.start,
             end: g.end,
@@ -831,10 +900,13 @@ fn build_layout_lines_from_visual_ranges(
             line_height_opt: glyph_line_height_opt,
             x_offset: g.x_offset,
             y_offset: g.y_offset,
-            color_opt: None,
+            color_opt: g.color_opt,
             metadata: g.metadata,
-            cache_key_flags: 0U,
+            cache_key_flags: g.cache_key_flags,
           })
+          push_decoration_for_layout_glyph(
+            decorations, glyph_i, g, glyph_font_size,
+          )
           x2 = x2 + w
         }
       }
@@ -846,8 +918,8 @@ fn build_layout_lines_from_visual_ranges(
         let run = runs[ri - 1]
         for ridx in run.0..<run.1 {
           let (x2, ts, te, max_h, max_a, max_d) = process_range(
-            shape, spans, ranges, ridx, glyphs, x, text_start, text_end, max_line_height,
-            max_ascent, max_descent, font_size, cell_w,
+            shape, spans, ranges, ridx, glyphs, decorations, x, text_start, text_end,
+            max_line_height, max_ascent, max_descent, font_size, cell_w,
           )
           x = x2
           text_start = ts
@@ -862,8 +934,8 @@ fn build_layout_lines_from_visual_ranges(
       for run in runs {
         for ridx in run.0..<run.1 {
           let (x2, ts, te, max_h, max_a, max_d) = process_range(
-            shape, spans, ranges, ridx, glyphs, x, text_start, text_end, max_line_height,
-            max_ascent, max_descent, font_size, cell_w,
+            shape, spans, ranges, ridx, glyphs, decorations, x, text_start, text_end,
+            max_line_height, max_ascent, max_descent, font_size, cell_w,
           )
           x = x2
           text_start = ts
@@ -884,6 +956,7 @@ fn build_layout_lines_from_visual_ranges(
       max_descent,
       line_height_opt: max_line_height,
       glyphs,
+      decorations,
     })
   }
   lines
@@ -911,6 +984,7 @@ pub fn layout_from_shape(
       max_descent: 0.0F,
       line_height_opt: None,
       glyphs: [],
+      decorations: [],
     })
     return finalize_layout_lines(lines, shape.rtl, width_opt)
   }
