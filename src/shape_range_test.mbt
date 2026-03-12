@@ -302,3 +302,45 @@ test "ShapeLine layout helpers: width/layout/layout_to_buffer" {
   )
   inspect(lines2.length(), content="1")
 }
+
+///|
+test "ShapeLine.layout applies ellipsize trimming semantics" {
+  let shape = ShapeLine::build(
+    ShapeLine::empty(),
+    "a a a a a",
+    AttrsList::new(Attrs::new()),
+    Shaping::Basic,
+    8,
+  )
+  let end_lines = shape.layout(
+    10.0F,
+    Some(30.0F),
+    Wrap::Word,
+    Ellipsize::End(EllipsizeHeightLimit::Lines(1)),
+    None,
+    None,
+    Hinting::Disabled,
+  )
+  inspect(end_lines.length(), content="1")
+  let end_glyphs = end_lines[0].glyphs
+  inspect(end_glyphs.length() > 0, content="true")
+  inspect(
+    end_glyphs[end_glyphs.length() - 1].start ==
+    end_glyphs[end_glyphs.length() - 1].end,
+    content="true",
+  )
+
+  let start_lines = shape.layout(
+    10.0F,
+    Some(30.0F),
+    Wrap::Word,
+    Ellipsize::Start(EllipsizeHeightLimit::Lines(1)),
+    None,
+    None,
+    Hinting::Disabled,
+  )
+  inspect(start_lines.length(), content="1")
+  let start_glyphs = start_lines[0].glyphs
+  inspect(start_glyphs.length() > 0, content="true")
+  inspect(start_glyphs[0].start == start_glyphs[0].end, content="true")
+}

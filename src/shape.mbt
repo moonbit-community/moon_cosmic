@@ -1502,8 +1502,8 @@ pub fn ShapeLine::layout(
 ) -> Array[LayoutLine] {
   let cell_w = if match_mono_width is Some(w) { w } else { font_size }
   let text = shape_line_source_text(self)
-  let lines = layout_from_shape(text, self, font_size, cell_w, width_opt, wrap)
-  ignore(ellipsize)
+  let lines0 = layout_from_shape(text, self, font_size, cell_w, width_opt, wrap)
+  let lines = apply_ellipsize(lines0, ellipsize, wrap, width_opt, font_size)
   shape_postprocess_layout(text, lines, self.rtl, align, width_opt, hinting)
 }
 
