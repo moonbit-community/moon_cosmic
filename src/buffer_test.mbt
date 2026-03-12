@@ -341,6 +341,33 @@ test "Buffer.shape_until_scroll clamps bottom overflow inside available content"
 }
 
 ///|
+test "Buffer.shape_until_scroll lazily shapes only lines needed for viewport" {
+  let attrs = AttrsList::new(Attrs::new())
+  let buf0 = Buffer::new(Metrics::new(10.0F, 10.0F))
+    .set_text("a\nb\nc\nd", attrs, Basic)
+    .set_size(Some(100.0F), Some(15.0F))
+  let buf1 = buf0.shape_until_scroll(FontSystem::new(), false)
+  inspect(buf1.lines()[0].shape_opt() is Some(_), content="true")
+  inspect(buf1.lines()[1].shape_opt() is Some(_), content="true")
+  inspect(buf1.lines()[2].shape_opt() is None, content="true")
+}
+
+///|
+test "Buffer.shape_until_scroll prune clears previously cached offscreen shaping" {
+  let attrs = AttrsList::new(Attrs::new())
+  let font_system = FontSystem::new()
+  let buf0 = Buffer::new(Metrics::new(10.0F, 10.0F))
+    .set_text("a\nb\nc\nd", attrs, Basic)
+    .set_size(Some(100.0F), Some(15.0F))
+    .shape_all_with_font_system(font_system)
+    .layout_all_with_font_system(font_system)
+    .set_scroll(Scroll::new(1, 0.0F, 0.0F))
+  inspect(buf0.lines()[0].shape_opt() is Some(_), content="true")
+  let buf1 = buf0.shape_until_scroll(font_system, true)
+  inspect(buf1.lines()[0].shape_opt() is None, content="true")
+}
+
+///|
 test "Buffer.shape_until_cursor scrolls to include target line and keeps x in view" {
   let attrs = AttrsList::new(Attrs::new())
 
