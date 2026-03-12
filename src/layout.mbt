@@ -63,6 +63,19 @@ pub struct LayoutGlyph {
   color_opt : Color?
   metadata : Int
   cache_key_flags : CacheKeyFlags
+
+  fn new(
+    start : Int,
+    end : Int,
+    font_size : Float,
+    font_id : Int,
+    font_weight : Int,
+    glyph_id : Int,
+    x : Float,
+    y : Float,
+    w : Float,
+    metadata : Int,
+  ) -> LayoutGlyph
 }
 
 ///|

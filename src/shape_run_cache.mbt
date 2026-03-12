@@ -21,6 +21,8 @@ pub struct ShapeRunKey {
   text : String
   default_attrs : Attrs
   attrs_spans : Array[(Int, Int, Attrs)]
+
+  fn new(text : String, attrs_list : AttrsList) -> ShapeRunKey
 }
 
 ///|
@@ -69,6 +71,8 @@ pub impl Hash for ShapeRunKey with hash_combine(self, hasher) {
 pub struct ShapeRunCache {
   mut age : UInt64
   cache : @hashmap.HashMap[ShapeRunKey, (UInt64, Array[ShapeGlyph])]
+
+  fn new() -> ShapeRunCache
 }
 
 ///|

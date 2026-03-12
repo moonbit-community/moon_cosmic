@@ -28,6 +28,8 @@ pub struct Buffer {
   monospace_width : Float?
   tab_width : Int
   hinting : Hinting
+
+  fn new(metrics : Metrics) -> Buffer
 }
 
 ///|

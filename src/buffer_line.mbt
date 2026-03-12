@@ -547,6 +547,13 @@ pub struct BufferLine {
   layout_opt : Cached[Array[LayoutLine]]
   shaping : Shaping
   metadata : Int?
+
+  fn new(
+    text : String,
+    ending : LineEnding,
+    attrs_list : AttrsList,
+    shaping : Shaping,
+  ) -> BufferLine
 }
 
 ///|

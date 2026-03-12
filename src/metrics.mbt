@@ -19,6 +19,8 @@ pub struct Metrics {
   font_size : Float
   /// Line height in pixels
   line_height : Float
+
+  fn new(font_size : Float, line_height : Float) -> Metrics
 }
 
 ///|

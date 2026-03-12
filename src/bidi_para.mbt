@@ -23,6 +23,8 @@ pub struct BidiParagraphs {
   text : String
   pos : Int
   ascii_fast : Bool
+
+  fn new(text : String) -> BidiParagraphs
 }
 
 ///|

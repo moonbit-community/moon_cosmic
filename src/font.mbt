@@ -79,6 +79,8 @@ pub struct FontSystem {
     FontCachedCodepointSupportInfo,
   ]
   shape_run_cache : ShapeRunCache
+
+  fn new() -> FontSystem
 }
 
 ///|
@@ -268,6 +270,8 @@ struct FontCachedCodepointSupportInfo {
   supported : Array[UInt]
   not_supported : Array[UInt]
   mut charmap_opt : @moon_swash.Charmap?
+
+  fn new() -> FontCachedCodepointSupportInfo
 }
 
 ///|
@@ -725,7 +729,7 @@ fn font_maps_codepoint(
       ok
     }
     None => {
-      let info = FontCachedCodepointSupportInfo::new()
+      let info = FontCachedCodepointSupportInfo()
       let ok = cached_codepoint_has_support(info, entry, codepoint)
       fs.codepoint_support_cache.set(entry.id, info)
       ok

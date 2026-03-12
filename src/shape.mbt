@@ -47,6 +47,18 @@ pub struct ShapeGlyph {
   level : Int
   /// Optional Metrics override (font size / line height) for this glyph's span.
   metrics_opt : Metrics?
+
+  fn new(
+    start : Int,
+    end : Int,
+    x_advance : Float,
+    y_advance : Float,
+    x_offset : Float,
+    y_offset : Float,
+    font_id : Int,
+    glyph_id : Int,
+    metadata : Int,
+  ) -> ShapeGlyph
 }
 
 ///|
@@ -98,6 +110,8 @@ pub struct ShapeLine {
   text : String
   rtl : Bool
   glyphs : Array[ShapeGlyph]
+
+  fn new(rtl : Bool, glyphs : Array[ShapeGlyph]) -> ShapeLine
 }
 
 ///|

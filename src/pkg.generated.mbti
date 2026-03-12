@@ -94,6 +94,8 @@ pub struct Attrs {
   letter_spacing_opt : LetterSpacing?
   font_features : FontFeatures
   text_decoration : TextDecoration
+
+  fn new() -> Attrs
 }
 pub fn Attrs::cache_key_flags(Self, UInt) -> Self
 pub fn Attrs::cache_key_flags_value(Self) -> UInt
@@ -131,6 +133,8 @@ pub impl Hash for Attrs
 pub struct AttrsList {
   defaults : Attrs
   spans : Array[AttrsSpan]
+
+  fn new(Attrs) -> AttrsList
 }
 pub fn AttrsList::add_span(Self, Int, Int, Attrs) -> Self
 pub fn AttrsList::defaults(Self) -> Attrs
@@ -154,6 +158,8 @@ pub struct BidiParagraphs {
   text : String
   pos : Int
   ascii_fast : Bool
+
+  fn new(String) -> BidiParagraphs
 }
 pub fn BidiParagraphs::iter(Self) -> Iter[String]
 pub fn BidiParagraphs::new(String) -> Self
@@ -171,6 +177,8 @@ pub struct Buffer {
   monospace_width : Float?
   tab_width : Int
   hinting : Hinting
+
+  fn new(Metrics) -> Buffer
 }
 pub fn Buffer::cursor_motion(Self, Cursor, Int?, Motion) -> (Cursor, Int?)?
 pub fn Buffer::draw(Self, FontSystem, SwashCache, Color, (Int, Int, UInt, UInt, Color) -> Unit) -> (Self, SwashCache)
@@ -217,6 +225,8 @@ pub struct BufferLine {
   layout_opt : Cached[Array[LayoutLine]]
   shaping : Shaping
   metadata : Int?
+
+  fn new(String, LineEnding, AttrsList, Shaping) -> BufferLine
 }
 pub fn BufferLine::align(Self) -> Align?
 pub fn BufferLine::append(Self, Self) -> Self
@@ -318,6 +328,8 @@ pub struct Cursor {
   line : Int
   index : Int
   affinity : Affinity
+
+  fn new(Int, Int) -> Cursor
 }
 pub fn Cursor::new(Int, Int) -> Self
 pub fn Cursor::new_with_affinity(Int, Int, Affinity) -> Self
@@ -326,6 +338,8 @@ pub impl Eq for Cursor
 pub struct DecorationMetrics {
   offset : Float
   thickness : Float
+
+  fn new(Float, Float) -> DecorationMetrics
 }
 pub fn DecorationMetrics::new(Float, Float) -> Self
 pub impl Eq for DecorationMetrics
@@ -347,6 +361,8 @@ pub struct Editor {
   cursor_moved : Bool
   auto_indent : Bool
   change_opt : Change?
+
+  fn new(Buffer) -> Editor
 }
 pub fn Editor::action(Self, Action) -> Self
 pub fn Editor::apply_change(Self, Change) -> (Self, Bool)
@@ -398,6 +414,8 @@ pub impl Show for Family
 pub struct Feature {
   tag : FeatureTag
   value : UInt
+
+  fn new(FeatureTag, UInt) -> Feature
 }
 pub fn Feature::new(FeatureTag, UInt) -> Self
 pub fn Feature::tag(Self) -> FeatureTag
@@ -407,6 +425,8 @@ pub impl Hash for Feature
 
 pub struct FeatureTag {
   value : UInt
+
+  fn new(String) -> FeatureTag
 }
 pub fn FeatureTag::as_tag(Self) -> UInt
 pub fn FeatureTag::from_tag(UInt) -> Self
@@ -437,6 +457,8 @@ pub fn FontEntry::postscript_name(Self) -> String
 
 pub struct FontFeatures {
   features : Array[Feature]
+
+  fn new() -> FontFeatures
 }
 pub fn FontFeatures::disable(Self, FeatureTag) -> Self
 pub fn FontFeatures::enable(Self, FeatureTag) -> Self
@@ -462,6 +484,8 @@ pub struct FontSystem {
   codepoint_support_cache : @hashmap.HashMap[Int, FontCachedCodepointSupportInfo]
   shape_run_cache : ShapeRunCache
   // private fields
+
+  fn new() -> FontSystem
 }
 pub fn FontSystem::count_supported_codepoints(Self, Int, Array[UInt]) -> Int
 pub fn FontSystem::font_matches(Self, Attrs) -> Array[Int]
@@ -503,6 +527,8 @@ pub struct LayoutCursor {
   line : Int
   layout : Int
   glyph : Int
+
+  fn new(Int, Int, Int) -> LayoutCursor
 }
 pub fn LayoutCursor::new(Int, Int, Int) -> Self
 pub impl Eq for LayoutCursor
@@ -524,6 +550,8 @@ pub struct LayoutGlyph {
   color_opt : Color?
   metadata : Int
   cache_key_flags : UInt
+
+  fn new(Int, Int, Float, Int, Int, Int, Float, Float, Float, Int) -> LayoutGlyph
 }
 pub fn LayoutGlyph::new(Int, Int, Float, Int, Int, Int, Float, Float, Float, Int) -> Self
 pub fn LayoutGlyph::physical(Self, (Float, Float), Float) -> PhysicalGlyph
@@ -556,12 +584,16 @@ pub struct LegacyRenderer {
   font_system : FontSystem
   cache : SwashCache
   callback : (Int, Int, UInt, UInt, Color) -> Unit
+
+  fn new(FontSystem, SwashCache, (Int, Int, UInt, UInt, Color) -> Unit) -> LegacyRenderer
 }
 pub fn LegacyRenderer::new(FontSystem, SwashCache, (Int, Int, UInt, UInt, Color) -> Unit) -> Self
 pub impl Renderer for LegacyRenderer
 
 pub struct LetterSpacing {
   bits : UInt
+
+  fn new(Float) -> LetterSpacing
 }
 pub fn LetterSpacing::new(Float) -> Self
 pub fn LetterSpacing::value(Self) -> Float
@@ -588,6 +620,8 @@ pub struct LineIter {
   string : String
   start : Int
   end : Int
+
+  fn new(String) -> LineIter
 }
 pub fn LineIter::new(String) -> Self
 pub fn LineIter::next(Self) -> (Self, (Int, Int, LineEnding)?)
@@ -595,6 +629,8 @@ pub fn LineIter::next(Self) -> (Self, (Int, Int, LineEnding)?)
 pub struct Metrics {
   font_size : Float
   line_height : Float
+
+  fn new(Float, Float) -> Metrics
 }
 pub fn Metrics::new(Float, Float) -> Self
 pub fn Metrics::relative(Float, Float) -> Self
@@ -636,6 +672,8 @@ pub struct Scroll {
   line : Int
   vertical : Float
   horizontal : Float
+
+  fn new(Int, Float, Float) -> Scroll
 }
 pub fn Scroll::default() -> Self
 pub fn Scroll::new(Int, Float, Float) -> Self
@@ -668,6 +706,8 @@ pub struct ShapeGlyph {
   strikethrough_metrics : DecorationMetrics
   level : Int
   metrics_opt : Metrics?
+
+  fn new(Int, Int, Float, Float, Float, Float, Int, Int, Int) -> ShapeGlyph
 }
 pub fn ShapeGlyph::new(Int, Int, Float, Float, Float, Float, Int, Int, Int) -> Self
 pub fn ShapeGlyph::width(Self, Float) -> Float
@@ -677,6 +717,8 @@ pub struct ShapeLine {
   text : String
   rtl : Bool
   glyphs : Array[ShapeGlyph]
+
+  fn new(Bool, Array[ShapeGlyph]) -> ShapeLine
 }
 pub fn ShapeLine::build(Self, String, AttrsList, Shaping, Int) -> Self
 pub fn ShapeLine::build_with_font_system(Self, FontSystem, String, AttrsList, Shaping, Int) -> Self
@@ -689,6 +731,8 @@ pub fn ShapeLine::width(Self, Float) -> Float
 pub struct ShapeRunCache {
   mut age : UInt64
   cache : @hashmap.HashMap[ShapeRunKey, (UInt64, Array[ShapeGlyph])]
+
+  fn new() -> ShapeRunCache
 }
 pub fn ShapeRunCache::clear(Self) -> Unit
 pub fn ShapeRunCache::get(Self, ShapeRunKey) -> Array[ShapeGlyph]?
@@ -702,6 +746,8 @@ pub struct ShapeRunKey {
   text : String
   default_attrs : Attrs
   attrs_spans : Array[(Int, Int, Attrs)]
+
+  fn new(String, AttrsList) -> ShapeRunKey
 }
 pub fn ShapeRunKey::new(String, AttrsList) -> Self
 pub impl Eq for ShapeRunKey
@@ -728,6 +774,8 @@ pub struct SwashCache {
   context : @scale.ScaleContext
   image_cache : @hashmap.HashMap[CacheKey, @scale.Image?]
   outline_path_cache : @hashmap.HashMap[CacheKey, (Array[@moon_zeno.Vector], Array[@moon_zeno.Verb])?]
+
+  fn new() -> SwashCache
 }
 pub fn SwashCache::get_image(Self, FontSystem, CacheKey) -> @scale.Image?
 pub fn SwashCache::get_image_uncached(Self, FontSystem, CacheKey) -> @scale.Image?
@@ -743,6 +791,8 @@ pub struct TextDecoration {
   strikethrough_color_opt : Color?
   overline : Bool
   overline_color_opt : Color?
+
+  fn new() -> TextDecoration
 }
 pub fn TextDecoration::has_decoration(Self) -> Bool
 pub fn TextDecoration::new() -> Self
@@ -759,6 +809,8 @@ pub impl Hash for UnderlineStyle
 
 pub struct Weight {
   value : Int
+
+  fn new(Int) -> Weight
 }
 pub fn Weight::bold() -> Self
 pub fn Weight::new(Int) -> Self

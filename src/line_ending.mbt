@@ -44,6 +44,8 @@ pub struct LineIter {
   string : String
   start : Int
   end : Int
+
+  fn new(string : String) -> LineIter
 }
 
 ///|

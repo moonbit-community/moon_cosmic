@@ -154,6 +154,8 @@ pub struct SwashCache {
     CacheKey,
     (Array[@moon_zeno.Vector], Array[@moon_zeno.Verb])?,
   ]
+
+  fn new() -> SwashCache
 }
 
 ///|
