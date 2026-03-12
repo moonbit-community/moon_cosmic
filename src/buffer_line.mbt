@@ -129,6 +129,256 @@ fn hint_line(l : LayoutLine) -> LayoutLine {
 }
 
 ///|
+fn nonneg(v : Float) -> Float {
+  if v < 0.0F {
+    0.0F
+  } else {
+    v
+  }
+}
+
+///|
+fn bl_maxf(a : Float, b : Float) -> Float {
+  if a > b {
+    a
+  } else {
+    b
+  }
+}
+
+///|
+fn layout_line_height_for_ellipsize(
+  line : LayoutLine,
+  font_size : Float,
+) -> Float {
+  if line.line_height_opt is Some(h) {
+    h
+  } else {
+    font_size
+  }
+}
+
+///|
+fn ellipsis_width(line : LayoutLine, font_size : Float) -> Float {
+  if line.glyphs.length() == 0 {
+    return font_size
+  }
+  let g = line.glyphs[0]
+  let w = if g.w > 0.0F { g.w } else { g.font_size }
+  if w > 0.0F {
+    w
+  } else {
+    font_size
+  }
+}
+
+///|
+fn ellipsis_glyph(
+  line : LayoutLine,
+  font_size : Float,
+  x : Float,
+  w : Float,
+) -> LayoutGlyph {
+  if line.glyphs.length() > 0 {
+    let base = line.glyphs[0]
+    LayoutGlyph::{ ..base, start: line.end, end: line.end, x, w }
+  } else {
+    LayoutGlyph::{
+      ..LayoutGlyph::new(
+        line.start,
+        line.end,
+        font_size,
+        0,
+        400,
+        0,
+        x,
+        0.0F,
+        w,
+        0,
+      ),
+      line_height_opt: line.line_height_opt,
+    }
+  }
+}
+
+///|
+fn take_prefix_glyphs(
+  glyphs : Array[LayoutGlyph],
+  max_w : Float,
+) -> Array[LayoutGlyph] {
+  let out : Array[LayoutGlyph] = []
+  let mut w = 0.0F
+  for g in glyphs {
+    if w + g.w > max_w {
+      break
+    }
+    out.push(g)
+    w = w + g.w
+  }
+  out
+}
+
+///|
+fn take_suffix_glyphs(
+  glyphs : Array[LayoutGlyph],
+  max_w : Float,
+) -> Array[LayoutGlyph] {
+  let rev : Array[LayoutGlyph] = []
+  let mut w = 0.0F
+  let mut i = glyphs.length()
+  while i > 0 {
+    let g = glyphs[i - 1]
+    if w + g.w > max_w {
+      break
+    }
+    rev.push(g)
+    w = w + g.w
+    i = i - 1
+  }
+  let out : Array[LayoutGlyph] = []
+  let mut j = rev.length()
+  while j > 0 {
+    out.push(rev[j - 1])
+    j = j - 1
+  }
+  out
+}
+
+///|
+fn reposition_glyphs(
+  glyphs : Array[LayoutGlyph],
+  start_x : Float,
+) -> (Array[LayoutGlyph], Float) {
+  let out : Array[LayoutGlyph] = []
+  let mut x = start_x
+  for g in glyphs {
+    out.push(LayoutGlyph::{ ..g, x, })
+    x = x + g.w
+  }
+  (out, x - start_x)
+}
+
+///|
+fn ellipsize_line(
+  line : LayoutLine,
+  font_size : Float,
+  width_limit : Float,
+  mode : Ellipsize,
+) -> LayoutLine {
+  let max_w = nonneg(width_limit)
+  let e_w = bl_maxf(1.0F, ellipsis_width(line, font_size))
+  let text_w = nonneg(max_w - e_w)
+  let glyphs = line.glyphs
+  let out_glyphs : Array[LayoutGlyph] = []
+
+  match mode {
+    End(_) => {
+      let prefix = take_prefix_glyphs(glyphs, text_w)
+      let (placed_prefix, prefix_w) = reposition_glyphs(prefix, 0.0F)
+      for g in placed_prefix {
+        out_glyphs.push(g)
+      }
+      out_glyphs.push(ellipsis_glyph(line, font_size, prefix_w, e_w))
+    }
+    Start(_) => {
+      let suffix = take_suffix_glyphs(glyphs, text_w)
+      out_glyphs.push(ellipsis_glyph(line, font_size, 0.0F, e_w))
+      let (placed_suffix, _) = reposition_glyphs(suffix, e_w)
+      for g in placed_suffix {
+        out_glyphs.push(g)
+      }
+    }
+    Middle(_) => {
+      let left_budget = text_w / 2.0F
+      let prefix = take_prefix_glyphs(glyphs, left_budget)
+      let mut prefix_w = 0.0F
+      for g in prefix {
+        prefix_w = prefix_w + g.w
+      }
+      let suffix = take_suffix_glyphs(glyphs, nonneg(text_w - prefix_w))
+      let (placed_prefix, prefix_w2) = reposition_glyphs(prefix, 0.0F)
+      for g in placed_prefix {
+        out_glyphs.push(g)
+      }
+      out_glyphs.push(ellipsis_glyph(line, font_size, prefix_w2, e_w))
+      let (placed_suffix, _) = reposition_glyphs(suffix, prefix_w2 + e_w)
+      for g in placed_suffix {
+        out_glyphs.push(g)
+      }
+    }
+    None => return line
+  }
+
+  let mut out_w = 0.0F
+  for g in out_glyphs {
+    out_w = out_w + g.w
+  }
+  LayoutLine::{ ..line, w: out_w, glyphs: out_glyphs, decorations: [] }
+}
+
+///|
+fn apply_ellipsize(
+  layout : Array[LayoutLine],
+  ellipsize : Ellipsize,
+  wrap : Wrap,
+  width_opt : Float?,
+  font_size : Float,
+) -> Array[LayoutLine] {
+  if layout.length() == 0 || ellipsize is None {
+    return layout
+  }
+
+  let keep_lines = match ellipsize {
+    None => layout.length()
+    Start(limit) | Middle(limit) | End(limit) =>
+      match (wrap, limit) {
+        (Wrap::None, _) => 1
+        (_, Lines(lines)) => if lines <= 0 { 1 } else { lines }
+        (_, Height(height_limit)) => {
+          let mut acc = 0.0F
+          let mut kept = 0
+          for line in layout {
+            let h = layout_line_height_for_ellipsize(line, font_size)
+            if acc + h > height_limit {
+              break
+            }
+            acc = acc + h
+            kept = kept + 1
+          }
+          if kept <= 0 {
+            1
+          } else {
+            kept
+          }
+        }
+      }
+  }
+
+  let keep = if keep_lines > layout.length() {
+    layout.length()
+  } else {
+    keep_lines
+  }
+  let target_i = if keep <= 0 { 0 } else { keep - 1 }
+  let target = layout[target_i]
+  let max_w = if width_opt is Some(w) { w } else { target.w }
+  let needs_trim = keep < layout.length() || target.w > max_w
+  if !needs_trim {
+    return layout
+  }
+
+  let out : Array[LayoutLine] = []
+  for i in 0..<keep {
+    if i == target_i {
+      out.push(ellipsize_line(layout[i], font_size, max_w, ellipsize))
+    } else {
+      out.push(layout[i])
+    }
+  }
+  out
+}
+
+///|
 fn apply_layout_postprocess(
   text : String,
   layout0 : Array[LayoutLine],
@@ -362,7 +612,9 @@ pub fn BufferLine::layout(
         width_opt,
         wrap,
       )
-      ignore(ellipsize)
+      let layout = apply_ellipsize(
+        layout, ellipsize, wrap, width_opt, font_size,
+      )
       let layout = apply_layout_postprocess(
         line.text,
         layout,
@@ -408,7 +660,9 @@ pub fn BufferLine::layout_with_font_system(
         width_opt,
         wrap,
       )
-      ignore(ellipsize)
+      let layout = apply_ellipsize(
+        layout, ellipsize, wrap, width_opt, font_size,
+      )
       let layout = apply_layout_postprocess(
         line.text,
         layout,

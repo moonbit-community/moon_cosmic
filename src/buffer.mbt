@@ -174,6 +174,25 @@ fn clamp_nonneg_opt(v : Float?) -> Float? {
 }
 
 ///|
+fn line_layout_total_height(metrics : Metrics, line : BufferLine) -> Float {
+  match line.layout_opt() {
+    None => metrics.line_height
+    Some(layout) => {
+      let mut h = 0.0F
+      for layout_line in layout {
+        let lh = if layout_line.line_height_opt is Some(v) {
+          v
+        } else {
+          metrics.line_height
+        }
+        h = h + lh
+      }
+      h
+    }
+  }
+}
+
+///|
 fn line_has_tab(s : String) -> Bool {
   for i in 0..<s.length() {
     if s.code_unit_at(i).to_int() == 9 {
@@ -564,10 +583,81 @@ pub fn Buffer::shape_until_scroll(
   font_system : FontSystem,
   prune : Bool,
 ) -> Buffer {
-  ignore(prune)
-  self
-  .shape_all_with_font_system(font_system)
-  .layout_all_with_font_system(font_system)
+  let buffer = self
+    .shape_all_with_font_system(font_system)
+    .layout_all_with_font_system(font_system)
+  let metrics = buffer.metrics
+  let old_scroll = buffer.scroll
+  let mut scroll = buffer.scroll
+  let lines = buffer.lines
+
+  while true {
+    // Keep vertical offset non-negative by moving to previous lines.
+    while scroll.vertical < 0.0F {
+      if scroll.line > 0 {
+        let line_i = scroll.line - 1
+        let layout_height = line_layout_total_height(metrics, lines[line_i])
+        scroll = Scroll::{
+          ..scroll,
+          line: line_i,
+          vertical: scroll.vertical + layout_height,
+        }
+      } else {
+        scroll = Scroll::{ ..scroll, vertical: 0.0F }
+        break
+      }
+    }
+
+    let scroll_start = scroll.vertical
+    let height_limit = if buffer.height_opt is Some(h) { h } else { 1.0e30F }
+    let scroll_end = scroll_start + height_limit
+
+    let mut total_height = 0.0F
+    let mut line_i = 0
+    while line_i < lines.length() {
+      if line_i < scroll.line {
+        if prune {
+          lines.set(line_i, lines[line_i].reset_shaping())
+        }
+        line_i = line_i + 1
+        continue
+      }
+      if total_height > scroll_end {
+        if prune {
+          lines.set(line_i, lines[line_i].reset_shaping())
+          line_i = line_i + 1
+          continue
+        }
+        break
+      }
+
+      let layout_height = line_layout_total_height(metrics, lines[line_i])
+      total_height = total_height + layout_height
+      if line_i == scroll.line && layout_height <= scroll.vertical {
+        scroll = Scroll::{
+          ..scroll,
+          line: scroll.line + 1,
+          vertical: scroll.vertical - layout_height,
+        }
+      }
+      line_i = line_i + 1
+    }
+
+    if total_height < scroll_end && scroll.line > 0 {
+      scroll = Scroll::{
+        ..scroll,
+        vertical: scroll.vertical - (scroll_end - total_height),
+      }
+    } else {
+      break
+    }
+  }
+
+  let redraw = buffer.redraw ||
+    old_scroll.line != scroll.line ||
+    old_scroll.vertical != scroll.vertical ||
+    old_scroll.horizontal != scroll.horizontal
+  Buffer::{ ..buffer, lines, scroll, redraw }
 }
 
 ///|
@@ -617,78 +707,142 @@ pub fn Buffer::shape_until_cursor(
   if cursor.line < 0 || cursor.line >= self.lines.length() {
     return self.shape_until_scroll(font_system, prune)
   }
-  let mut buffer = self.shape_until_scroll(font_system, prune)
-  let mut scroll = buffer.scroll
-  if cursor.line < scroll.line {
-    scroll = Scroll::{ ..scroll, line: cursor.line, vertical: 0.0F }
-  } else if buffer.height_opt is Some(_) {
-    let mut visible = false
-    for run in buffer.layout_runs() {
-      if run.line_i == cursor.line {
-        visible = true
-      }
-    }
-    if !visible {
-      scroll = Scroll::{ ..scroll, line: cursor.line, vertical: 0.0F }
-    }
+
+  let metrics = self.metrics
+  let old_scroll = self.scroll
+
+  let layout_cursor = match self.layout_cursor(font_system, cursor) {
+    Some(v) => v
+    None => return self.shape_until_scroll(font_system, prune)
   }
-  if scroll.line != buffer.scroll.line ||
-    scroll.vertical != buffer.scroll.vertical ||
-    scroll.horizontal != buffer.scroll.horizontal {
-    buffer = Buffer::{ ..buffer, scroll, redraw: true }
+  let layout = match self.line_layout(font_system, layout_cursor.line) {
+    Some(v) => v
+    None => return self.shape_until_scroll(font_system, prune)
+  }
+  if layout_cursor.layout < 0 || layout_cursor.layout >= layout.length() {
+    return self.shape_until_scroll(font_system, prune)
   }
 
-  let layout_cursor_opt = buffer.layout_cursor(font_system, cursor)
-  match layout_cursor_opt {
-    None => buffer
-    Some(layout_cursor) => {
-      let lines_opt = buffer.line_layout(font_system, layout_cursor.line)
-      match lines_opt {
-        None => buffer
-        Some(layout_lines) => {
-          let layout_line_opt = layout_lines.get(layout_cursor.layout)
-          if layout_line_opt is None {
-            return buffer
-          }
-          let layout_line = if layout_line_opt is Some(v) {
-            v
-          } else {
-            layout_lines[0]
-          }
-          let glyph = if layout_line.glyphs.get(layout_cursor.glyph) is Some(v) {
-            Some(v)
-          } else if layout_line.glyphs.length() > 0 {
-            Some(layout_line.glyphs[layout_line.glyphs.length() - 1])
-          } else {
-            None
-          }
-          if glyph is None {
-            return buffer
-          }
-          let g = if glyph is Some(v) { v } else { layout_line.glyphs[0] }
-          let x_a = g.x
-          let x_b = g.x + g.w
-          let x_min = if x_a < x_b { x_a } else { x_b }
-          let x_max = if x_a > x_b { x_a } else { x_b }
-          if x_min < buffer.scroll.horizontal {
-            buffer = Buffer::{
-              ..buffer,
-              scroll: Scroll::{ ..buffer.scroll, horizontal: x_min },
-              redraw: true,
+  let mut layout_y = 0.0F
+  for i in 0..<layout_cursor.layout {
+    let line_height = if layout[i].line_height_opt is Some(v) {
+      v
+    } else {
+      metrics.line_height
+    }
+    layout_y = layout_y + line_height
+  }
+  let current_line_height = if layout[layout_cursor.layout].line_height_opt
+    is Some(v) {
+    v
+  } else {
+    metrics.line_height
+  }
+  let mut total_height = layout_y + current_line_height
+
+  let mut scroll = self.scroll
+  if scroll.line > layout_cursor.line ||
+    (scroll.line == layout_cursor.line && scroll.vertical > layout_y) {
+    scroll = Scroll::{ ..scroll, line: layout_cursor.line, vertical: layout_y }
+  } else if self.height_opt is Some(height) {
+    let mut line_i = layout_cursor.line
+    if line_i <= scroll.line {
+      if total_height > height + scroll.vertical {
+        scroll = Scroll::{ ..scroll, vertical: total_height - height }
+      }
+    } else {
+      while line_i > scroll.line {
+        line_i = line_i - 1
+        match self.line_layout(font_system, line_i) {
+          Some(line_layout) =>
+            for layout_line in line_layout {
+              let line_height = if layout_line.line_height_opt is Some(v) {
+                v
+              } else {
+                metrics.line_height
+              }
+              total_height = total_height + line_height
             }
+          None => total_height = total_height + metrics.line_height
+        }
+        if total_height > height + scroll.vertical {
+          scroll = Scroll::{
+            ..scroll,
+            line: line_i,
+            vertical: total_height - height,
           }
-          if buffer.width_opt is Some(width) &&
-            x_max > buffer.scroll.horizontal + width {
-            buffer = Buffer::{
-              ..buffer,
-              scroll: Scroll::{ ..buffer.scroll, horizontal: x_max - width },
-              redraw: true,
-            }
-          }
-          buffer
         }
       }
     }
+  }
+
+  let mut buffer = if scroll.line != self.scroll.line ||
+    scroll.vertical != self.scroll.vertical ||
+    scroll.horizontal != self.scroll.horizontal {
+    Buffer::{ ..self, scroll, redraw: true }
+  } else {
+    self
+  }
+
+  buffer = buffer.shape_until_scroll(font_system, prune)
+
+  match buffer.layout_cursor(font_system, cursor) {
+    Some(layout_cursor2) =>
+      match buffer.line_layout(font_system, layout_cursor2.line) {
+        Some(layout_lines) =>
+          match layout_lines.get(layout_cursor2.layout) {
+            Some(layout_line) => {
+              let glyph_opt = match
+                layout_line.glyphs.get(layout_cursor2.glyph) {
+                Some(v) => Some(v)
+                None =>
+                  if layout_line.glyphs.length() > 0 {
+                    Some(layout_line.glyphs[layout_line.glyphs.length() - 1])
+                  } else {
+                    None
+                  }
+              }
+              match glyph_opt {
+                Some(glyph) => {
+                  let x_a = glyph.x
+                  let x_b = glyph.x + glyph.w
+                  let x_min = if x_a < x_b { x_a } else { x_b }
+                  let x_max = if x_a > x_b { x_a } else { x_b }
+                  if x_min < buffer.scroll.horizontal {
+                    buffer = Buffer::{
+                      ..buffer,
+                      scroll: Scroll::{ ..buffer.scroll, horizontal: x_min },
+                      redraw: true,
+                    }
+                  }
+                  if buffer.width_opt is Some(width) &&
+                    x_max > buffer.scroll.horizontal + width {
+                    buffer = Buffer::{
+                      ..buffer,
+                      scroll: Scroll::{
+                        ..buffer.scroll,
+                        horizontal: x_max - width,
+                      },
+                      redraw: true,
+                    }
+                  }
+                }
+                None => ()
+              }
+            }
+            None => ()
+          }
+        None => ()
+      }
+    None => ()
+  }
+
+  if old_scroll.line != buffer.scroll.line ||
+    old_scroll.vertical != buffer.scroll.vertical ||
+    old_scroll.horizontal != buffer.scroll.horizontal {
+    Buffer::{ ..buffer, redraw: true }
+  } else {
+    buffer
   }
 }
 
