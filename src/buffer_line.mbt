@@ -202,28 +202,30 @@ fn ellipsis_glyph(
 }
 
 ///|
-fn take_prefix_glyphs(
+fn take_prefix_indices(
   glyphs : Array[LayoutGlyph],
   max_w : Float,
-) -> Array[LayoutGlyph] {
-  let out : Array[LayoutGlyph] = []
+) -> Array[Int] {
+  let out : Array[Int] = []
   let mut w = 0.0F
-  for g in glyphs {
+  for p in glyphs.iter2() {
+    let i = p.0
+    let g = p.1
     if w + g.w > max_w {
       break
     }
-    out.push(g)
+    out.push(i)
     w = w + g.w
   }
   out
 }
 
 ///|
-fn take_suffix_glyphs(
+fn take_suffix_indices(
   glyphs : Array[LayoutGlyph],
   max_w : Float,
-) -> Array[LayoutGlyph] {
-  let rev : Array[LayoutGlyph] = []
+) -> Array[Int] {
+  let rev : Array[Int] = []
   let mut w = 0.0F
   let mut i = glyphs.length()
   while i > 0 {
@@ -231,15 +233,29 @@ fn take_suffix_glyphs(
     if w + g.w > max_w {
       break
     }
-    rev.push(g)
+    rev.push(i - 1)
     w = w + g.w
     i = i - 1
   }
-  let out : Array[LayoutGlyph] = []
+  let out : Array[Int] = []
   let mut j = rev.length()
   while j > 0 {
     out.push(rev[j - 1])
     j = j - 1
+  }
+  out
+}
+
+///|
+fn glyphs_from_indices(
+  glyphs : Array[LayoutGlyph],
+  indices : Array[Int],
+) -> Array[LayoutGlyph] {
+  let out : Array[LayoutGlyph] = []
+  for idx in indices {
+    if glyphs.get(idx) is Some(g) {
+      out.push(g)
+    }
   }
   out
 }
@@ -259,6 +275,44 @@ fn reposition_glyphs(
 }
 
 ///|
+fn project_decorations(
+  decorations : Array[DecorationSpan],
+  source_indices : Array[Int],
+) -> Array[DecorationSpan] {
+  let out : Array[DecorationSpan] = []
+  for decoration in decorations {
+    let mut run_start = -1
+    let mut i = 0
+    while i < source_indices.length() {
+      let source_i = source_indices[i]
+      let in_span = source_i >= decoration.glyph_start &&
+        source_i < decoration.glyph_end
+      if in_span {
+        if run_start < 0 {
+          run_start = i
+        }
+      } else if run_start >= 0 {
+        out.push(DecorationSpan::{
+          ..decoration,
+          glyph_start: run_start,
+          glyph_end: i,
+        })
+        run_start = -1
+      }
+      i = i + 1
+    }
+    if run_start >= 0 {
+      out.push(DecorationSpan::{
+        ..decoration,
+        glyph_start: run_start,
+        glyph_end: source_indices.length(),
+      })
+    }
+  }
+  out
+}
+
+///|
 fn ellipsize_line(
   line : LayoutLine,
   font_size : Float,
@@ -270,40 +324,63 @@ fn ellipsize_line(
   let text_w = nonneg(max_w - e_w)
   let glyphs = line.glyphs
   let out_glyphs : Array[LayoutGlyph] = []
+  let source_indices : Array[Int] = []
 
   match mode {
     End(_) => {
-      let prefix = take_prefix_glyphs(glyphs, text_w)
+      let prefix_indices = take_prefix_indices(glyphs, text_w)
+      let prefix = glyphs_from_indices(glyphs, prefix_indices)
       let (placed_prefix, prefix_w) = reposition_glyphs(prefix, 0.0F)
       for g in placed_prefix {
         out_glyphs.push(g)
       }
+      for idx in prefix_indices {
+        source_indices.push(idx)
+      }
       out_glyphs.push(ellipsis_glyph(line, font_size, prefix_w, e_w))
+      source_indices.push(-1)
     }
     Start(_) => {
-      let suffix = take_suffix_glyphs(glyphs, text_w)
+      let suffix_indices = take_suffix_indices(glyphs, text_w)
+      let suffix = glyphs_from_indices(glyphs, suffix_indices)
       out_glyphs.push(ellipsis_glyph(line, font_size, 0.0F, e_w))
+      source_indices.push(-1)
       let (placed_suffix, _) = reposition_glyphs(suffix, e_w)
       for g in placed_suffix {
         out_glyphs.push(g)
       }
+      for idx in suffix_indices {
+        source_indices.push(idx)
+      }
     }
     Middle(_) => {
       let left_budget = text_w / 2.0F
-      let prefix = take_prefix_glyphs(glyphs, left_budget)
+      let prefix_indices = take_prefix_indices(glyphs, left_budget)
+      let prefix = glyphs_from_indices(glyphs, prefix_indices)
       let mut prefix_w = 0.0F
       for g in prefix {
         prefix_w = prefix_w + g.w
       }
-      let suffix = take_suffix_glyphs(glyphs, nonneg(text_w - prefix_w))
+      let suffix_indices = take_suffix_indices(
+        glyphs,
+        nonneg(text_w - prefix_w),
+      )
+      let suffix = glyphs_from_indices(glyphs, suffix_indices)
       let (placed_prefix, prefix_w2) = reposition_glyphs(prefix, 0.0F)
       for g in placed_prefix {
         out_glyphs.push(g)
       }
+      for idx in prefix_indices {
+        source_indices.push(idx)
+      }
       out_glyphs.push(ellipsis_glyph(line, font_size, prefix_w2, e_w))
+      source_indices.push(-1)
       let (placed_suffix, _) = reposition_glyphs(suffix, prefix_w2 + e_w)
       for g in placed_suffix {
         out_glyphs.push(g)
+      }
+      for idx in suffix_indices {
+        source_indices.push(idx)
       }
     }
     None => return line
@@ -313,7 +390,31 @@ fn ellipsize_line(
   for g in out_glyphs {
     out_w = out_w + g.w
   }
-  LayoutLine::{ ..line, w: out_w, glyphs: out_glyphs, decorations: [] }
+  let decorations = project_decorations(line.decorations, source_indices)
+  let mut out_start = line.start
+  let mut out_end = line.end
+  let mut seen_real_glyph = false
+  for source_i in source_indices {
+    if source_i >= 0 && glyphs.get(source_i) is Some(source_glyph) {
+      if !seen_real_glyph {
+        out_start = source_glyph.start
+        seen_real_glyph = true
+      }
+      out_end = source_glyph.end
+    }
+  }
+  if !seen_real_glyph {
+    out_start = line.end
+    out_end = line.end
+  }
+  LayoutLine::{
+    ..line,
+    start: out_start,
+    end: out_end,
+    w: out_w,
+    glyphs: out_glyphs,
+    decorations,
+  }
 }
 
 ///|

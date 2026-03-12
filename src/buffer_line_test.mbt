@@ -328,6 +328,35 @@ test "BufferLine.layout: Ellipsize::Start puts ellipsis glyph at line start" {
 }
 
 ///|
+test "BufferLine.layout: ellipsize keeps decoration spans mapped to visible glyphs" {
+  let decorated = Attrs::new().underline(UnderlineStyle::Double)
+  let attrs = AttrsList::new(decorated)
+  let line0 = BufferLine::new("a a a a a", Lf, attrs, Advanced)
+  let line1 = line0.layout(
+    10.0F,
+    Some(30.0F),
+    Wrap::Word,
+    Ellipsize::End(EllipsizeHeightLimit::Lines(1)),
+    None,
+    4,
+    Hinting::Disabled,
+  )
+  if line1.layout_opt() is Some(layout) {
+    inspect(layout.length(), content="1")
+    inspect(layout[0].decorations.length() > 0, content="true")
+    let dec = layout[0].decorations[0]
+    inspect(
+      dec.glyph_start >= 0 &&
+      dec.glyph_end <= layout[0].glyphs.length() &&
+      dec.glyph_end > dec.glyph_start,
+      content="true",
+    )
+  } else {
+    fail("expected Some(layout)")
+  }
+}
+
+///|
 test "BufferLine.set_attrs_list resets shaping cache when changed" {
   let attrs0 = AttrsList::new(Attrs::new())
   let attrs1 = AttrsList::new(Attrs::with_metadata(42))
