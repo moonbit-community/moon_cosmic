@@ -315,6 +315,63 @@ test "Buffer line helpers: line_shape/line_layout/layout_cursor/shape_until_scro
 }
 
 ///|
+test "Buffer.shape_until_scroll normalizes vertical offset and prunes offscreen lines" {
+  let attrs = AttrsList::new(Attrs::new())
+  let buf0 = Buffer::new(Metrics::new(10.0F, 10.0F))
+    .set_text("a\nb\nc\nd", attrs, Basic)
+    .set_size(Some(100.0F), Some(15.0F))
+    .set_scroll(Scroll::new(1, -5.0F, 0.0F))
+  let buf1 = buf0.shape_until_scroll(FontSystem::new(), true)
+  inspect(buf1.scroll().line, content="0")
+  inspect(buf1.scroll().vertical, content="5")
+  inspect(buf1.lines()[0].shape_opt() is Some(_), content="true")
+  inspect(buf1.lines()[3].shape_opt() is None, content="true")
+}
+
+///|
+test "Buffer.shape_until_scroll clamps bottom overflow inside available content" {
+  let attrs = AttrsList::new(Attrs::new())
+  let buf0 = Buffer::new(Metrics::new(10.0F, 10.0F))
+    .set_text("a\nb\nc\nd", attrs, Basic)
+    .set_size(Some(100.0F), Some(20.0F))
+    .set_scroll(Scroll::new(3, 8.0F, 0.0F))
+  let buf1 = buf0.shape_until_scroll(FontSystem::new(), false)
+  inspect(buf1.scroll().line, content="2")
+  inspect(buf1.scroll().vertical, content="0")
+}
+
+///|
+test "Buffer.shape_until_cursor scrolls to include target line and keeps x in view" {
+  let attrs = AttrsList::new(Attrs::new())
+
+  let vertical_buf0 = Buffer::new(Metrics::new(10.0F, 10.0F))
+    .set_text("a\nb\nc\nd", attrs, Basic)
+    .set_size(Some(100.0F), Some(15.0F))
+  let vertical_buf1 = vertical_buf0.shape_until_cursor(
+    FontSystem::new(),
+    Cursor::new_with_affinity(3, 0, After),
+    false,
+  )
+  inspect(vertical_buf1.scroll().line, content="2")
+  inspect(
+    vertical_buf1.scroll().vertical > 4.9F &&
+    vertical_buf1.scroll().vertical < 5.1F,
+    content="true",
+  )
+
+  let horizontal_buf0 = Buffer::new(Metrics::new(10.0F, 10.0F))
+    .set_text("abcdefghij", attrs, Basic)
+    .set_wrap(Wrap::None)
+    .set_size(Some(20.0F), Some(20.0F))
+  let horizontal_buf1 = horizontal_buf0.shape_until_cursor(
+    FontSystem::new(),
+    Cursor::new_with_affinity(0, 9, After),
+    false,
+  )
+  inspect(horizontal_buf1.scroll().horizontal > 0.0F, content="true")
+}
+
+///|
 test "LayoutRun.highlight returns intersection width for cursor span" {
   let attrs = AttrsList::new(Attrs::new())
   let buffer = Buffer::new(Metrics::new(12.0F, 14.0F))

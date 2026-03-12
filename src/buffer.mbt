@@ -174,22 +174,49 @@ fn clamp_nonneg_opt(v : Float?) -> Float? {
 }
 
 ///|
-fn line_layout_total_height(metrics : Metrics, line : BufferLine) -> Float {
-  match line.layout_opt() {
+fn layout_total_height(
+  metrics : Metrics,
+  layout_opt : Array[LayoutLine]?,
+) -> Float {
+  match layout_opt {
     None => metrics.line_height
     Some(layout) => {
       let mut h = 0.0F
       for layout_line in layout {
-        let lh = if layout_line.line_height_opt is Some(v) {
+        let line_height = if layout_line.line_height_opt is Some(v) {
           v
         } else {
           metrics.line_height
         }
-        h = h + lh
+        h = h + line_height
       }
       h
     }
   }
+}
+
+///|
+fn ensure_line_layout_cached(
+  lines : Array[BufferLine],
+  line_i : Int,
+  font_system : FontSystem,
+  font_size : Float,
+  width_opt : Float?,
+  wrap : Wrap,
+  ellipsize : Ellipsize,
+  monospace_width : Float?,
+  tab_width : Int,
+  hinting : Hinting,
+) -> Array[LayoutLine]? {
+  if line_i < 0 || line_i >= lines.length() {
+    return None
+  }
+  let line = lines[line_i].layout_with_font_system(
+    font_system, font_size, width_opt, wrap, ellipsize, monospace_width, tab_width,
+    hinting,
+  )
+  lines.set(line_i, line)
+  line.layout_opt()
 }
 
 ///|
@@ -583,20 +610,29 @@ pub fn Buffer::shape_until_scroll(
   font_system : FontSystem,
   prune : Bool,
 ) -> Buffer {
-  let buffer = self
-    .shape_all_with_font_system(font_system)
-    .layout_all_with_font_system(font_system)
-  let metrics = buffer.metrics
-  let old_scroll = buffer.scroll
-  let mut scroll = buffer.scroll
-  let lines = buffer.lines
+  let metrics = self.metrics
+  let old_scroll = self.scroll
+  let mut scroll = self.scroll
+  let lines = self.lines
 
   while true {
     // Keep vertical offset non-negative by moving to previous lines.
     while scroll.vertical < 0.0F {
       if scroll.line > 0 {
         let line_i = scroll.line - 1
-        let layout_height = line_layout_total_height(metrics, lines[line_i])
+        let layout_opt = ensure_line_layout_cached(
+          lines,
+          line_i,
+          font_system,
+          self.metrics.font_size,
+          self.width_opt,
+          self.wrap,
+          self.ellipsize,
+          self.monospace_width,
+          self.tab_width,
+          self.hinting,
+        )
+        let layout_height = layout_total_height(metrics, layout_opt)
         scroll = Scroll::{
           ..scroll,
           line: line_i,
@@ -609,7 +645,7 @@ pub fn Buffer::shape_until_scroll(
     }
 
     let scroll_start = scroll.vertical
-    let height_limit = if buffer.height_opt is Some(h) { h } else { 1.0e30F }
+    let height_limit = if self.height_opt is Some(h) { h } else { 1.0e30F }
     let scroll_end = scroll_start + height_limit
 
     let mut total_height = 0.0F
@@ -631,7 +667,19 @@ pub fn Buffer::shape_until_scroll(
         break
       }
 
-      let layout_height = line_layout_total_height(metrics, lines[line_i])
+      let layout_opt = ensure_line_layout_cached(
+        lines,
+        line_i,
+        font_system,
+        self.metrics.font_size,
+        self.width_opt,
+        self.wrap,
+        self.ellipsize,
+        self.monospace_width,
+        self.tab_width,
+        self.hinting,
+      )
+      let layout_height = layout_total_height(metrics, layout_opt)
       total_height = total_height + layout_height
       if line_i == scroll.line && layout_height <= scroll.vertical {
         scroll = Scroll::{
@@ -653,11 +701,11 @@ pub fn Buffer::shape_until_scroll(
     }
   }
 
-  let redraw = buffer.redraw ||
+  let redraw = self.redraw ||
     old_scroll.line != scroll.line ||
     old_scroll.vertical != scroll.vertical ||
     old_scroll.horizontal != scroll.horizontal
-  Buffer::{ ..buffer, lines, scroll, redraw }
+  Buffer::{ ..self, lines, scroll, redraw }
 }
 
 ///|

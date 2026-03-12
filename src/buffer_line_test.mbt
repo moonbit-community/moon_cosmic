@@ -278,6 +278,56 @@ test "BufferLine.layout: whitespace-only word wrap keeps blanks when unbounded" 
 }
 
 ///|
+test "BufferLine.layout: Ellipsize::End trims to one visual line within width" {
+  let attrs = AttrsList::new(Attrs::new())
+  let line0 = BufferLine::new("a a a a a", Lf, attrs, Advanced)
+  let line1 = line0.layout(
+    10.0F,
+    Some(30.0F),
+    Wrap::Word,
+    Ellipsize::End(EllipsizeHeightLimit::Lines(1)),
+    None,
+    4,
+    Hinting::Disabled,
+  )
+  if line1.layout_opt() is Some(layout) {
+    inspect(layout.length(), content="1")
+    inspect(layout[0].w <= 30.0F, content="true")
+    let glyphs = layout[0].glyphs
+    inspect(glyphs.length() > 0, content="true")
+    inspect(
+      glyphs[glyphs.length() - 1].start == glyphs[glyphs.length() - 1].end,
+      content="true",
+    )
+  } else {
+    fail("expected Some(layout)")
+  }
+}
+
+///|
+test "BufferLine.layout: Ellipsize::Start puts ellipsis glyph at line start" {
+  let attrs = AttrsList::new(Attrs::new())
+  let line0 = BufferLine::new("a a a a a", Lf, attrs, Advanced)
+  let line1 = line0.layout(
+    10.0F,
+    Some(30.0F),
+    Wrap::Word,
+    Ellipsize::Start(EllipsizeHeightLimit::Height(15.0F)),
+    None,
+    4,
+    Hinting::Disabled,
+  )
+  if line1.layout_opt() is Some(layout) {
+    inspect(layout.length(), content="1")
+    let glyphs = layout[0].glyphs
+    inspect(glyphs.length() > 0, content="true")
+    inspect(glyphs[0].start == glyphs[0].end, content="true")
+  } else {
+    fail("expected Some(layout)")
+  }
+}
+
+///|
 test "BufferLine.set_attrs_list resets shaping cache when changed" {
   let attrs0 = AttrsList::new(Attrs::new())
   let attrs1 = AttrsList::new(Attrs::with_metadata(42))
