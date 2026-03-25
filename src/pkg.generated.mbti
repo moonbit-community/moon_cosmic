@@ -406,6 +406,14 @@ pub(all) enum Family {
   Cursive
   Fantasy
   Monospace
+  SystemUi
+  UiSerif
+  UiSansSerif
+  UiMonospace
+  UiRounded
+  Emoji
+  Math
+  FangSong
 }
 pub impl Eq for Family
 pub impl Hash for Family

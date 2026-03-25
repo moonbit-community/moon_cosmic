@@ -71,7 +71,10 @@ pub fn Color::as_rgba(self : Color) -> (Byte, Byte, Byte, Byte) {
 }
 
 ///|
-/// Font family selector (mirrors `fontdb::Family` in cosmic-text).
+/// Font family selector.
+///
+/// This mirrors the generic families exposed by `cosmic-text` and extends them
+/// with the CSS/Bevy generic families required by modern text stacks.
 pub(all) enum Family {
   Name(String)
   Serif
@@ -79,6 +82,14 @@ pub(all) enum Family {
   Cursive
   Fantasy
   Monospace
+  SystemUi
+  UiSerif
+  UiSansSerif
+  UiMonospace
+  UiRounded
+  Emoji
+  Math
+  FangSong
 }
 
 ///|
@@ -90,6 +101,14 @@ pub impl Eq for Family with equal(self, other) {
     (Cursive, Cursive) => true
     (Fantasy, Fantasy) => true
     (Monospace, Monospace) => true
+    (SystemUi, SystemUi) => true
+    (UiSerif, UiSerif) => true
+    (UiSansSerif, UiSansSerif) => true
+    (UiMonospace, UiMonospace) => true
+    (UiRounded, UiRounded) => true
+    (Emoji, Emoji) => true
+    (Math, Math) => true
+    (FangSong, FangSong) => true
     _ => false
   }
 }
@@ -106,6 +125,14 @@ pub impl Hash for Family with hash_combine(self, hasher) {
     Cursive => hasher.combine_int(3)
     Fantasy => hasher.combine_int(4)
     Monospace => hasher.combine_int(5)
+    SystemUi => hasher.combine_int(6)
+    UiSerif => hasher.combine_int(7)
+    UiSansSerif => hasher.combine_int(8)
+    UiMonospace => hasher.combine_int(9)
+    UiRounded => hasher.combine_int(10)
+    Emoji => hasher.combine_int(11)
+    Math => hasher.combine_int(12)
+    FangSong => hasher.combine_int(13)
   }
 }
 
@@ -122,6 +149,14 @@ pub impl Show for Family with output(self, logger) {
     Cursive => logger.write_string("Cursive")
     Fantasy => logger.write_string("Fantasy")
     Monospace => logger.write_string("Monospace")
+    SystemUi => logger.write_string("SystemUi")
+    UiSerif => logger.write_string("UiSerif")
+    UiSansSerif => logger.write_string("UiSansSerif")
+    UiMonospace => logger.write_string("UiMonospace")
+    UiRounded => logger.write_string("UiRounded")
+    Emoji => logger.write_string("Emoji")
+    Math => logger.write_string("Math")
+    FangSong => logger.write_string("FangSong")
   }
 }
 

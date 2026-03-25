@@ -311,7 +311,8 @@ pub impl Hash for FontMatchAttrs with hash_combine(self, hasher) {
 fn family_matches(entry : FontEntry, family : Family) -> Bool {
   match family {
     Name(name) => entry_has_family_name(entry, name)
-    Monospace => entry.is_monospace
+    Monospace | UiMonospace => entry.is_monospace
+    Emoji => !entry.not_emoji
     _ => true
   }
 }
@@ -320,7 +321,8 @@ fn family_matches(entry : FontEntry, family : Family) -> Bool {
 fn explicit_family_matches(entry : FontEntry, family : Family) -> Bool {
   match family {
     Name(name) => entry_has_family_name(entry, name)
-    Monospace => entry.is_monospace
+    Monospace | UiMonospace => entry.is_monospace
+    Emoji => !entry.not_emoji
     _ => false
   }
 }
