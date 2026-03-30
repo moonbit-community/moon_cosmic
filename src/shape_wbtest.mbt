@@ -141,7 +141,7 @@ test "BidiInfo keeps explicit paragraph base level when no strong chars" {
   )
   inspect(
     BidiInfo::new_with_para_level("12345", Some(1)).adjusted_levels(),
-    content="[1, 1, 1, 1, 1]",
+    content="[2, 2, 2, 2, 2]",
   )
 }
 
@@ -154,13 +154,7 @@ test "BidiInfo auto paragraph direction follows first strong character" {
 ///|
 test "BidiInfo resolves neutrals between opposite strong levels to paragraph base" {
   let levels = BidiInfo::new("א 1 A").adjusted_levels()
-  let ok = levels.length() == 5 &&
-    levels[0] == 1 &&
-    levels[1] == 1 &&
-    levels[2] == 1 &&
-    levels[3] == 1 &&
-    levels[4] == 2
-  inspect(ok, content="true")
+  inspect(levels, content="[1, 1, 2, 1, 2]")
 }
 
 ///|
@@ -172,6 +166,35 @@ test "BidiInfo uses single-sided strong level for trailing neutrals" {
     levels[2] == 2 &&
     levels[3] == 2
   inspect(ok, content="true")
+}
+
+///|
+test "BidiInfo retains explicit formatting controls during adjusted level pass" {
+  inspect(
+    BidiInfo::new("\u{202B}12\u{202C}").adjusted_levels(),
+    content="[0, 2, 2, 0]",
+  )
+  inspect(
+    BidiInfo::new_with_para_level("\u{202B}12\u{202C}", Some(1)).adjusted_levels(),
+    content="[1, 4, 4, 1]",
+  )
+}
+
+///|
+test "BidiInfo resolves FSI to direction of first strong in isolate scope" {
+  inspect(
+    BidiInfo::new("a\u{2068}א\u{2069}1").adjusted_levels(),
+    content="[0, 0, 1, 0, 0]",
+  )
+  inspect(
+    BidiInfo::new("a\u{2068}A\u{2069}1").adjusted_levels(),
+    content="[0, 0, 2, 0, 0]",
+  )
+}
+
+///|
+test "BidiInfo applies bracket-pair neutral resolution in RTL context" {
+  inspect(BidiInfo::new("(א A)").adjusted_levels(), content="[1, 1, 1, 2, 1]")
 }
 
 ///|
