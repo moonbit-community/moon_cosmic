@@ -14,9 +14,6 @@
 
 ///|
 /// Rendering helpers for Editor (ported from `cosmic-text/src/edit/editor.rs`).
-///
-/// This is an MVP: selection/cursor rendering is based on current `layout_runs()`
-/// and uses code-unit indices (not grapheme clusters).
 fn int_from_float(v : Float) -> Int {
   v.to_double().to_int()
 }
@@ -119,7 +116,7 @@ fn cursor_position_in_run(cursor : Cursor, run : LayoutRun) -> (Int, Int)? {
 }
 
 ///|
-/// Get X and Y position of the top-left corner of the cursor (MVP).
+/// Get X and Y position of the top-left corner of the cursor.
 pub fn Editor::cursor_position(self : Editor) -> (Int, Int)? {
   let buffer = self.buffer.layout_all()
   let mut fallback : (Int, Int)? = None

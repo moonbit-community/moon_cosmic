@@ -70,7 +70,7 @@ pub fn Affinity::from_after(after : Bool) -> Affinity {
 pub struct Cursor {
   /// Index of BufferLine in Buffer::lines
   line : Int
-  /// First-byte-index of glyph at cursor (upstream uses byte index; in MoonBit MVP we treat it as code-unit index)
+  /// First-byte-index of glyph at cursor (represented as UTF-16 code-unit index).
   index : Int
   affinity : Affinity
 

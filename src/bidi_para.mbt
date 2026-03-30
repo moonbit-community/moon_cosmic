@@ -13,83 +13,108 @@
 // limitations under the License.
 
 ///|
-/// Paragraph iterator for bidi-aware text processing.
+/// An iterator over paragraphs in input text.
 ///
-/// Upstream `cosmic-text` uses `unicode-bidi` to find paragraph boundaries.
-/// This MoonBit port approximates the behavior:
-/// - Fast path for simple ASCII text: split on '\n' (does not special-case CRLF).
-/// - Otherwise: split on `BidiClass::B` (Paragraph_Separator) using swash properties.
+/// Behavior follows `unicode-bidi` paragraph ranges:
+/// paragraph separator characters (`BidiClass::B`) remain in the paragraph range
+/// but are trimmed from the returned paragraph text.
 pub struct BidiParagraphs {
   text : String
+  ranges : Array[(Int, Int)]
+  cursor : Int
   pos : Int
-  ascii_fast : Bool
 
   fn new(text : String) -> BidiParagraphs
 }
 
 ///|
-pub fn BidiParagraphs::new(text : String) -> BidiParagraphs {
-  let mut ascii_fast = true
+fn bidi_paragraphs_is_ascii_fast_path(text : String) -> Bool {
   for ch in text {
     if ch.to_int() > 0x7F {
-      ascii_fast = false
-      break
+      return false
     }
     if ch.is_control() && ch != '\n' && ch != '\r' && ch != '\t' {
-      ascii_fast = false
-      break
+      return false
     }
   }
-  BidiParagraphs::{ text, pos: 0, ascii_fast }
+  true
+}
+
+///|
+fn bidi_paragraphs_ascii_ranges(text : String) -> Array[(Int, Int)] {
+  let ranges : Array[(Int, Int)] = []
+  let len = text.length()
+  let mut start = 0
+  for p in text.iter2() {
+    let i = p.0
+    let ch = p.1
+    if ch == '\n' {
+      ranges.push((start, i))
+      start = i + 1
+    }
+  }
+  if start < len {
+    ranges.push((start, len))
+  }
+  ranges
+}
+
+///|
+fn bidi_paragraphs_ranges(text : String) -> Array[(Int, Int)] {
+  if bidi_paragraphs_is_ascii_fast_path(text) {
+    return bidi_paragraphs_ascii_ranges(text)
+  }
+
+  let ranges : Array[(Int, Int)] = []
+  let info = BidiInfo::new(text)
+  for para in info.paragraphs() {
+    ranges.push((para.range_start(), para.range_end()))
+  }
+  ranges
+}
+
+///|
+fn bidi_paragraphs_trim_trailing_b_separator(para : String) -> String {
+  let mut last : (Int, Char)? = None
+  for p in para.iter2() {
+    last = Some((p.0, p.1))
+  }
+  match last {
+    None => para
+    Some((idx, ch)) => {
+      let class = @moon_swash.CharInfo::from_char(ch).properties().bidi_class()
+      if class is B {
+        slice_string(para, 0, idx)
+      } else {
+        para
+      }
+    }
+  }
+}
+
+///|
+pub fn BidiParagraphs::new(text : String) -> BidiParagraphs {
+  let ranges = bidi_paragraphs_ranges(text)
+  let pos = if ranges.length() == 0 { text.length() } else { ranges[0].0 }
+  BidiParagraphs::{ text, ranges, cursor: 0, pos }
 }
 
 ///|
 /// Returns (next, paragraph_text) if any.
 pub fn BidiParagraphs::next(self : BidiParagraphs) -> (BidiParagraphs, String)? {
-  let len = self.text.length()
-  if self.pos >= len {
+  if self.cursor >= self.ranges.length() {
     return None
   }
-  let start = self.pos
-  if self.ascii_fast {
-    // Split on '\n' only, matching the upstream fast path.
-    let mut i = start
-    while i < len {
-      if self.text.code_unit_at(i).to_int() == 10 {
-        let para = slice_string(self.text, start, i)
-        return Some((BidiParagraphs::{ ..self, pos: i + 1 }, para))
-      }
-      i = i + 1
-    }
-    let para = slice_string(self.text, start, len)
-    return Some((BidiParagraphs::{ ..self, pos: len }, para))
+  let range = self.ranges[self.cursor]
+  let para_raw = slice_string(self.text, range.0, range.1)
+  let para = bidi_paragraphs_trim_trailing_b_separator(para_raw)
+  let next_cursor = self.cursor + 1
+  let next_pos = if next_cursor >= self.ranges.length() {
+    self.text.length()
+  } else {
+    self.ranges[next_cursor].0
   }
-
-  // Complex text: split on Paragraph_Separator (BidiClass::B).
-  let mut sep_start = len
-  let mut sep_end = len
-  for p in self.text.iter2() {
-    let idx = p.0
-    let ch = p.1
-    if idx < start {
-      continue
-    }
-    let bc = @moon_swash.CharInfo::from_char(ch).properties().bidi_class()
-    match bc {
-      B => {
-        sep_start = idx
-        sep_end = idx + ch.utf16_len()
-        break
-      }
-      _ => ()
-    }
-  }
-  if sep_start == len {
-    let para = slice_string(self.text, start, len)
-    return Some((BidiParagraphs::{ ..self, pos: len }, para))
-  }
-  let para = slice_string(self.text, start, sep_start)
-  Some((BidiParagraphs::{ ..self, pos: sep_end }, para))
+  Some((BidiParagraphs::{ ..self, cursor: next_cursor, pos: next_pos }, para))
 }
 
 ///|

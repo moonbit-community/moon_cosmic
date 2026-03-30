@@ -15,8 +15,7 @@
 ///|
 /// Segmentation utilities.
 ///
-/// Upstream cosmic-text uses `unicode_segmentation` (UAX#29). This MVP provides a
-/// whitespace-based word segmentation that is sufficient for ASCII/Latin text.
+/// Upstream cosmic-text uses `unicode_segmentation` (UAX#29).
 fn is_ws(code : Int) -> Bool {
   code == 32 || code == 9 || code == 10 || code == 13
 }

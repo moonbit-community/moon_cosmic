@@ -122,7 +122,7 @@ test "BufferLine.shape builds 1 glyph per code unit (tab uses tab_width cells)" 
 }
 
 ///|
-test "BufferLine.layout wraps words using whitespace segmentation (MVP)" {
+test "BufferLine.layout wraps words using whitespace segmentation" {
   let attrs = AttrsList::new(Attrs::new())
   let line0 = BufferLine::new("hello world", Lf, attrs, Advanced)
   let line1 = line0.layout(

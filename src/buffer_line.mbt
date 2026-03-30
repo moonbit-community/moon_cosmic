@@ -787,7 +787,7 @@ pub fn BufferLine::layout_with_font_system(
     }
   } else {
     // Match existing API: if layout is cached, no work.
-    // `hinting` is currently unused (MVP), but kept for API compatibility.
+    // `hinting` is currently kept for API compatibility.
     ignore(hinting)
     self
   }

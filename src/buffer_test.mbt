@@ -218,7 +218,7 @@ test "Buffer.layout_runs follows scroll line and viewport height" {
 }
 
 ///|
-test "wrap_word_fallback: layout_runs never overflow width (MVP)" {
+test "wrap_word_fallback: layout_runs never overflow width" {
   let metrics = Metrics::new(14.0F, 20.0F)
   let mut buffer = Buffer::new(metrics)
   buffer = buffer.set_wrap(Wrap::WordOrGlyph)

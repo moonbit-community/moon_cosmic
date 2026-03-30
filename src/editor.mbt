@@ -327,7 +327,7 @@ pub fn Editor::selection_bounds(self : Editor) -> (Cursor, Cursor)? {
       let mut start = start0
       let mut end = end0
 
-      // Move start to beginning of word (whitespace-based MVP).
+      // Move start to beginning of word.
       {
         let line = buffer.lines()[start.line]
         let ranges = word_indices_uax29(line.text())
@@ -347,7 +347,7 @@ pub fn Editor::selection_bounds(self : Editor) -> (Cursor, Cursor)? {
         start = Cursor::new_with_affinity(start.line, found, start.affinity)
       }
 
-      // Move end to end of word (whitespace-based MVP).
+      // Move end to end of word.
       {
         let line = buffer.lines()[end.line]
         let ranges = word_indices_uax29(line.text())
@@ -697,7 +697,7 @@ pub fn Editor::apply_change(self : Editor, change : Change) -> (Editor, Bool) {
 ///|
 
 ///|
-/// Perform an action on the editor (MVP: cursor motion is text-index based, no hit-testing yet).
+/// Perform an action on the editor.
 pub fn Editor::action(self : Editor, action : Action) -> Editor {
   let old_cursor = self.cursor
   let mut editor = self

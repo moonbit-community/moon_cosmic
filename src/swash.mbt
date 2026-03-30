@@ -13,14 +13,6 @@
 // limitations under the License.
 
 ///|
-/// Swash rasterization cache (ported from `cosmic-text/src/swash.rs`).
-///
-/// This implementation uses `Milky2018/moon_swash/scale` directly.
-fn Color::raw(self : Color) -> UInt {
-  self.value
-}
-
-///|
 fn f32_from_bits(bits : UInt) -> Float {
   Float::reinterpret_from_uint(bits)
 }
@@ -232,6 +224,40 @@ pub fn SwashCache::with_pixels(
   base : Color,
   f : (Int, Int, Color) -> Unit,
 ) -> Unit {
+  fn scale_byte_alpha(v : Byte, alpha : UInt) -> Byte {
+    (v.to_int().reinterpret_as_uint() * alpha / 255U)
+    .reinterpret_as_int()
+    .to_byte()
+  }
+
+  fn emit_rgba_pixels(
+    x0 : Int,
+    y0 : Int,
+    width : Int,
+    height : Int,
+    data : Bytes,
+    alpha_scale : UInt?,
+    f : (Int, Int, Color) -> Unit,
+  ) -> Unit {
+    let mut i = 0
+    for off_y in 0..<height {
+      for off_x in 0..<width {
+        let mut r = if data.get(i) is Some(v) { v } else { 0x00 }
+        let mut g = if data.get(i + 1) is Some(v) { v } else { 0x00 }
+        let mut b = if data.get(i + 2) is Some(v) { v } else { 0x00 }
+        let mut a = if data.get(i + 3) is Some(v) { v } else { 0x00 }
+        if alpha_scale is Some(s) {
+          r = scale_byte_alpha(r, s)
+          g = scale_byte_alpha(g, s)
+          b = scale_byte_alpha(b, s)
+          a = scale_byte_alpha(a, s)
+        }
+        f(x0 + off_x, y0 + off_y, Color::rgba(r, g, b, a))
+        i = i + 4
+      }
+    }
+  }
+
   match self.get_image(font_system, cache_key) {
     None => ()
     Some(image) => {
@@ -243,36 +269,28 @@ pub fn SwashCache::with_pixels(
       let data = image.data()
       match image.content() {
         Mask => {
-          let mut i = 0
-          for off_y in 0..<height {
-            for off_x in 0..<width {
-              let a = if data.get(i) is Some(v) { v } else { 0x00 }
-              // TODO: blend base alpha.
-              let color = Color::{
-                value: (a.to_int().reinterpret_as_uint() << 24) |
-                (base.raw() & 0x00FF_FFFF),
-              }
-              f(x0 + off_x, y0 + off_y, color)
-              i = i + 1
-            }
+          let rgba = image
+          if rgba.to_rgba8([base.r(), base.g(), base.b(), base.a()]) {
+            emit_rgba_pixels(x0, y0, width, height, rgba.data(), None, f)
           }
         }
         Color => {
-          let mut i = 0
-          for off_y in 0..<height {
-            for off_x in 0..<width {
-              let r = if data.get(i) is Some(v) { v } else { 0x00 }
-              let g = if data.get(i + 1) is Some(v) { v } else { 0x00 }
-              let b = if data.get(i + 2) is Some(v) { v } else { 0x00 }
-              let a = if data.get(i + 3) is Some(v) { v } else { 0x00 }
-              f(x0 + off_x, y0 + off_y, Color::rgba(r, g, b, a))
-              i = i + 4
+          let alpha_scale : UInt? = {
+            let a = base.a().to_int().reinterpret_as_uint()
+            if a == 255U {
+              None
+            } else {
+              Some(a)
             }
           }
+          emit_rgba_pixels(x0, y0, width, height, data, alpha_scale, f)
         }
-        SubpixelMask =>
-          // TODO
-          ()
+        SubpixelMask => {
+          let rgba = image
+          if rgba.to_rgba8([base.r(), base.g(), base.b(), base.a()]) {
+            emit_rgba_pixels(x0, y0, width, height, rgba.data(), None, f)
+          }
+        }
       }
     }
   }

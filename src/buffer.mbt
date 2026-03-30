@@ -14,8 +14,6 @@
 
 ///|
 /// Minimal `Buffer` port scaffold from `cosmic-text/src/buffer.rs`.
-///
-/// This MVP focuses on line splitting, cache invalidation and redraw semantics.
 pub struct Buffer {
   lines : Array[BufferLine]
   metrics : Metrics
@@ -386,7 +384,7 @@ fn slice_string(s : String, start : Int, end : Int) -> String {
 }
 
 ///|
-/// Set full text of buffer (MVP).
+/// Set full text of buffer.
 ///
 /// NOTE: `attrs_list` is copied per line (upstream spans are per line).
 pub fn Buffer::set_text(
@@ -405,7 +403,7 @@ pub fn Buffer::set_text(
       let end = item.1
       let ending = item.2
       let line_text = slice_string(text, start, end)
-      // MVP: attrs_list is shared; once we implement per-line ranges this will be adjusted.
+      // `attrs_list` is currently shared across split lines.
       new_lines.push(BufferLine::new(line_text, ending, attrs_list, shaping))
     } else {
       break
@@ -897,7 +895,7 @@ pub fn Buffer::shape_until_cursor(
 }
 
 ///|
-/// A line of visible text for rendering (MVP subset).
+/// A line of visible text for rendering.
 pub struct LayoutRun {
   line_i : Int
   line_y : Float
@@ -1066,7 +1064,7 @@ pub fn Buffer::layout_runs(self : Buffer) -> Iter[LayoutRun] {
 }
 
 ///|
-/// Hit-testing: map a physical x/y position to a cursor (MVP).
+/// Hit-testing: map a physical x/y position to a cursor.
 pub fn Buffer::hit(self : Buffer, x : Float, y : Float) -> Cursor? {
   let buffer = self.layout_all()
   let mut last : Cursor? = None
@@ -1135,7 +1133,7 @@ pub fn Buffer::hit(self : Buffer, x : Float, y : Float) -> Cursor? {
 }
 
 ///|
-/// Cursor motion based on current layout runs (MVP).
+/// Cursor motion based on current layout runs.
 ///
 /// This uses visual lines from `layout_runs()` for vertical movement.
 pub fn Buffer::cursor_motion(
@@ -1424,7 +1422,7 @@ pub fn Buffer::cursor_motion(
     )
   }
 
-  // Fallback: text-index motion (same as Editor's MVP cursor_motion).
+  // Fallback: text-index motion (same as Editor's cursor_motion).
   let mut c = cursor
   fn move_prev_grapheme(buffer : Buffer, c0 : Cursor) -> Cursor {
     let mut c = c0

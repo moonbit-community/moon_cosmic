@@ -14,8 +14,6 @@
 
 ///|
 /// Minimal layout scaffolding ported from `cosmic-text/src/layout.rs`.
-///
-/// NOTE: This is an MVP focused on wrap/layout tests; shaping/font fallback will be added later.
 
 ///|
 /// Metrics hinting strategy
@@ -44,7 +42,7 @@ pub(all) enum Align {
 }
 
 ///|
-/// A laid out glyph (MVP subset)
+/// A laid out glyph.
 pub struct LayoutGlyph {
   start : Int
   end : Int
@@ -123,7 +121,7 @@ pub fn LayoutGlyph::new(
 }
 
 ///|
-/// A line of laid out glyphs (MVP subset)
+/// A line of laid out glyphs.
 pub struct LayoutLine {
   start : Int
   end : Int
@@ -448,7 +446,7 @@ fn push_line(
 ) -> Unit {
   let len = text_end - text_start
   let w = glyph_w * float_from_int(len)
-  // MVP: 1 glyph per code unit, with x computed from glyph width.
+  // Monospace fallback helper: 1 glyph per code unit.
   let glyphs : Array[LayoutGlyph] = []
   for i in 0..<len {
     glyphs.push(LayoutGlyph::{
@@ -976,7 +974,7 @@ fn build_layout_lines_from_visual_ranges(
 }
 
 ///|
-/// Layout from ShapeLine (MVP).
+/// Layout from ShapeLine.
 ///
 /// `cell_w` is the pixel width per "advance cell" (ShapeGlyph.x_advance is in cells).
 pub fn layout_from_shape(
@@ -1525,7 +1523,7 @@ fn apply_align_to_line(
         LayoutLine::{ ..line, glyphs, }
       }
     Justified => {
-      // MVP: distribute extra width across ASCII spaces in this line.
+      // Distribute extra width across ASCII spaces in this line.
       let mut space_count = 0
       for i in line.start..<line.end {
         if i >= 0 && i < text.length() && text.code_unit_at(i) == 32 {

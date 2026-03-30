@@ -16,7 +16,7 @@
 test "BidiParagraphs matches upstream fast path for ASCII (splits on \\n only)" {
   let ps = BidiParagraphs::new("a\nb\r\nc")
   let out = ps.iter().to_array()
-  inspect(out, content="[\"a\", \"b\\r\", \"c\"]")
+  inspect(out, content="[\"a\", \"b\", \"c\"]")
 }
 
 ///|

@@ -13,10 +13,7 @@
 // limitations under the License.
 
 ///|
-/// Minimal shaping port scaffold from `cosmic-text/src/shape.rs`.
-///
-/// This MVP produces 1 glyph per UTF-16 code unit and does not perform script runs,
-/// harfbuzz shaping, BiDi, or font fallback.
+/// Shaping primitives ported from `cosmic-text/src/shape.rs`.
 pub(all) enum Shaping {
   Basic
   Advanced
@@ -1005,11 +1002,6 @@ fn shape_run_with_font(
 
 ///|
 /// Build a shaped line from text and attributes list.
-///
-/// MVP notes:
-/// - 1 code unit -> 1 glyph
-/// - `glyph_id` is the code unit value
-/// - `x_advance` is measured in "cells": 1.0 for normal chars, `tab_width` for tab.
 pub fn ShapeLine::build(
   _self : ShapeLine,
   text : String,

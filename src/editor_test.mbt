@@ -59,7 +59,7 @@ test "Editor.selection_bounds: none/normal/line/word" {
     }
   }
 
-  // Word selection expands to whole words (whitespace-based MVP).
+  // Word selection expands to whole words.
   let editor3 = editor0
     .set_cursor(Cursor::new(0, 8))
     .set_selection(Selection::Word(Cursor::new(0, 1)))
