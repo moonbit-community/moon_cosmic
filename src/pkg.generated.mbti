@@ -154,6 +154,22 @@ pub struct AttrsSpan {
 pub impl Eq for AttrsSpan
 pub impl Hash for AttrsSpan
 
+pub struct BidiInfo {
+  text : String
+  original_classes : Array[@moon_swash.BidiClass]
+  levels : Array[Int]
+  paragraphs : Array[ParagraphInfo]
+
+  fn new(String) -> BidiInfo
+}
+pub fn BidiInfo::adjusted_levels(Self) -> Array[Int]
+pub fn BidiInfo::levels(Self) -> Array[Int]
+pub fn BidiInfo::new(String) -> Self
+pub fn BidiInfo::new_with_para_level(String, Int?) -> Self
+pub fn BidiInfo::paragraphs(Self) -> Array[ParagraphInfo]
+pub fn BidiInfo::rtl(Self) -> Bool
+pub fn BidiInfo::text(Self) -> String
+
 pub struct BidiParagraphs {
   text : String
   pos : Int
@@ -669,6 +685,16 @@ pub(all) enum Motion {
   GotoLine(Int)
 }
 pub impl Eq for Motion
+
+pub struct ParagraphInfo {
+  range_start : Int
+  range_end : Int
+  level : Int
+}
+pub fn ParagraphInfo::is_rtl(Self) -> Bool
+pub fn ParagraphInfo::level(Self) -> Int
+pub fn ParagraphInfo::range_end(Self) -> Int
+pub fn ParagraphInfo::range_start(Self) -> Int
 
 pub struct PhysicalGlyph {
   cache_key : CacheKey

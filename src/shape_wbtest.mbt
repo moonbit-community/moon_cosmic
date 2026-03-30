@@ -134,26 +134,38 @@ test "shape_levels_require_new_run splits on any level change" {
 }
 
 ///|
-test "compute_bidi_levels keeps base level when no strong chars" {
-  inspect(compute_bidi_levels("12345", false), content="[0, 0, 0, 0, 0]")
-  inspect(compute_bidi_levels("12345", true), content="[1, 1, 1, 1, 1]")
+test "BidiInfo keeps explicit paragraph base level when no strong chars" {
+  inspect(
+    BidiInfo::new_with_para_level("12345", Some(0)).adjusted_levels(),
+    content="[0, 0, 0, 0, 0]",
+  )
+  inspect(
+    BidiInfo::new_with_para_level("12345", Some(1)).adjusted_levels(),
+    content="[1, 1, 1, 1, 1]",
+  )
 }
 
 ///|
-test "compute_bidi_levels resolves neutrals between opposite strong levels to base" {
-  let levels = compute_bidi_levels("א 1 A", false)
+test "BidiInfo auto paragraph direction follows first strong character" {
+  inspect(BidiInfo::new("א 1 A").rtl(), content="true")
+  inspect(BidiInfo::new("A 1 א").rtl(), content="false")
+}
+
+///|
+test "BidiInfo resolves neutrals between opposite strong levels to paragraph base" {
+  let levels = BidiInfo::new("א 1 A").adjusted_levels()
   let ok = levels.length() == 5 &&
     levels[0] == 1 &&
-    levels[1] == 0 &&
-    levels[2] == 0 &&
-    levels[3] == 0 &&
-    levels[4] == 0
+    levels[1] == 1 &&
+    levels[2] == 1 &&
+    levels[3] == 1 &&
+    levels[4] == 2
   inspect(ok, content="true")
 }
 
 ///|
-test "compute_bidi_levels uses single-sided strong level for trailing neutrals" {
-  let levels = compute_bidi_levels("A 12", true)
+test "BidiInfo uses single-sided strong level for trailing neutrals" {
+  let levels = BidiInfo::new_with_para_level("A 12", Some(1)).adjusted_levels()
   let ok = levels.length() == 4 &&
     levels[0] == 2 &&
     levels[1] == 2 &&

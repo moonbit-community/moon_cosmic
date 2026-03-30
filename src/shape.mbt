@@ -140,127 +140,6 @@ fn utf16_len_of_char(ch : Char) -> Int {
 }
 
 ///|
-fn bidi_is_strong_rtl(b : @moon_swash.BidiClass) -> Bool {
-  match b {
-    R | AL | AN | RLE | RLO | RLI => true
-    _ => false
-  }
-}
-
-///|
-fn bidi_is_strong_ltr(b : @moon_swash.BidiClass) -> Bool {
-  match b {
-    L | LRE | LRO | LRI => true
-    _ => false
-  }
-}
-
-///|
-fn detect_base_rtl(text : String) -> Bool {
-  // Heuristic: use the first strong directional character.
-  for ch in text {
-    let props = @moon_swash.CharInfo::from_char(ch).properties()
-    let bidi = props.bidi_class()
-    if bidi_is_strong_rtl(bidi) {
-      return true
-    }
-    if bidi_is_strong_ltr(bidi) {
-      return false
-    }
-  }
-  false
-}
-
-///|
-fn compute_bidi_levels(text : String, rtl : Bool) -> Array[Int] {
-  let base = if rtl { 1 } else { 0 }
-  let levels : Array[Int] = Array::makei(text.length(), _ => base)
-  let strong_mask : Array[Bool] = Array::makei(text.length(), _ => false)
-  let segments : Array[(Int, Int, Bool)] = []
-  for p in text.iter2() {
-    let idx = p.0
-    let ch = p.1
-    let props = @moon_swash.CharInfo::from_char(ch).properties()
-    let bidi = props.bidi_class()
-    let strong_rtl = bidi_is_strong_rtl(bidi)
-    let strong_ltr = bidi_is_strong_ltr(bidi)
-    let strong = strong_rtl || strong_ltr
-    let lev = if strong_rtl {
-      1
-    } else if strong_ltr {
-      if rtl {
-        2
-      } else {
-        0
-      }
-    } else {
-      base
-    }
-    let end = idx + ch.utf16_len()
-    let mut i = idx
-    while i < end && i < levels.length() {
-      levels.set(i, lev)
-      strong_mask.set(i, strong)
-      i = i + 1
-    }
-    segments.push((idx, end, strong))
-  }
-
-  // Resolve neutral spans (e.g. spaces) toward surrounding strong runs.
-  // Keep semantics unchanged while avoiding O(N^2) bidirectional scans.
-  let len = levels.length()
-  let prev_strong_before : Array[Int] = Array::makei(len + 1, _ => -1)
-  let mut prev_idx = -1
-  for i in 0..<len {
-    if strong_mask[i] {
-      prev_idx = i
-    }
-    prev_strong_before.set(i + 1, prev_idx)
-  }
-  let next_strong_after : Array[Int] = Array::makei(len + 1, _ => -1)
-  let mut next_idx = -1
-  let mut i = len - 1
-  while i >= 0 {
-    if strong_mask[i] {
-      next_idx = i
-    }
-    next_strong_after.set(i, next_idx)
-    i = i - 1
-  }
-  for seg in segments {
-    let start0 = seg.0
-    let end0 = seg.1
-    if seg.2 {
-      continue
-    }
-    let start = if start0 < 0 { 0 } else if start0 > len { len } else { start0 }
-    let end = if end0 < start { start } else if end0 > len { len } else { end0 }
-    let prev_level = if prev_strong_before[start] >= 0 {
-      Some(levels[prev_strong_before[start]])
-    } else {
-      None
-    }
-    let next_level = if next_strong_after[end] >= 0 {
-      Some(levels[next_strong_after[end]])
-    } else {
-      None
-    }
-    let neutral_level = match (prev_level, next_level) {
-      (Some(pl), Some(nl)) => if pl == nl { pl } else { base }
-      (Some(pl), None) => pl
-      (None, Some(nl)) => nl
-      (None, None) => base
-    }
-    let mut j = start
-    while j < end {
-      levels.set(j, neutral_level)
-      j = j + 1
-    }
-  }
-  levels
-}
-
-///|
 fn script_eq(a : @moon_swash.Script, b : @moon_swash.Script) -> Bool {
   a.to_opentype() == b.to_opentype()
 }
@@ -1138,8 +1017,13 @@ pub fn ShapeLine::build(
   shaping : Shaping,
   tab_width : Int,
 ) -> ShapeLine {
-  let rtl = shaping is Advanced && detect_base_rtl(text)
-  let levels = compute_bidi_levels(text, rtl)
+  let bidi_info = if shaping is Advanced {
+    BidiInfo::new(text)
+  } else {
+    BidiInfo::new_with_para_level(text, Some(0))
+  }
+  let rtl = bidi_info.rtl()
+  let levels = bidi_info.adjusted_levels()
   let glyphs : Array[ShapeGlyph] = []
   let len = text.length()
   for i in 0..<len {
@@ -1227,8 +1111,9 @@ pub fn ShapeLine::build_with_font_system(
   // Use swash's shaping engine for clusters/ligatures/marks. We intentionally use
   // size=1.0 so the returned advances/offsets are in "em" units (like upstream),
   // which are later multiplied by `font_size` during layout.
-  let rtl = detect_base_rtl(text)
-  let levels = compute_bidi_levels(text, rtl)
+  let bidi_info = BidiInfo::new(text)
+  let rtl = bidi_info.rtl()
+  let levels = bidi_info.adjusted_levels()
   let cx = @shape.ShapeContext::new()
   let runs : Array[
     (
