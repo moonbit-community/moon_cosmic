@@ -1,0 +1,61 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "Milky2018/moon_cosmic/edit_vi"
+
+import {
+  "Milky2018/moon_cosmic",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub struct ViEditor {
+  editor : @moon_cosmic.Editor
+  mode : ViMode
+  pending_operator : ViOperator?
+  passthrough : Bool
+  history : Array[@moon_cosmic.Change]
+  history_index : Int
+  save_pivot_opt : Int?
+  changed : Bool
+  search_opt : (String, Bool)?
+  search_input_opt : String?
+  pending_find_opt : (Bool, Bool)?
+  pending_text_object_opt : (ViOperator, Bool)?
+  register_opt : String?
+
+  fn new(@moon_cosmic.Editor) -> ViEditor
+}
+pub fn ViEditor::changed(Self) -> Bool
+pub fn ViEditor::editor(Self) -> @moon_cosmic.Editor
+pub fn ViEditor::escape(Self) -> Self
+pub fn ViEditor::feed_char(Self, Char) -> Self
+pub fn ViEditor::feed_string(Self, String) -> Self
+pub fn ViEditor::mode(Self) -> ViMode
+pub fn ViEditor::new(@moon_cosmic.Editor) -> Self
+pub fn ViEditor::redo(Self) -> Self
+pub fn ViEditor::save_point(Self) -> Self
+pub fn ViEditor::set_changed(Self, Bool) -> Self
+pub fn ViEditor::set_editor(Self, @moon_cosmic.Editor) -> Self
+pub fn ViEditor::set_passthrough(Self, Bool) -> Self
+pub fn ViEditor::undo(Self) -> Self
+
+pub(all) enum ViMode {
+  Normal
+  Insert
+  Visual
+  VisualLine
+  Search
+}
+
+pub(all) enum ViOperator {
+  Delete
+  Change
+  Yank
+}
+
+// Type aliases
+
+// Traits
+

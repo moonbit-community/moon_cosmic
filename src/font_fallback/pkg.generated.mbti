@@ -1,0 +1,34 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "Milky2018/moon_cosmic/font_fallback"
+
+import {
+  "Milky2018/moon_swash",
+}
+
+// Values
+pub fn common_fallback_family_names(FallbackProfile) -> Array[String]
+
+pub fn detect_fallback_profile(Array[String]) -> FallbackProfile
+
+pub fn forbidden_fallback_family_names(FallbackProfile) -> Array[String]
+
+pub fn platform_default_fallback_profile() -> FallbackProfile
+
+pub fn script_fallback_family_names(@moon_swash.Script, String, FallbackProfile) -> Array[String]
+
+pub fn script_uses_fallback_stage(@moon_swash.Script) -> Bool
+
+// Errors
+
+// Types and methods
+pub(all) enum FallbackProfile {
+  Unix
+  MacOS
+  Windows
+  Other
+}
+
+// Type aliases
+
+// Traits
+

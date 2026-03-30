@@ -1,0 +1,108 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "Milky2018/moon_cosmic/edit_syntect"
+
+import {
+  "Milky2018/moon_cosmic",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub struct CachedLine {
+  text : String
+  state_in : LineState
+  state_out : LineState
+  spans : Array[TokenSpan]
+}
+
+pub struct LineState {
+  block_comment_depth : Int
+  string_delim_opt : Char?
+}
+pub fn LineState::new() -> Self
+pub impl Eq for LineState
+
+pub struct SyntaxEditor {
+  editor : @moon_cosmic.Editor
+  syntax_system : SyntaxSystem
+  syntax_name : String
+  theme : SyntaxTheme
+  cache : Array[CachedLine]
+}
+pub fn SyntaxEditor::action(Self, @moon_cosmic.Action) -> Self
+pub fn SyntaxEditor::apply_change(Self, @moon_cosmic.Change) -> (Self, Bool)
+pub fn SyntaxEditor::auto_indent(Self) -> Bool
+pub fn SyntaxEditor::background_color(Self) -> @moon_cosmic.Color
+pub fn SyntaxEditor::copy_selection(Self) -> String?
+pub fn SyntaxEditor::cursor(Self) -> @moon_cosmic.Cursor
+pub fn SyntaxEditor::cursor_color(Self) -> @moon_cosmic.Color
+pub fn SyntaxEditor::cursor_position(Self) -> (Int, Int)?
+pub fn SyntaxEditor::delete_range(Self, @moon_cosmic.Cursor, @moon_cosmic.Cursor) -> Self
+pub fn SyntaxEditor::delete_selection(Self) -> (Self, Bool)
+pub fn SyntaxEditor::editor(Self) -> @moon_cosmic.Editor
+pub fn SyntaxEditor::finish_change(Self) -> (Self, @moon_cosmic.Change?)
+pub fn SyntaxEditor::foreground_color(Self) -> @moon_cosmic.Color
+pub fn SyntaxEditor::insert_string(Self, String, @moon_cosmic.AttrsList?) -> Self
+pub fn SyntaxEditor::new(@moon_cosmic.Editor, SyntaxSystem, String) -> Self?
+pub fn SyntaxEditor::rehighlight(Self) -> Self
+pub fn[R : @moon_cosmic.Renderer] SyntaxEditor::render(Self, R) -> Unit
+pub fn SyntaxEditor::selection(Self) -> @moon_cosmic.Selection
+pub fn SyntaxEditor::selection_color(Self) -> @moon_cosmic.Color
+pub fn SyntaxEditor::set_auto_indent(Self, Bool) -> Self
+pub fn SyntaxEditor::set_cursor(Self, @moon_cosmic.Cursor) -> Self
+pub fn SyntaxEditor::set_editor(Self, @moon_cosmic.Editor) -> Self
+pub fn SyntaxEditor::set_selection(Self, @moon_cosmic.Selection) -> Self
+pub fn SyntaxEditor::set_tab_width(Self, Int) -> Self
+pub fn SyntaxEditor::start_change(Self) -> Self
+pub fn SyntaxEditor::syntax_by_extension(Self, String) -> Self
+pub fn SyntaxEditor::syntax_name(Self) -> String
+pub fn SyntaxEditor::tab_width(Self) -> Int
+pub fn SyntaxEditor::theme(Self) -> SyntaxTheme
+pub fn SyntaxEditor::update_theme(Self, String) -> (Self, Bool)
+
+pub struct SyntaxSystem {
+  fn new() -> SyntaxSystem
+}
+pub fn SyntaxSystem::new() -> Self
+pub fn SyntaxSystem::plain_text_syntax(Self) -> String
+pub fn SyntaxSystem::syntax_for_extension(Self, String) -> String?
+pub fn SyntaxSystem::theme(Self, String) -> SyntaxTheme?
+
+pub struct SyntaxTheme {
+  name : String
+  background : @moon_cosmic.Color
+  foreground : @moon_cosmic.Color
+  cursor_opt : @moon_cosmic.Color?
+  selection_opt : @moon_cosmic.Color?
+  keyword : @moon_cosmic.Color
+  type_name : @moon_cosmic.Color
+  string_lit : @moon_cosmic.Color
+  comment : @moon_cosmic.Color
+  number : @moon_cosmic.Color
+}
+pub fn SyntaxTheme::background(Self) -> @moon_cosmic.Color
+pub fn SyntaxTheme::cursor(Self) -> @moon_cosmic.Color
+pub fn SyntaxTheme::foreground(Self) -> @moon_cosmic.Color
+pub fn SyntaxTheme::name(Self) -> String
+pub fn SyntaxTheme::selection(Self) -> @moon_cosmic.Color
+
+pub(all) enum TokenClass {
+  Keyword
+  TypeName
+  StringLit
+  Comment
+  Number
+}
+
+pub struct TokenSpan {
+  start : Int
+  end : Int
+  class : TokenClass
+}
+
+// Type aliases
+
+// Traits
+

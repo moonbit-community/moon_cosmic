@@ -4,6 +4,8 @@ import {
   "Milky2018/moon_swash/scale",
   "Milky2018/moon_zeno",
   "Milky2018/moon_swash",
+  "Milky2018/moon_cosmic/linebreak" @linebreak,
+  "Milky2018/moon_cosmic/font_fallback" @font_fallback,
   "moonbit-community/harfbuzz/common",
   "moonbit-community/harfbuzz/face",
   "moonbit-community/harfbuzz/font",

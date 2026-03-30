@@ -486,3 +486,25 @@ test "non-native fallback profile defaults to Other" {
   }
   inspect(is_other, content="true")
 }
+
+///|
+test "fallback profile can be explicitly overridden" {
+  let data = mk_min_font_cmap4_single(b'\x00', b'\x41')
+  let fs = FontSystem::new().load_font_data(data).set_fallback_profile(Windows)
+  let is_windows = match fallback_profile(fs) {
+    Windows => true
+    _ => false
+  }
+  inspect(is_windows, content="true")
+}
+
+///|
+test "clear_fallback_profile returns to platform default" {
+  let data = mk_min_font_cmap4_single(b'\x00', b'\x41')
+  let fs = FontSystem::new()
+    .load_font_data(data)
+    .set_fallback_profile(MacOS)
+    .clear_fallback_profile()
+  let expected = fallback_profile(FontSystem::new().load_font_data(data))
+  inspect(fallback_profile(fs) == expected, content="true")
+}

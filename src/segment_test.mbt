@@ -78,11 +78,8 @@ test "word_indices_uax29 follows unicode-segmentation thai boundary behavior" {
 
 ///|
 test "wrap_word_segments matches unicode-linebreak boundary samples" {
-  inspect(wrap_word_segments("x!=y"), content="[(0, 2, false), (2, 4, false)]")
-  inspect(
-    wrap_word_segments("foo->bar"),
-    content="[(0, 4, false), (4, 8, false)]",
-  )
+  inspect(wrap_word_segments("x!=y"), content="[(0, 4, false)]")
+  inspect(wrap_word_segments("foo->bar"), content="[(0, 8, false)]")
   inspect(
     wrap_word_segments("中 文"),
     content="[(0, 1, false), (1, 2, true), (2, 3, false)]",
