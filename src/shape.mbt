@@ -217,16 +217,6 @@ fn entry_supports_any_run_script(
 }
 
 ///|
-fn source_start_index(source : @moon_swash.SourceRange) -> Int {
-  source.start().reinterpret_as_int()
-}
-
-///|
-fn source_end_index(source : @moon_swash.SourceRange) -> Int {
-  source.end().reinterpret_as_int()
-}
-
-///|
 fn attrs_for_position(
   attrs_list : AttrsList,
   pos : Int,
@@ -244,30 +234,6 @@ fn attrs_for_position(
     }
     attrs_list.get_span(i)
   }
-}
-
-///|
-fn clamp_range_to_source(
-  start0 : Int,
-  end0 : Int,
-  source_start : Int,
-  source_end : Int,
-) -> (Int, Int) {
-  let start1 = if start0 < source_start {
-    source_start
-  } else if start0 > source_end {
-    source_end
-  } else {
-    start0
-  }
-  let end1 = if end0 < start1 {
-    start1
-  } else if end0 > source_end {
-    source_end
-  } else {
-    end0
-  }
-  (start1, end1)
 }
 
 ///|
@@ -305,84 +271,6 @@ fn attrs_list_for_utf16_range(
   let (_, right) = attrs_list.split_off(s)
   let (mid, _) = right.split_off(e - s)
   mid
-}
-
-///|
-fn build_cluster_starts(
-  source : @moon_swash.SourceRange,
-  components : ArrayView[@moon_swash.SourceRange],
-  glyph_count : Int,
-  rtl : Bool,
-) -> Array[Int] {
-  let starts : Array[Int] = []
-  if glyph_count <= 0 {
-    return starts
-  }
-  if components.length() == 0 {
-    let source_start = source_start_index(source)
-    for _ in 0..<glyph_count {
-      starts.push(source_start)
-    }
-    return starts
-  }
-
-  let component_starts : Array[Int] = []
-  for comp in components {
-    component_starts.push(source_start_index(comp))
-  }
-  let m = component_starts.length()
-  for i in 0..<glyph_count {
-    let bucket = if glyph_count <= m {
-      i * m / glyph_count
-    } else if i < m {
-      i
-    } else {
-      m - 1
-    }
-    let k = if rtl { m - 1 - bucket } else { bucket }
-    starts.push(component_starts[k])
-  }
-  starts
-}
-
-///|
-fn build_cluster_ends(
-  starts : Array[Int],
-  source_end : Int,
-  rtl : Bool,
-) -> Array[Int] {
-  let n = starts.length()
-  let ends : Array[Int] = []
-  for _ in 0..<n {
-    ends.push(source_end)
-  }
-  if n < 2 {
-    return ends
-  }
-  if rtl {
-    for i in 1..<n {
-      let next_start = starts[i - 1]
-      let next_end = ends[i - 1]
-      if starts[i] == next_start {
-        ends.set(i, next_end)
-      } else {
-        ends.set(i, next_start)
-      }
-    }
-  } else {
-    let mut i = n - 1
-    while i > 0 {
-      let next_start = starts[i]
-      let next_end = ends[i]
-      if starts[i - 1] == next_start {
-        ends.set(i - 1, next_end)
-      } else {
-        ends.set(i - 1, next_start)
-      }
-      i = i - 1
-    }
-  }
-  ends
 }
 
 ///|
@@ -801,29 +689,6 @@ fn reorder_monospace_fallback_candidates(
 }
 
 ///|
-fn clamp_feature_value(value : UInt) -> UInt16 {
-  if value > 0xFFFFU {
-    0xFFFF
-  } else {
-    value.to_uint16()
-  }
-}
-
-///|
-fn attrs_feature_settings(attrs : Attrs) -> Array[@moon_swash.FeatureSetting] {
-  let settings : Array[@moon_swash.FeatureSetting] = []
-  for feature in attrs.font_features_value().features() {
-    settings.push(
-      @moon_swash.Setting::new(
-        feature.tag().as_tag(),
-        clamp_feature_value(feature.value()),
-      ),
-    )
-  }
-  settings
-}
-
-///|
 fn shape_clamp_double(v : Double, lo : Double, hi : Double) -> Double {
   if v < lo {
     lo
@@ -881,15 +746,11 @@ fn shape_harfbuzz_variations(
   attrs : Attrs,
 ) -> Array[@var.AxisCoord] {
   let axis_coords : Array[@var.AxisCoord] = []
-  match font.variations().find_by_tag(SHAPE_WEIGHT_AXIS_TAG) {
-    None => ()
-    Some(axis) => {
-      let w = attrs.weight_value().value().to_double()
-      let value = shape_clamp_double(w, axis.min_value(), axis.max_value())
-      axis_coords.push(
-        @var.AxisCoord::new(hb_tag_from_swash_tag(SHAPE_WEIGHT_AXIS_TAG), value),
-      )
-    }
+  let settings = shape_variation_settings_for_font(font, attrs)
+  for setting in settings {
+    axis_coords.push(
+      @var.AxisCoord::new(hb_tag_from_swash_tag(setting.tag), setting.value),
+    )
   }
   axis_coords
 }
@@ -1061,6 +922,20 @@ fn attrs_letter_spacing(attrs : Attrs) -> Float {
 }
 
 ///|
+fn shape_run_missing_tokens(
+  run_tokens : Array[@moon_swash.Token],
+) -> Array[Int] {
+  let missing : Array[Int] = []
+  for t in run_tokens {
+    let s = t.offset().reinterpret_as_int()
+    if !missing_contains(missing, s) {
+      missing.push(s)
+    }
+  }
+  missing
+}
+
+///|
 fn shape_run_with_font(
   font_system : FontSystem,
   attrs_list : AttrsList,
@@ -1068,25 +943,16 @@ fn shape_run_with_font(
   text_len : Int,
   line_rtl : Bool,
   run_rtl : Bool,
-  cx : @shape.ShapeContext,
   script : @moon_swash.Script,
   run_tokens : Array[@moon_swash.Token],
   font_id : Int,
 ) -> (Array[ShapeGlyph], Array[Int]) {
-  let font_opt = font_system.get_font(font_id)
-  let font = match font_opt {
-    None => {
-      let missing : Array[Int] = []
-      for t in run_tokens {
-        missing.push(t.offset().reinterpret_as_int())
-      }
-      return ([], missing)
-    }
-    Some(f) => f
+  let entry = match font_system.get_font_entry(font_id) {
+    None => return ([], shape_run_missing_tokens(run_tokens))
+    Some(v) => v
   }
-  let cmap = @moon_swash.Charmap::from_font(font)
   let (font_ascent, font_descent, underline_metrics, strikethrough_metrics) = {
-    let metrics = font.metrics([])
+    let metrics = entry.font.metrics([])
     let upem = metrics.units_per_em.to_int()
     if upem <= 0 {
       (
@@ -1126,122 +992,14 @@ fn shape_run_with_font(
       text_len,
     )
   }
-  match font_system.get_font_entry(font_id) {
-    None => ()
-    Some(entry) =>
-      match
-        shape_run_with_harfbuzz(
-          entry, attrs_list, levels, text_len, line_rtl, run_rtl, script, run_tokens,
-          run_attrs, font_id, font_ascent, font_descent, underline_metrics, strikethrough_metrics,
-        ) {
-        None => ()
-        Some(ret) => return ret
-      }
+  match
+    shape_run_with_harfbuzz(
+      entry, attrs_list, levels, text_len, line_rtl, run_rtl, script, run_tokens,
+      run_attrs, font_id, font_ascent, font_descent, underline_metrics, strikethrough_metrics,
+    ) {
+    None => ([], shape_run_missing_tokens(run_tokens))
+    Some(ret) => ret
   }
-  let feature_settings = attrs_feature_settings(run_attrs)
-  let variation_settings = shape_variation_settings_for_font(font, run_attrs)
-  let shaper = cx
-    .builder(font)
-    .script(script)
-    .direction(
-      if run_rtl {
-        @shape.Direction::RightToLeft
-      } else {
-        @shape.Direction::LeftToRight
-      },
-    )
-    .language(None)
-    .size(1.0)
-    .features(feature_settings.iter())
-    .variations(variation_settings.iter())
-    .build()
-
-  let parser = @moon_swash.Parser::new(script, run_tokens.iter())
-  let cluster = @moon_swash.CharCluster::new()
-  while parser.next(cluster) {
-    cluster.map(fn(ch) { cmap.map(ch.to_int().reinterpret_as_uint()) })
-    |> ignore
-    shaper.add_cluster(cluster)
-  }
-
-  let out : Array[ShapeGlyph] = []
-  let missing : Array[Int] = []
-  shaper.shape_with(fn(gc) {
-    let source = gc.source()
-    let source_start = source_start_index(source)
-    let source_end = source_end_index(source)
-    let shaped = gc.glyphs()
-    let shaped_count = shaped.length()
-    if shaped_count != 0 {
-      let starts_fallback = build_cluster_starts(
-        source,
-        gc.components(),
-        shaped_count,
-        run_rtl,
-      )
-      let starts : Array[Int] = []
-      // Reference alignment:
-      // use per-glyph source marker first (analogous to HarfBuzz cluster index),
-      // and fall back to component-based starts only when marker is out of range.
-      for i in 0..<shaped_count {
-        let data_start = shaped[i].data().reinterpret_as_int()
-        if data_start >= source_start && data_start <= source_end {
-          let fallback_start = starts_fallback[i]
-          if data_start < fallback_start {
-            starts.push(data_start)
-          } else {
-            starts.push(fallback_start)
-          }
-        } else {
-          starts.push(starts_fallback[i])
-        }
-      }
-      let ends = build_cluster_ends(starts, source_end, run_rtl)
-      for i in 0..<shaped_count {
-        let g = shaped[i]
-        let (start, end) = clamp_range_to_source(
-          starts[i],
-          ends[i],
-          source_start,
-          source_end,
-        )
-        let attrs = attrs_for_position(attrs_list, start, text_len)
-        let lev = if levels.get(start) is Some(v) {
-          v
-        } else if line_rtl {
-          1
-        } else {
-          0
-        }
-        if g.id().to_int() == 0 {
-          missing.push(start)
-        }
-        let letter_spacing = attrs_letter_spacing(attrs)
-        out.push(ShapeGlyph::{
-          start,
-          end,
-          x_advance: Float::from_double(g.advance()) + letter_spacing,
-          y_advance: 0.0F,
-          x_offset: Float::from_double(g.x()),
-          y_offset: Float::from_double(g.y()),
-          ascent: font_ascent,
-          descent: font_descent,
-          font_id,
-          font_weight: attrs.weight_value().value(),
-          glyph_id: g.id().to_int(),
-          color_opt: attrs.color_opt_value(),
-          metadata: attrs.metadata(),
-          cache_key_flags: attrs.cache_key_flags_value(),
-          text_decoration: attrs.text_decoration_value(),
-          underline_metrics,
-          strikethrough_metrics,
-          level: lev,
-          metrics_opt: attrs.metrics_opt(),
-        })
-      }
-    }
-  })
-  (out, missing)
 }
 
 ///|
@@ -1351,7 +1109,6 @@ pub fn ShapeLine::build_with_font_system(
   let bidi_info = BidiInfo::new(text)
   let rtl = bidi_info.rtl()
   let levels = bidi_info.adjusted_levels()
-  let cx = @shape.ShapeContext::new()
   let runs : Array[
     (
       @moon_swash.Script,
@@ -1455,7 +1212,6 @@ pub fn ShapeLine::build_with_font_system(
       text.length(),
       rtl,
       run_rtl,
-      cx,
       script,
       run_tokens,
       run_font_id,
@@ -1480,7 +1236,6 @@ pub fn ShapeLine::build_with_font_system(
           text.length(),
           rtl,
           run_rtl,
-          cx,
           script,
           run_tokens,
           alt_font_id,
