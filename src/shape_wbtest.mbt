@@ -241,3 +241,32 @@ test "shape run cache is cleared when fonts are loaded" {
     content="false",
   )
 }
+
+///|
+test "shape variation settings clamp weight to variable axis range" {
+  let fs = FontSystem::new().load_font_data(
+    mk_min_variable_font_cmap4_single(b'\x00', b'\x41'),
+  )
+  let font = fs.get_font(0).unwrap()
+  let attrs_hi = Attrs::new().weight(Weight::new(950))
+  let attrs_lo = Attrs::new().weight(Weight::new(50))
+  let vars_hi = shape_variation_settings_for_font(font, attrs_hi)
+  let vars_lo = shape_variation_settings_for_font(font, attrs_lo)
+  inspect(vars_hi.length(), content="1")
+  inspect(vars_lo.length(), content="1")
+  let axis = font.variations().find_by_tag(0x77676874U).unwrap()
+  let coords_hi = font.variations().normalized_coords(vars_hi.iter()).to_array()
+  let coords_lo = font.variations().normalized_coords(vars_lo.iter()).to_array()
+  inspect(coords_hi[0] == axis.normalize(900.0), content="true")
+  inspect(coords_lo[0] == axis.normalize(100.0), content="true")
+}
+
+///|
+test "shape variation settings are empty for non-variable fonts" {
+  let fs = FontSystem::new().load_font_data(
+    mk_min_font_cmap4_single(b'\x00', b'\x41'),
+  )
+  let font = fs.get_font(0).unwrap()
+  let attrs = Attrs::new().weight(Weight::bold())
+  inspect(shape_variation_settings_for_font(font, attrs).length(), content="0")
+}

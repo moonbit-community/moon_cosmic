@@ -20,6 +20,9 @@ pub(all) enum Shaping {
 }
 
 ///|
+const SHAPE_WEIGHT_AXIS_TAG : UInt = 0x77676874U // "wght"
+
+///|
 pub struct ShapeGlyph {
   start : Int
   end : Int
@@ -821,6 +824,34 @@ fn attrs_feature_settings(attrs : Attrs) -> Array[@moon_swash.FeatureSetting] {
 }
 
 ///|
+fn shape_clamp_double(v : Double, lo : Double, hi : Double) -> Double {
+  if v < lo {
+    lo
+  } else if v > hi {
+    hi
+  } else {
+    v
+  }
+}
+
+///|
+fn shape_variation_settings_for_font(
+  font : @moon_swash.FontRef,
+  attrs : Attrs,
+) -> Array[@moon_swash.VariationSetting] {
+  let settings : Array[@moon_swash.VariationSetting] = []
+  match font.variations().find_by_tag(SHAPE_WEIGHT_AXIS_TAG) {
+    None => settings
+    Some(axis) => {
+      let w = attrs.weight_value().value().to_double()
+      let value = shape_clamp_double(w, axis.min_value(), axis.max_value())
+      settings.push(@moon_swash.Setting::new(SHAPE_WEIGHT_AXIS_TAG, value))
+      settings
+    }
+  }
+}
+
+///|
 fn attrs_letter_spacing(attrs : Attrs) -> Float {
   match attrs.letter_spacing_opt() {
     None => 0.0F
@@ -895,7 +926,7 @@ fn shape_run_with_font(
     )
   }
   let feature_settings = attrs_feature_settings(run_attrs)
-  let empty_variations : Array[@moon_swash.Setting[Double]] = []
+  let variation_settings = shape_variation_settings_for_font(font, run_attrs)
   let shaper = cx
     .builder(font)
     .script(script)
@@ -909,7 +940,7 @@ fn shape_run_with_font(
     .language(None)
     .size(1.0)
     .features(feature_settings.iter())
-    .variations(empty_variations.iter())
+    .variations(variation_settings.iter())
     .build()
 
   let parser = @moon_swash.Parser::new(script, run_tokens.iter())
@@ -1059,10 +1090,9 @@ pub fn ShapeLine::build(
 ///|
 /// Build a shaped line using a FontSystem (best-effort).
 ///
-/// Current behavior is still "Basic shaping" (1 UTF-16 code unit -> 1 glyph),
-/// but uses `moon_swash` charmap + glyph metrics so advances are font-derived.
-/// TODO: Align this path with upstream full shaping behavior (EGC-level clusters
-/// + advanced script shaping parity).
+/// Advanced mode follows upstream `shape_run/shape_fallback` flow on top of
+/// `moon_swash`: BiDi runs, per-run script/fallback selection, cluster-aware
+/// glyph ranges, and run-cache reuse.
 pub fn ShapeLine::build_with_font_system(
   _self : ShapeLine,
   font_system : FontSystem,
