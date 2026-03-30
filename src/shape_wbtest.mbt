@@ -134,6 +134,15 @@ test "shape_levels_require_new_run splits on any level change" {
 }
 
 ///|
+fn repeated_ascii_digit(n : Int) -> String {
+  let sb = StringBuilder::new(size_hint=n)
+  for _ in 0..<n {
+    sb.write_char('1')
+  }
+  sb.to_string()
+}
+
+///|
 test "BidiInfo keeps explicit paragraph base level when no strong chars" {
   inspect(
     BidiInfo::new_with_para_level("12345", Some(0)).adjusted_levels(),
@@ -143,6 +152,16 @@ test "BidiInfo keeps explicit paragraph base level when no strong chars" {
     BidiInfo::new_with_para_level("12345", Some(1)).adjusted_levels(),
     content="[2, 2, 2, 2, 2]",
   )
+}
+
+///|
+test "BidiInfo stays responsive on long neutral-heavy numeric input" {
+  let text = repeated_ascii_digit(100000)
+  let levels = BidiInfo::new_with_para_level(text, Some(0)).adjusted_levels()
+  let ok = levels.length() == text.length() &&
+    levels[0] == 0 &&
+    levels[levels.length() - 1] == 0
+  inspect(ok, content="true")
 }
 
 ///|

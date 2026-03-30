@@ -85,6 +85,7 @@ priv struct BidiBracketPair {
 ///|
 priv struct BidiTextMeta {
   char_len_at : Array[Int]
+  char_at_start : Array[Char]
 }
 
 ///|
@@ -252,12 +253,14 @@ fn bidi_set_repeated_class(
 fn bidi_build_text_meta(text : String) -> BidiTextMeta {
   let len = text.length()
   let char_len_at : Array[Int] = Array::makei(len, _ => 0)
+  let char_at_start : Array[Char] = Array::makei(len, _ => '\u{0000}')
   for p in text.iter2() {
     let idx = p.0
     let ch = p.1
     char_len_at.set(idx, bidi_utf16_len(ch))
+    char_at_start.set(idx, ch)
   }
-  BidiTextMeta::{ char_len_at, }
+  BidiTextMeta::{ char_len_at, char_at_start }
 }
 
 ///|
@@ -743,21 +746,6 @@ fn bidi_sequence_set_nsm_or_bn_forward(
 }
 
 ///|
-fn bidi_sequence_flatten_indices(
-  sequence : BidiIsolatingRunSequence,
-) -> Array[Int] {
-  let indices : Array[Int] = []
-  for run in sequence.runs {
-    let mut i = run.start
-    while i < run.end {
-      indices.push(i)
-      i = i + 1
-    }
-  }
-  indices
-}
-
-///|
 fn bidi_prepare_isolating_run_sequences_for_para(
   para : ParagraphInfo,
   original_classes : Array[@moon_swash.BidiClass],
@@ -771,6 +759,16 @@ fn bidi_prepare_isolating_run_sequences_for_para(
   }
 
   if !has_isolate_controls {
+    let non_removed : Array[Int] = []
+    let mut i = para.range_start
+    while i < para.range_end {
+      if !bidi_is_removed_by_x9(original_classes[i]) {
+        non_removed.push(i)
+      }
+      i = i + 1
+    }
+    let mut pred_cursor = 0
+    let mut succ_cursor = 0
     for run in runs {
       let seq_level = bidi_run_first_non_removed_level(
         run, original_classes, levels,
@@ -778,25 +776,24 @@ fn bidi_prepare_isolating_run_sequences_for_para(
       let end_level = bidi_run_last_non_removed_level(
         run, original_classes, levels,
       )
-
-      let pred_level = match
-        bidi_find_prev_non_removed_index(
-          original_classes,
-          run.start,
-          para.range_start,
-        ) {
-        Some(idx) => levels[idx]
-        None => para.level
+      while pred_cursor < non_removed.length() &&
+            non_removed[pred_cursor] < run.start {
+        pred_cursor = pred_cursor + 1
+      }
+      let pred_level = if pred_cursor == 0 {
+        para.level
+      } else {
+        levels[non_removed[pred_cursor - 1]]
       }
 
-      let succ_level = match
-        bidi_find_next_non_removed_index(
-          original_classes,
-          run.end,
-          para.range_end,
-        ) {
-        Some(idx) => levels[idx]
-        None => para.level
+      while succ_cursor < non_removed.length() &&
+            non_removed[succ_cursor] < run.end {
+        succ_cursor = succ_cursor + 1
+      }
+      let succ_level = if succ_cursor < non_removed.length() {
+        levels[non_removed[succ_cursor]]
+      } else {
+        para.level
       }
 
       out_sequences.push(BidiIsolatingRunSequence::{
@@ -1097,28 +1094,21 @@ fn bidi_sort_bracket_pairs_by_start(pairs : Array[BidiBracketPair]) -> Unit {
 
 ///|
 fn bidi_identify_bracket_pairs(
-  text : String,
+  meta : BidiTextMeta,
   sequence : BidiIsolatingRunSequence,
   classes : Array[@moon_swash.BidiClass],
   out_pairs : Array[BidiBracketPair],
 ) -> Unit {
   let stack : Array[(Char, Int, Int)] = []
-
   for run_index in 0..<sequence.runs.length() {
     let level_run = sequence.runs[run_index]
-    for p in text.iter2() {
-      let i = p.0
-      let ch = p.1
-      if i < level_run.start {
+    let mut i = level_run.start
+    while i < level_run.end {
+      if !(classes[i] is ON) || bidi_char_len_at(meta, i) <= 0 {
+        i = i + 1
         continue
       }
-      if i >= level_run.end {
-        break
-      }
-      if !(classes[i] is ON) {
-        continue
-      }
-
+      let ch = meta.char_at_start[i]
       match @moon_swash.Codepoint::bracket_type(ch) {
         Open(_) => {
           if stack.length() >= 63 {
@@ -1149,6 +1139,7 @@ fn bidi_identify_bracket_pairs(
           }
         None => ()
       }
+      i = i + 1
     }
   }
 
@@ -1178,7 +1169,6 @@ fn bidi_resolve_neutral_run_class(
 
 ///|
 fn bidi_resolve_neutral_for_sequence(
-  text : String,
   meta : BidiTextMeta,
   sequence : BidiIsolatingRunSequence,
   levels : Array[Int],
@@ -1193,7 +1183,7 @@ fn bidi_resolve_neutral_for_sequence(
   }
 
   let bracket_pairs : Array[BidiBracketPair] = []
-  bidi_identify_bracket_pairs(text, sequence, processing_classes, bracket_pairs)
+  bidi_identify_bracket_pairs(meta, sequence, processing_classes, bracket_pairs)
 
   for pair in bracket_pairs {
     let mut found_embedding = false
@@ -1306,29 +1296,53 @@ fn bidi_resolve_neutral_for_sequence(
     }
   }
 
-  let indices = bidi_sequence_flatten_indices(sequence)
   let mut prev_class = sequence.sos
   let ni_run : Array[Int] = []
-  let mut k = 0
+  let runs = sequence.runs
+  if runs.length() == 0 {
+    return
+  }
+  let mut run_i = 0
+  let mut i = runs[0].start
+  while run_i < runs.length() {
+    let run = runs[run_i]
+    if i >= run.end {
+      run_i = run_i + 1
+      if run_i < runs.length() {
+        i = runs[run_i].start
+      }
+      continue
+    }
 
-  while k < indices.length() {
-    let i = indices[k]
     let class_i = processing_classes[i]
     if bidi_is_ni_class(class_i) || class_i is BN {
       ni_run.push(i)
-      let mut last_i = i
       let mut next_class = sequence.eos
-      k = k + 1
-      while k < indices.length() {
-        let j = indices[k]
-        let cls = processing_classes[j]
-        if bidi_is_ni_class(cls) || cls is BN {
-          ni_run.push(j)
-          last_i = j
-          k = k + 1
-        } else {
-          next_class = cls
+      let mut found_next_strong = false
+      let mut scan_run_i = run_i
+      let mut scan_i = i + 1
+      while scan_run_i < runs.length() {
+        let scan_run = runs[scan_run_i]
+        if scan_i < scan_run.start {
+          scan_i = scan_run.start
+        }
+        while scan_i < scan_run.end {
+          let cls = processing_classes[scan_i]
+          if bidi_is_ni_class(cls) || cls is BN {
+            ni_run.push(scan_i)
+            scan_i = scan_i + 1
+          } else {
+            next_class = cls
+            found_next_strong = true
+            break
+          }
+        }
+        if found_next_strong {
           break
+        }
+        scan_run_i = scan_run_i + 1
+        if scan_run_i < runs.length() {
+          scan_i = runs[scan_run_i].start
         }
       }
 
@@ -1339,10 +1353,17 @@ fn bidi_resolve_neutral_for_sequence(
         processing_classes.set(j, new_class)
       }
       ni_run.clear()
-      prev_class = processing_classes[last_i]
+      prev_class = new_class
+
+      if found_next_strong {
+        run_i = scan_run_i
+        i = scan_i
+      } else {
+        break
+      }
     } else {
       prev_class = class_i
-      k = k + 1
+      i = i + 1
     }
   }
 }
@@ -1437,7 +1458,7 @@ fn bidi_compute_info_for_para(
   for sequence in sequences {
     bidi_resolve_weak_for_sequence(meta, sequence, processing_classes)
     bidi_resolve_neutral_for_sequence(
-      text, meta, sequence, levels, original_classes, processing_classes,
+      meta, sequence, levels, original_classes, processing_classes,
     )
   }
 

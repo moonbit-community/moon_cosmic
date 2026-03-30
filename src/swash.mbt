@@ -84,7 +84,6 @@ fn swash_image(
     )
   }
 
-  // Renderer: for now prefer outline -> bitmap fallbacks are TODO.
   @scale.Render::new([
     @scale.Source::ColorOutline(0),
     @scale.Source::ColorBitmap(@scale.StrikeWith::BestFit),

@@ -1061,6 +1061,8 @@ pub fn ShapeLine::build(
 ///
 /// Current behavior is still "Basic shaping" (1 UTF-16 code unit -> 1 glyph),
 /// but uses `moon_swash` charmap + glyph metrics so advances are font-derived.
+/// TODO: Align this path with upstream full shaping behavior (EGC-level clusters
+/// + advanced script shaping parity).
 pub fn ShapeLine::build_with_font_system(
   _self : ShapeLine,
   font_system : FontSystem,

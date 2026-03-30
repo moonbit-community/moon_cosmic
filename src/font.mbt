@@ -101,6 +101,9 @@ const CODEPOINT_SUPPORTED_PER_FONT_LIMIT : Int = 512
 const CODEPOINT_NOT_SUPPORTED_PER_FONT_LIMIT : Int = 1024
 
 ///|
+const WEIGHT_AXIS_TAG : UInt = 0x77676874U // "wght"
+
+///|
 pub fn FontSystem::new() -> FontSystem {
   FontSystem::new_with_locale("en-US")
 }
@@ -439,7 +442,10 @@ fn split_default_stage_candidates(
     let entry = fs.fonts[id]
     if !default_set &&
       explicit_family_matches(entry, family) &&
-      entry_weight_diff(entry, req_weight) == 0 {
+      (
+        entry_weight_diff(entry, req_weight) == 0 ||
+        entry_variable_weight_match(entry, req_weight)
+      ) {
       default_set = true
       defaults.push(id)
     } else {
@@ -461,7 +467,10 @@ fn first_named_fallback_candidate(
       continue
     }
     let entry = fs.fonts[id]
-    if entry_weight_diff(entry, req_weight) == 0 &&
+    if (
+        entry_weight_diff(entry, req_weight) == 0 ||
+        entry_variable_weight_match(entry, req_weight)
+      ) &&
       entry_has_family_name(entry, family_name) {
       return Some(id)
     }
@@ -852,9 +861,26 @@ fn entry_style_diff(entry : FontEntry, req_style : @moon_swash.Style) -> Int {
 }
 
 ///|
+fn entry_variable_weight_match(entry : FontEntry, req_weight : Weight) -> Bool {
+  if entry_weight_diff(entry, req_weight) == 0 ||
+    !entry.attributes.has_weight_variation() {
+    return false
+  }
+  match entry.font.variations().find_by_tag(WEIGHT_AXIS_TAG) {
+    None => false
+    Some(axis) => {
+      let w = req_weight.value.to_double()
+      let min_w = axis.min_value()
+      let max_w = axis.max_value()
+      w >= min_w && w <= max_w
+    }
+  }
+}
+
+///|
 fn better_font_match(
-  cand : (Int, Bool, Int, Int, Int, Int, Int),
-  best : (Int, Bool, Int, Int, Int, Int, Int),
+  cand : (Int, Bool, Int, Int, Int, Int, Int, Bool),
+  best : (Int, Bool, Int, Int, Int, Int, Int, Bool),
 ) -> Bool {
   let cand_id = cand.0
   let cand_not_emoji = cand.1
@@ -898,7 +924,7 @@ fn build_font_matches(fs : FontSystem, attrs : Attrs) -> Array[Int] {
   let req_weight = attrs.weight_value()
   let req_stretch = attrs.stretch_value()
   let req_style = attrs.style_value()
-  let candidates : Array[(Int, Bool, Int, Int, Int, Int, Int)] = []
+  let candidates : Array[(Int, Bool, Int, Int, Int, Int, Int, Bool)] = []
   for e in fs.fonts {
     candidates.push(
       (
@@ -909,6 +935,7 @@ fn build_font_matches(fs : FontSystem, attrs : Attrs) -> Array[Int] {
         entry_style_diff(e, req_style),
         entry_weight_raw(e),
         entry_stretch_raw(e),
+        entry_variable_weight_match(e, req_weight),
       ),
     )
   }
@@ -933,7 +960,7 @@ fn build_font_matches(fs : FontSystem, attrs : Attrs) -> Array[Int] {
 
   // Keep candidate ordering close to upstream:
   // sort globally by match score, then move query best family match to front.
-  let mut preferred : (Int, Bool, Int, Int, Int, Int, Int)? = None
+  let mut preferred : (Int, Bool, Int, Int, Int, Int, Int, Bool)? = None
   for e in fs.fonts {
     if !explicit_family_matches(e, family) {
       continue
@@ -946,6 +973,7 @@ fn build_font_matches(fs : FontSystem, attrs : Attrs) -> Array[Int] {
       entry_style_diff(e, req_style),
       entry_weight_raw(e),
       entry_stretch_raw(e),
+      entry_variable_weight_match(e, req_weight),
     )
     match preferred {
       None => preferred = Some(cand)
@@ -989,6 +1017,19 @@ fn get_font_matches(fs : FontSystem, attrs : Attrs) -> Array[Int] {
       fs.font_matches_cache.set(key, ids)
       ids.copy()
     }
+  }
+}
+
+///|
+fn codepoint_to_char(codepoint : UInt) -> Char? {
+  if codepoint > 0x10FFFF {
+    None
+  } else {
+    let v = codepoint.reinterpret_as_int()
+    if v >= 0xD800 && v <= 0xDFFF {
+      return None
+    }
+    Some(v.unsafe_to_char())
   }
 }
 
@@ -1113,7 +1154,17 @@ pub fn FontSystem::resolve_for_codepoint(
   attrs : Attrs,
   codepoint : UInt,
 ) -> Int? {
-  let matches = get_font_matches(self, attrs)
+  let scripts : Array[@moon_swash.Script] = []
+  match codepoint_to_char(codepoint) {
+    None => ()
+    Some(ch) =>
+      scripts.push(@moon_swash.CharInfo::from_char(ch).properties().script())
+  }
+  let matches = if scripts.length() > 0 {
+    self.font_matches_for_scripts(attrs, scripts)
+  } else {
+    get_font_matches(self, attrs)
+  }
   for id in matches {
     if id < 0 || id >= self.fonts.length() {
       continue

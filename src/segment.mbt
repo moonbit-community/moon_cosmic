@@ -59,24 +59,19 @@ pub fn word_indices_uax29(s : String) -> Array[(Int, Int)] {
     offs.push(pos)
     pos = pos + ch.utf16_len()
   }
-  fn category_is_word_like(category : @moon_swash.Category) -> Bool {
+  fn category_is_unicode_word_alnum(category : @moon_swash.Category) -> Bool {
     match category {
       @moon_swash.Category::CasedLetter
       | @moon_swash.Category::DecimalNumber
-      | @moon_swash.Category::EnclosingMark
       | @moon_swash.Category::Letter
       | @moon_swash.Category::LetterNumber
       | @moon_swash.Category::LowercaseLetter
-      | @moon_swash.Category::Mark
       | @moon_swash.Category::ModifierLetter
-      | @moon_swash.Category::NonspacingMark
       | @moon_swash.Category::Number
       | @moon_swash.Category::OtherLetter
       | @moon_swash.Category::OtherNumber
-      | @moon_swash.Category::SpacingMark
       | @moon_swash.Category::TitlecaseLetter
-      | @moon_swash.Category::UppercaseLetter
-      | @moon_swash.Category::ConnectorPunctuation => true
+      | @moon_swash.Category::UppercaseLetter => true
       _ => false
     }
   }
@@ -90,7 +85,7 @@ pub fn word_indices_uax29(s : String) -> Array[(Int, Int)] {
     }
     for i in start_char_i..<(end_char_i + 1) {
       let cat = @moon_swash.CharInfo::from_char(chars[i]).category()
-      if category_is_word_like(cat) {
+      if category_is_unicode_word_alnum(cat) {
         return true
       }
     }
@@ -136,6 +131,7 @@ pub fn word_indices_uax29(s : String) -> Array[(Int, Int)] {
 ///   split on `Boundary::Line` or `Boundary::Mandatory` (ignore `Boundary::Word`).
 /// - For each segment, split trailing whitespace characters into individual blank segments
 ///   (mirrors upstream's `char::is_whitespace()` scan).
+/// TODO: Replace this approximation with exact `unicode_linebreak` parity.
 ///
 /// Returns `(start, end, blank)` ranges in UTF-16 code units.
 pub fn wrap_word_segments(s : String) -> Array[(Int, Int, Bool)] {
