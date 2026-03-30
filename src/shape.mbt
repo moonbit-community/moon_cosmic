@@ -207,29 +207,43 @@ fn compute_bidi_levels(text : String, rtl : Bool) -> Array[Int] {
   }
 
   // Resolve neutral spans (e.g. spaces) toward surrounding strong runs.
+  // Keep semantics unchanged while avoiding O(N^2) bidirectional scans.
+  let len = levels.length()
+  let prev_strong_before : Array[Int] = Array::makei(len + 1, _ => -1)
+  let mut prev_idx = -1
+  for i in 0..<len {
+    if strong_mask[i] {
+      prev_idx = i
+    }
+    prev_strong_before.set(i + 1, prev_idx)
+  }
+  let next_strong_after : Array[Int] = Array::makei(len + 1, _ => -1)
+  let mut next_idx = -1
+  let mut i = len - 1
+  while i >= 0 {
+    if strong_mask[i] {
+      next_idx = i
+    }
+    next_strong_after.set(i, next_idx)
+    i = i - 1
+  }
   for seg in segments {
-    let start = seg.0
-    let end = seg.1
+    let start0 = seg.0
+    let end0 = seg.1
     if seg.2 {
       continue
     }
-    let mut prev_level : Int? = None
-    let mut j = start - 1
-    while j >= 0 {
-      if strong_mask[j] {
-        prev_level = Some(levels[j])
-        break
-      }
-      j = j - 1
+    let start = if start0 < 0 { 0 } else if start0 > len { len } else { start0 }
+    let end = if end0 < start { start } else if end0 > len { len } else { end0 }
+    let prev_level = if prev_strong_before[start] >= 0 {
+      Some(levels[prev_strong_before[start]])
+    } else {
+      None
     }
-    let mut next_level : Int? = None
-    let mut k = end
-    while k < levels.length() {
-      if strong_mask[k] {
-        next_level = Some(levels[k])
-        break
-      }
-      k = k + 1
+    let next_level = if next_strong_after[end] >= 0 {
+      Some(levels[next_strong_after[end]])
+    } else {
+      None
     }
     let neutral_level = match (prev_level, next_level) {
       (Some(pl), Some(nl)) => if pl == nl { pl } else { base }
@@ -237,10 +251,10 @@ fn compute_bidi_levels(text : String, rtl : Bool) -> Array[Int] {
       (None, Some(nl)) => nl
       (None, None) => base
     }
-    let mut i = start
-    while i < end && i < levels.length() {
-      levels.set(i, neutral_level)
-      i = i + 1
+    let mut j = start
+    while j < end {
+      levels.set(j, neutral_level)
+      j = j + 1
     }
   }
   levels

@@ -134,6 +134,35 @@ test "shape_levels_require_new_run splits on any level change" {
 }
 
 ///|
+test "compute_bidi_levels keeps base level when no strong chars" {
+  inspect(compute_bidi_levels("12345", false), content="[0, 0, 0, 0, 0]")
+  inspect(compute_bidi_levels("12345", true), content="[1, 1, 1, 1, 1]")
+}
+
+///|
+test "compute_bidi_levels resolves neutrals between opposite strong levels to base" {
+  let levels = compute_bidi_levels("א 1 A", false)
+  let ok = levels.length() == 5 &&
+    levels[0] == 1 &&
+    levels[1] == 0 &&
+    levels[2] == 0 &&
+    levels[3] == 0 &&
+    levels[4] == 0
+  inspect(ok, content="true")
+}
+
+///|
+test "compute_bidi_levels uses single-sided strong level for trailing neutrals" {
+  let levels = compute_bidi_levels("A 12", true)
+  let ok = levels.length() == 4 &&
+    levels[0] == 2 &&
+    levels[1] == 2 &&
+    levels[2] == 2 &&
+    levels[3] == 2
+  inspect(ok, content="true")
+}
+
+///|
 test "shape run cache is cleared when fonts are loaded" {
   let fs = FontSystem::new().load_font_data(
     mk_min_font_cmap4_single(b'\x00', b'\x41'),
