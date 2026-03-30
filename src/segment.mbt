@@ -126,12 +126,11 @@ pub fn word_indices_uax29(s : String) -> Array[(Int, Int)] {
 /// Upstream uses `unicode_linebreak::linebreaks` to split into segments, then
 /// splits trailing whitespace into individual blank "words".
 ///
-/// This helper approximates that behavior using swash boundary analysis:
+/// This helper follows the same flow on top of `moon_swash`'s UAX#14 analyzer:
 /// - Use `moon_swash.analyze` to identify UAX#14 linebreak opportunities:
 ///   split on `Boundary::Line` or `Boundary::Mandatory` (ignore `Boundary::Word`).
 /// - For each segment, split trailing whitespace characters into individual blank segments
 ///   (mirrors upstream's `char::is_whitespace()` scan).
-/// TODO: Replace this approximation with exact `unicode_linebreak` parity.
 ///
 /// Returns `(start, end, blank)` ranges in UTF-16 code units.
 pub fn wrap_word_segments(s : String) -> Array[(Int, Int, Bool)] {
