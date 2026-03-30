@@ -21,6 +21,8 @@ pub struct FontEntry {
   id : Int
   family_name : String
   postscript_name : String
+  source_data : Bytes
+  source_index : Int
   font : @moon_swash.FontRef
   charmap_proxy : @moon_swash.CharmapProxy
   attributes : @moon_swash.Attributes
@@ -41,6 +43,16 @@ pub fn FontEntry::family_name(self : FontEntry) -> String {
 ///|
 pub fn FontEntry::postscript_name(self : FontEntry) -> String {
   self.postscript_name
+}
+
+///|
+pub fn FontEntry::source_data(self : FontEntry) -> Bytes {
+  self.source_data
+}
+
+///|
+pub fn FontEntry::source_index(self : FontEntry) -> Int {
+  self.source_index
 }
 
 ///|
@@ -227,6 +239,7 @@ pub fn FontSystem::load_font_data(
     Some(data_ref) => {
       let locale = self.locale
       let fonts = self.fonts
+      let mut source_index = 0
       for f in data_ref.fonts() {
         let id = fonts.length()
         let family_name = font_family_name(f, locale)
@@ -237,12 +250,15 @@ pub fn FontSystem::load_font_data(
           id,
           family_name,
           postscript_name,
+          source_data: data,
+          source_index,
           font: f,
           charmap_proxy: @moon_swash.CharmapProxy::from_font(f),
           attributes: f.attributes(),
           is_monospace: metrics.is_monospace && not_emoji,
           not_emoji,
         })
+        source_index = source_index + 1
       }
       // New fonts change candidate ordering; clear match cache.
       self.font_matches_cache.clear()

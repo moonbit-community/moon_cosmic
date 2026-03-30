@@ -852,6 +852,207 @@ fn shape_variation_settings_for_font(
 }
 
 ///|
+fn hb_tag_from_swash_tag(tag : UInt) -> @common.Tag {
+  @common.Tag::from_bytes(
+    ((tag >> 24) & 0xFFU).to_byte(),
+    ((tag >> 16) & 0xFFU).to_byte(),
+    ((tag >> 8) & 0xFFU).to_byte(),
+    (tag & 0xFFU).to_byte(),
+  )
+}
+
+///|
+fn hb_script_from_swash_script(script : @moon_swash.Script) -> @common.Script {
+  @common.Script::from_iso15924_tag(hb_tag_from_swash_tag(script.to_opentype()))
+}
+
+///|
+fn hb_direction_from_run_rtl(run_rtl : Bool) -> @common.Direction {
+  if run_rtl {
+    @common.direction_rtl
+  } else {
+    @common.direction_ltr
+  }
+}
+
+///|
+fn shape_harfbuzz_variations(
+  font : @moon_swash.FontRef,
+  attrs : Attrs,
+) -> Array[@var.AxisCoord] {
+  let axis_coords : Array[@var.AxisCoord] = []
+  match font.variations().find_by_tag(SHAPE_WEIGHT_AXIS_TAG) {
+    None => ()
+    Some(axis) => {
+      let w = attrs.weight_value().value().to_double()
+      let value = shape_clamp_double(w, axis.min_value(), axis.max_value())
+      axis_coords.push(
+        @var.AxisCoord::new(hb_tag_from_swash_tag(SHAPE_WEIGHT_AXIS_TAG), value),
+      )
+    }
+  }
+  axis_coords
+}
+
+///|
+fn shape_run_with_harfbuzz(
+  entry : FontEntry,
+  attrs_list : AttrsList,
+  levels : Array[Int],
+  text_len : Int,
+  line_rtl : Bool,
+  run_rtl : Bool,
+  script : @moon_swash.Script,
+  run_tokens : Array[@moon_swash.Token],
+  run_attrs : Attrs,
+  font_id : Int,
+  font_ascent : Float,
+  font_descent : Float,
+  underline_metrics : DecorationMetrics,
+  strikethrough_metrics : DecorationMetrics,
+) -> (Array[ShapeGlyph], Array[Int])? {
+  if run_tokens.length() == 0 {
+    return Some(([], []))
+  }
+  let mut source_start = run_tokens[0].offset().reinterpret_as_int()
+  let mut source_end = source_start + run_tokens[0].len().reinterpret_as_int()
+  for t in run_tokens {
+    let s = t.offset().reinterpret_as_int()
+    let e = s + t.len().reinterpret_as_int()
+    if s < source_start {
+      source_start = s
+    }
+    if e > source_end {
+      source_end = e
+    }
+  }
+  if source_end < source_start {
+    source_end = source_start
+  }
+  let upem = entry.font.metrics([]).units_per_em.to_int()
+  if upem <= 0 {
+    return None
+  }
+  let hb_font = @font.Font::new(
+    @face.Face::from_bytes(entry.source_data(), index=entry.source_index()),
+  )
+  hb_font.set_scale(upem, upem)
+  let axis_coords = shape_harfbuzz_variations(entry.font, run_attrs)
+  match hb_font.set_variations(axis_coords) {
+    Err(_) => ()
+    Ok(_) => ()
+  }
+
+  let hb_buffer = @buffer.Buffer::new()
+  hb_buffer.set_direction(hb_direction_from_run_rtl(run_rtl))
+  hb_buffer.set_script(hb_script_from_swash_script(script))
+  for t in run_tokens {
+    let ch = if t.ch() == '\t' { ' ' } else { t.ch() }
+    hb_buffer.add_codepoint(
+      ch.to_uint(),
+      cluster=t.offset().reinterpret_as_int() - source_start,
+    )
+  }
+  match hb_buffer.shape_ot(hb_font) {
+    Err(_) => return None
+    Ok(_) => ()
+  }
+  let infos = hb_buffer.infos()
+  let positions = hb_buffer.positions()
+  if infos.length() != positions.length() {
+    return None
+  }
+
+  let upem_d = upem.to_double()
+  let out : Array[ShapeGlyph] = []
+  let missing : Array[Int] = []
+  for i in 0..<infos.length() {
+    let info = infos[i]
+    let pos = positions[i]
+    let start0 = source_start + info.cluster
+    let start = if start0 < source_start {
+      source_start
+    } else if start0 > source_end {
+      source_end
+    } else {
+      start0
+    }
+    let attrs = attrs_for_position(attrs_list, start, text_len)
+    let lev = if levels.get(start) is Some(v) {
+      v
+    } else if line_rtl {
+      1
+    } else {
+      0
+    }
+    if info.codepoint == 0U {
+      missing.push(start)
+    }
+    let letter_spacing = attrs_letter_spacing(attrs)
+    out.push(ShapeGlyph::{
+      start,
+      end: source_end,
+      x_advance: Float::from_double(pos.x_advance.to_double() / upem_d) +
+      letter_spacing,
+      y_advance: Float::from_double(pos.y_advance.to_double() / upem_d),
+      x_offset: Float::from_double(pos.x_offset.to_double() / upem_d),
+      y_offset: Float::from_double(pos.y_offset.to_double() / upem_d),
+      ascent: font_ascent,
+      descent: font_descent,
+      font_id,
+      font_weight: attrs.weight_value().value(),
+      glyph_id: info.codepoint.reinterpret_as_int(),
+      color_opt: attrs.color_opt_value(),
+      metadata: attrs.metadata(),
+      cache_key_flags: attrs.cache_key_flags_value(),
+      text_decoration: attrs.text_decoration_value(),
+      underline_metrics,
+      strikethrough_metrics,
+      level: lev,
+      metrics_opt: attrs.metrics_opt(),
+    })
+  }
+
+  let use_rtl_end_adjust = if out.length() > 1 {
+    out[0].start > out[out.length() - 1].start
+  } else {
+    run_rtl
+  }
+  if use_rtl_end_adjust {
+    for i in 1..<out.length() {
+      let next_start = out[i - 1].start
+      let next_end = out[i - 1].end
+      let g = out[i]
+      out.set(i, ShapeGlyph::{
+        ..g,
+        end: if g.start == next_start {
+          next_end
+        } else {
+          next_start
+        },
+      })
+    }
+  } else if out.length() > 1 {
+    let mut i = out.length() - 1
+    while i > 0 {
+      let next_start = out[i].start
+      let next_end = out[i].end
+      let g = out[i - 1]
+      out.set(i - 1, ShapeGlyph::{
+        ..g,
+        end: if g.start == next_start {
+          next_end
+        } else {
+          next_start
+        },
+      })
+      i = i - 1
+    }
+  }
+  Some((out, missing))
+}
+
+///|
 fn attrs_letter_spacing(attrs : Attrs) -> Float {
   match attrs.letter_spacing_opt() {
     None => 0.0F
@@ -924,6 +1125,18 @@ fn shape_run_with_font(
       run_tokens[0].offset().reinterpret_as_int(),
       text_len,
     )
+  }
+  match font_system.get_font_entry(font_id) {
+    None => ()
+    Some(entry) =>
+      match
+        shape_run_with_harfbuzz(
+          entry, attrs_list, levels, text_len, line_rtl, run_rtl, script, run_tokens,
+          run_attrs, font_id, font_ascent, font_descent, underline_metrics, strikethrough_metrics,
+        ) {
+        None => ()
+        Some(ret) => return ret
+      }
   }
   let feature_settings = attrs_feature_settings(run_attrs)
   let variation_settings = shape_variation_settings_for_font(font, run_attrs)

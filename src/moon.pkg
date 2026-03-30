@@ -5,4 +5,9 @@ import {
   "Milky2018/moon_swash/shape",
   "Milky2018/moon_zeno",
   "Milky2018/moon_swash",
+  "moonbit-community/harfbuzz/common",
+  "moonbit-community/harfbuzz/face",
+  "moonbit-community/harfbuzz/font",
+  "moonbit-community/harfbuzz/buffer",
+  "moonbit-community/harfbuzz/ot/var",
 }
