@@ -24,6 +24,9 @@ pub struct ViEditor {
   pending_find_opt : (Bool, Bool)?
   pending_text_object_opt : (ViOperator, Bool)?
   pending_g : Bool
+  pending_register_prefix : Bool
+  active_register_opt : Char?
+  registers : Array[(Char, @moon_cosmic.Selection, String)]
   register_opt : String?
 
   fn new(@moon_cosmic.Editor) -> ViEditor

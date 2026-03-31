@@ -107,7 +107,7 @@ test "ViEditor supports diw and ciw text-objects" {
 test "ViEditor supports yiw register flow" {
   let vi0 = mk_vi("abc def\n")
   let vi1 = vi0.feed_string("yiwp")
-  inspect(vi1.editor().buffer().lines()[0].text(), content="abcabc def")
+  inspect(vi1.editor().buffer().lines()[0].text(), content="abc abcdef")
 }
 
 ///|
@@ -169,4 +169,27 @@ test "ViEditor supports ^ gg and G motions" {
 
   let vi3 = mk_vi("a\nb\nc\n").feed_string("Ggg")
   inspect(vi3.editor().cursor().line, content="0")
+}
+
+///|
+test "ViEditor supports named registers with quote prefix" {
+  let out = mk_vi("abc\ndef\n").feed_string("\"ayyj\"ap")
+  inspect(out.editor().buffer().lines()[0].text(), content="abc")
+  inspect(out.editor().buffer().lines()[1].text(), content="def")
+  inspect(out.editor().buffer().lines()[2].text(), content="abc")
+}
+
+///|
+test "ViEditor supports linewise P put-before" {
+  let out = mk_vi("abc\ndef\n").feed_string("yyjP")
+  inspect(out.editor().buffer().lines()[0].text(), content="abc")
+  inspect(out.editor().buffer().lines()[1].text(), content="abc")
+  inspect(out.editor().buffer().lines()[2].text(), content="def")
+}
+
+///|
+test "ViEditor stores D deletions into unnamed register" {
+  let out = mk_vi("abc def\n").feed_string("lDp")
+  inspect(out.register_opt, content="Some(\"bc def\")")
+  inspect(out.editor().buffer().lines()[0].text(), content="abc def")
 }

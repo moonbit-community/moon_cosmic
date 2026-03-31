@@ -113,20 +113,6 @@ fn vi_open_line_above(editor : Editor) -> Editor {
 }
 
 ///|
-fn vi_delete_to_line_end(editor : Editor) -> (Editor, Bool) {
-  let cursor = editor.cursor()
-  let lines = editor.buffer().lines()
-  if cursor.line < 0 || cursor.line >= lines.length() {
-    return (editor, false)
-  }
-  let end = lines[cursor.line].text().length()
-  if cursor.index >= end {
-    return (editor, false)
-  }
-  (editor.delete_range(cursor, Cursor::new(cursor.line, end)), true)
-}
-
-///|
 fn string_append_char(s : String, ch : Char) -> String {
   let sb = StringBuilder::new(size_hint=s.length() + ch.utf16_len())
   sb.write_string(s)
@@ -581,34 +567,147 @@ fn vi_apply_text_object_operator(
   op : ViOperator,
   key : Char,
   with_delims : Bool,
-  register_opt : String?,
-) -> (Editor, ViMode, String?, Bool) {
+) -> (Editor, ViMode, (Selection, String)?, Bool) {
   let selected = vi_select_text_object(editor, key, with_delims)
   if !selected.1 {
-    return (editor, Normal, register_opt, false)
+    return (editor, Normal, None, false)
   }
   let selected_editor = selected.0
+  let selection = selected_editor.selection()
   match op {
     Delete => {
+      let captured : (Selection, String)? = match
+        selected_editor.copy_selection() {
+        None => None
+        Some(data) => Some((selection, data))
+      }
       let deleted = selected_editor.delete_selection()
-      (deleted.0, Normal, register_opt, deleted.1)
+      (deleted.0, Normal, captured, deleted.1)
     }
     Change => {
+      let captured : (Selection, String)? = match
+        selected_editor.copy_selection() {
+        None => None
+        Some(data) => Some((selection, data))
+      }
       let deleted = selected_editor.delete_selection()
-      (deleted.0, Insert, register_opt, deleted.1)
+      (deleted.0, Insert, captured, deleted.1)
     }
     Yank => {
-      let register_opt = match selected_editor.copy_selection() {
-        None => register_opt
-        Some(data) => Some(data)
+      let captured : (Selection, String)? = match
+        selected_editor.copy_selection() {
+        None => None
+        Some(data) => Some((selection, data))
       }
-      (
-        selected_editor.set_selection(Selection::None),
-        Normal,
-        register_opt,
-        true,
-      )
+      (selected_editor.set_selection(Selection::None), Normal, captured, true)
     }
+  }
+}
+
+///|
+fn vi_register_get(
+  registers : Array[(Char, Selection, String)],
+  key : Char,
+) -> (Selection, String)? {
+  for entry in registers {
+    if entry.0 == key {
+      return Some((entry.1, entry.2))
+    }
+  }
+  None
+}
+
+///|
+fn vi_register_set(
+  registers : Array[(Char, Selection, String)],
+  key : Char,
+  selection : Selection,
+  data : String,
+) -> Array[(Char, Selection, String)] {
+  let out : Array[(Char, Selection, String)] = []
+  let mut replaced = false
+  for entry in registers {
+    if entry.0 == key {
+      out.push((key, selection, data))
+      replaced = true
+    } else {
+      out.push(entry)
+    }
+  }
+  if !replaced {
+    out.push((key, selection, data))
+  }
+  out
+}
+
+///|
+fn vi_target_register_key(key_opt : Char?) -> Char {
+  match key_opt {
+    None => '"'
+    Some(key) => key
+  }
+}
+
+///|
+fn vi_put_from_register(
+  editor : Editor,
+  selection : Selection,
+  data : String,
+  after : Bool,
+) -> Editor {
+  match selection {
+    Selection::Line(_) => {
+      let cursor = editor.cursor()
+      let line = if after { cursor.line + 1 } else { cursor.line }
+      let inserted = editor.insert_at(Cursor::new(line, 0), data, None)
+      inserted.0.set_cursor(inserted.1)
+    }
+    _ => {
+      let editor = if after {
+        let moved = editor.action(Motion(Right))
+        if moved.cursor().line == editor.cursor().line {
+          moved
+        } else {
+          editor
+        }
+      } else {
+        editor
+      }
+      editor.insert_string(data, None)
+    }
+  }
+}
+
+///|
+fn vi_capture_current_line(editor : Editor) -> (Selection, String)? {
+  match vi_copy_current_line(editor) {
+    None => None
+    Some(data) => Some((Selection::Line(editor.cursor()), data))
+  }
+}
+
+///|
+fn vi_delete_to_line_end(editor : Editor) -> (Editor, (Selection, String)?) {
+  let cursor = editor.cursor()
+  let lines = editor.buffer().lines()
+  if cursor.line < 0 || cursor.line >= lines.length() {
+    return (editor, None)
+  }
+  let end_index = lines[cursor.line].text().length()
+  if cursor.index >= end_index {
+    return (editor, None)
+  }
+  let end = Cursor::new(cursor.line, end_index)
+  let selected = editor.set_selection(Selection::Normal(cursor)).set_cursor(end)
+  let captured : (Selection, String)? = match selected.copy_selection() {
+    None => None
+    Some(data) => Some((selected.selection(), data))
+  }
+  let deleted = selected.delete_selection()
+  if deleted.1 {
+    (deleted.0, captured)
+  } else {
+    (editor, None)
   }
 }
 
@@ -627,6 +726,9 @@ pub struct ViEditor {
   pending_find_opt : (Bool, Bool)?
   pending_text_object_opt : (ViOperator, Bool)?
   pending_g : Bool
+  pending_register_prefix : Bool
+  active_register_opt : Char?
+  registers : Array[(Char, Selection, String)]
   register_opt : String?
 
   fn new(editor : Editor) -> ViEditor
@@ -648,6 +750,9 @@ pub fn ViEditor::new(editor : Editor) -> ViEditor {
     pending_find_opt: None,
     pending_text_object_opt: None,
     pending_g: false,
+    pending_register_prefix: false,
+    active_register_opt: None,
+    registers: [],
     register_opt: None,
   }
 }
@@ -701,6 +806,8 @@ pub fn ViEditor::escape(self : ViEditor) -> ViEditor {
     pending_find_opt: None,
     pending_text_object_opt: None,
     pending_g: false,
+    pending_register_prefix: false,
+    active_register_opt: None,
   }
 }
 
@@ -725,6 +832,45 @@ fn ViEditor::push_change(self : ViEditor, change : Change) -> ViEditor {
     history,
     history_index,
     changed: vi_eval_changed(history_index, self.save_pivot_opt),
+  }
+}
+
+///|
+fn ViEditor::set_register(
+  self : ViEditor,
+  selection : Selection,
+  data : String,
+) -> ViEditor {
+  let target = vi_target_register_key(self.active_register_opt)
+  let registers0 = vi_register_set(self.registers, '"', selection, data)
+  let registers = if target == '"' {
+    registers0
+  } else {
+    vi_register_set(registers0, target, selection, data)
+  }
+  ViEditor::{
+    ..self,
+    registers,
+    register_opt: Some(data),
+    active_register_opt: None,
+    pending_register_prefix: false,
+  }
+}
+
+///|
+fn ViEditor::register_for_put(self : ViEditor) -> (Selection, String)? {
+  let target = vi_target_register_key(self.active_register_opt)
+  match vi_register_get(self.registers, target) {
+    Some(value) => Some(value)
+    None =>
+      if target == '"' {
+        match self.register_opt {
+          None => None
+          Some(data) => Some((Selection::None, data))
+        }
+      } else {
+        None
+      }
   }
 }
 
@@ -790,16 +936,26 @@ fn ViEditor::feed_char_inner(self : ViEditor, key : Char) -> ViEditor {
         op,
         key,
         with_delims,
-        self.register_opt,
       )
-      return ViEditor::{
+      let with_state = ViEditor::{
         ..self,
         editor: applied.0,
         mode: applied.1,
-        register_opt: applied.2,
         pending_operator: None,
         pending_text_object_opt: None,
       }
+      match applied.2 {
+        None => return with_state
+        Some(captured) => return with_state.set_register(captured.0, captured.1)
+      }
+    }
+  }
+
+  if self.pending_register_prefix {
+    return ViEditor::{
+      ..self,
+      pending_register_prefix: false,
+      active_register_opt: Some(key),
     }
   }
 
@@ -857,10 +1013,14 @@ fn ViEditor::feed_char_inner(self : ViEditor, key : Char) -> ViEditor {
               pending_text_object_opt: Some((Delete, true)),
             }
           } else if key == 'd' {
-            ViEditor::{
+            let with_editor = ViEditor::{
               ..self,
               editor: vi_delete_current_line(self.editor),
               pending_operator: None,
+            }
+            match vi_capture_current_line(self.editor) {
+              None => with_editor
+              Some(captured) => with_editor.set_register(captured.0, captured.1)
             }
           } else {
             let after_op = ViEditor::{ ..self, pending_operator: None }
@@ -887,11 +1047,15 @@ fn ViEditor::feed_char_inner(self : ViEditor, key : Char) -> ViEditor {
               pending_text_object_opt: Some((Change, true)),
             }
           } else if key == 'c' {
-            ViEditor::{
+            let with_editor = ViEditor::{
               ..self,
               editor: vi_delete_current_line(self.editor),
               mode: Insert,
               pending_operator: None,
+            }
+            match vi_capture_current_line(self.editor) {
+              None => with_editor
+              Some(captured) => with_editor.set_register(captured.0, captured.1)
             }
           } else {
             let after_op = ViEditor::{ ..self, pending_operator: None }
@@ -919,8 +1083,11 @@ fn ViEditor::feed_char_inner(self : ViEditor, key : Char) -> ViEditor {
               pending_text_object_opt: Some((Yank, true)),
             }
           } else if key == 'y' {
-            let register_opt = vi_copy_current_line(self.editor)
-            ViEditor::{ ..self, pending_operator: None, register_opt }
+            let with_state = ViEditor::{ ..self, pending_operator: None }
+            match vi_capture_current_line(self.editor) {
+              None => with_state
+              Some(captured) => with_state.set_register(captured.0, captured.1)
+            }
           } else {
             ViEditor::{ ..self, pending_operator: None }
           }
@@ -975,28 +1142,38 @@ fn ViEditor::feed_char_inner(self : ViEditor, key : Char) -> ViEditor {
             }
           } else if key == 'D' {
             let deleted = vi_delete_to_line_end(self.editor)
-            if deleted.1 {
-              ViEditor::{ ..self, editor: deleted.0 }
-            } else {
-              self
+            let with_editor = ViEditor::{ ..self, editor: deleted.0 }
+            match deleted.1 {
+              None => with_editor
+              Some(captured) => with_editor.set_register(captured.0, captured.1)
             }
           } else if key == 'C' {
             let deleted = vi_delete_to_line_end(self.editor)
-            if deleted.1 {
-              ViEditor::{ ..self, editor: deleted.0, mode: Insert }
-            } else {
-              self
+            let with_editor = ViEditor::{
+              ..self,
+              editor: deleted.0,
+              mode: Insert,
+            }
+            match deleted.1 {
+              None => with_editor
+              Some(captured) => with_editor.set_register(captured.0, captured.1)
             }
           } else if key == 'S' {
-            ViEditor::{
+            let with_editor = ViEditor::{
               ..self,
               editor: vi_delete_current_line(self.editor),
               mode: Insert,
+            }
+            match vi_capture_current_line(self.editor) {
+              None => with_editor
+              Some(captured) => with_editor.set_register(captured.0, captured.1)
             }
           } else if key == 'g' {
             ViEditor::{ ..self, pending_g: true }
           } else if key == 'G' {
             ViEditor::{ ..self, editor: self.editor.action(Motion(BufferEnd)) }
+          } else if key == '"' {
+            ViEditor::{ ..self, pending_register_prefix: true }
           } else if key == '/' {
             ViEditor::{ ..self, mode: Search, search_input_opt: Some("") }
           } else if key == 'n' {
@@ -1026,12 +1203,33 @@ fn ViEditor::feed_char_inner(self : ViEditor, key : Char) -> ViEditor {
           } else if key == 'T' {
             ViEditor::{ ..self, pending_find_opt: Some((false, true)) }
           } else if key == 'p' {
-            match self.register_opt {
+            match self.register_for_put() {
               None => self
-              Some(data) =>
+              Some(register) =>
                 ViEditor::{
                   ..self,
-                  editor: self.editor.insert_string(data, None),
+                  editor: vi_put_from_register(
+                    self.editor,
+                    register.0,
+                    register.1,
+                    true,
+                  ),
+                  active_register_opt: None,
+                }
+            }
+          } else if key == 'P' {
+            match self.register_for_put() {
+              None => self
+              Some(register) =>
+                ViEditor::{
+                  ..self,
+                  editor: vi_put_from_register(
+                    self.editor,
+                    register.0,
+                    register.1,
+                    false,
+                  ),
+                  active_register_opt: None,
                 }
             }
           } else if key == 'd' {
@@ -1084,6 +1282,8 @@ pub fn ViEditor::undo(self : ViEditor) -> ViEditor {
     pending_operator: None,
     pending_text_object_opt: None,
     pending_g: false,
+    pending_register_prefix: false,
+    active_register_opt: None,
   }
 }
 
@@ -1107,6 +1307,8 @@ pub fn ViEditor::redo(self : ViEditor) -> ViEditor {
     pending_operator: None,
     pending_text_object_opt: None,
     pending_g: false,
+    pending_register_prefix: false,
+    active_register_opt: None,
   }
 }
 
