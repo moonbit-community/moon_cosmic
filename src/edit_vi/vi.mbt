@@ -47,6 +47,8 @@ fn vi_motion_for_key(key : Char) -> @cosmic.Motion? {
     Some(@cosmic.RightWord)
   } else if key == '0' {
     Some(@cosmic.Home)
+  } else if key == '^' {
+    Some(@cosmic.SoftHome)
   } else if key == '$' {
     Some(@cosmic.End)
   } else {
@@ -91,6 +93,51 @@ fn vi_copy_current_line(editor : @cosmic.Editor) -> String? {
   }
   let line0 = lines[line]
   Some(line0.text() + line0.ending().as_str())
+}
+
+///|
+fn vi_open_line_below(editor : @cosmic.Editor) -> @cosmic.Editor {
+  let cursor = editor.cursor()
+  let lines = editor.buffer().lines()
+  if cursor.line < 0 || cursor.line >= lines.length() {
+    return editor
+  }
+  let end = lines[cursor.line].text().length()
+  let inserted = editor.insert_at(
+    @cosmic.Cursor::new(cursor.line, end),
+    "\n",
+    None,
+  )
+  inserted.0.set_cursor(inserted.1)
+}
+
+///|
+fn vi_open_line_above(editor : @cosmic.Editor) -> @cosmic.Editor {
+  let cursor = editor.cursor()
+  let lines = editor.buffer().lines()
+  if cursor.line < 0 || cursor.line >= lines.length() {
+    return editor
+  }
+  let inserted = editor.insert_at(
+    @cosmic.Cursor::new(cursor.line, 0),
+    "\n",
+    None,
+  )
+  inserted.0.set_cursor(@cosmic.Cursor::new(cursor.line, 0))
+}
+
+///|
+fn vi_delete_to_line_end(editor : @cosmic.Editor) -> (@cosmic.Editor, Bool) {
+  let cursor = editor.cursor()
+  let lines = editor.buffer().lines()
+  if cursor.line < 0 || cursor.line >= lines.length() {
+    return (editor, false)
+  }
+  let end = lines[cursor.line].text().length()
+  if cursor.index >= end {
+    return (editor, false)
+  }
+  (editor.delete_range(cursor, @cosmic.Cursor::new(cursor.line, end)), true)
 }
 
 ///|
@@ -599,6 +646,7 @@ pub struct ViEditor {
   search_input_opt : String?
   pending_find_opt : (Bool, Bool)?
   pending_text_object_opt : (ViOperator, Bool)?
+  pending_g : Bool
   register_opt : String?
 
   fn new(editor : @cosmic.Editor) -> ViEditor
@@ -619,6 +667,7 @@ pub fn ViEditor::new(editor : @cosmic.Editor) -> ViEditor {
     search_input_opt: None,
     pending_find_opt: None,
     pending_text_object_opt: None,
+    pending_g: false,
     register_opt: None,
   }
 }
@@ -674,6 +723,7 @@ pub fn ViEditor::escape(self : ViEditor) -> ViEditor {
     search_input_opt: None,
     pending_find_opt: None,
     pending_text_object_opt: None,
+    pending_g: false,
   }
 }
 
@@ -774,6 +824,17 @@ fn ViEditor::feed_char_inner(self : ViEditor, key : Char) -> ViEditor {
         pending_text_object_opt: None,
       }
     }
+  }
+
+  if self.pending_g {
+    if key == 'g' {
+      return ViEditor::{
+        ..self,
+        editor: self.editor.action(@cosmic.Motion(@cosmic.BufferStart)),
+        pending_g: false,
+      }
+    }
+    return ViEditor::{ ..self, pending_g: false }.feed_char_inner(key)
   }
 
   if self.passthrough {
@@ -896,10 +957,22 @@ fn ViEditor::feed_char_inner(self : ViEditor, key : Char) -> ViEditor {
         None =>
           if key == 'i' {
             ViEditor::{ ..self, mode: Insert }
+          } else if key == 'I' {
+            ViEditor::{
+              ..self,
+              editor: self.editor.action(@cosmic.Motion(@cosmic.Home)),
+              mode: Insert,
+            }
           } else if key == 'a' {
             ViEditor::{
               ..self,
               editor: self.editor.action(@cosmic.Motion(@cosmic.Right)),
+              mode: Insert,
+            }
+          } else if key == 'A' {
+            ViEditor::{
+              ..self,
+              editor: self.editor.action(@cosmic.Motion(@cosmic.End)),
               mode: Insert,
             }
           } else if key == 'v' {
@@ -918,6 +991,45 @@ fn ViEditor::feed_char_inner(self : ViEditor, key : Char) -> ViEditor {
             }
           } else if key == 'x' {
             ViEditor::{ ..self, editor: self.editor.action(@cosmic.Delete) }
+          } else if key == 'o' {
+            ViEditor::{
+              ..self,
+              editor: vi_open_line_below(self.editor),
+              mode: Insert,
+            }
+          } else if key == 'O' {
+            ViEditor::{
+              ..self,
+              editor: vi_open_line_above(self.editor),
+              mode: Insert,
+            }
+          } else if key == 'D' {
+            let deleted = vi_delete_to_line_end(self.editor)
+            if deleted.1 {
+              ViEditor::{ ..self, editor: deleted.0 }
+            } else {
+              self
+            }
+          } else if key == 'C' {
+            let deleted = vi_delete_to_line_end(self.editor)
+            if deleted.1 {
+              ViEditor::{ ..self, editor: deleted.0, mode: Insert }
+            } else {
+              self
+            }
+          } else if key == 'S' {
+            ViEditor::{
+              ..self,
+              editor: vi_delete_current_line(self.editor),
+              mode: Insert,
+            }
+          } else if key == 'g' {
+            ViEditor::{ ..self, pending_g: true }
+          } else if key == 'G' {
+            ViEditor::{
+              ..self,
+              editor: self.editor.action(@cosmic.Motion(@cosmic.BufferEnd)),
+            }
           } else if key == '/' {
             ViEditor::{ ..self, mode: Search, search_input_opt: Some("") }
           } else if key == 'n' {
@@ -961,6 +1073,10 @@ fn ViEditor::feed_char_inner(self : ViEditor, key : Char) -> ViEditor {
             ViEditor::{ ..self, pending_operator: Some(Change) }
           } else if key == 'y' {
             ViEditor::{ ..self, pending_operator: Some(Yank) }
+          } else if key == 'u' {
+            self.undo()
+          } else if key == '\u{12}' {
+            self.redo()
           } else {
             match vi_motion_for_key(key) {
               None => self
@@ -1003,6 +1119,7 @@ pub fn ViEditor::undo(self : ViEditor) -> ViEditor {
     mode: Normal,
     pending_operator: None,
     pending_text_object_opt: None,
+    pending_g: false,
   }
 }
 
@@ -1025,6 +1142,7 @@ pub fn ViEditor::redo(self : ViEditor) -> ViEditor {
     mode: Normal,
     pending_operator: None,
     pending_text_object_opt: None,
+    pending_g: false,
   }
 }
 

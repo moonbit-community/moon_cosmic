@@ -23,6 +23,7 @@ pub struct ViEditor {
   search_input_opt : String?
   pending_find_opt : (Bool, Bool)?
   pending_text_object_opt : (ViOperator, Bool)?
+  pending_g : Bool
   register_opt : String?
 
   fn new(@moon_cosmic.Editor) -> ViEditor

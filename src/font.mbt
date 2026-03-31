@@ -940,14 +940,33 @@ fn font_fallback_check_missing(
 
 ///|
 fn font_fallback_missing_message(info : FontFallbackMissingInfo) -> String {
-  let scripts_len = info.scripts.length().to_string()
+  let mut scripts = "["
+  let mut i = 0
+  while i < info.scripts.length() {
+    if i > 0 {
+      scripts = scripts + ", "
+    }
+    scripts = scripts + info.scripts[i].name()
+    i = i + 1
+  }
+  scripts = scripts + "]"
   match info.kind {
     Exhausted =>
-      "fallback-exhausted locale=\{info.locale} scripts=\{scripts_len} word=\{info.word}"
-    PresetFallback =>
-      "fallback-preset locale=\{info.locale} scripts=\{scripts_len} word=\{info.word} used=\{info.used}"
-    ScriptFallback =>
-      "fallback-script locale=\{info.locale} scripts=\{scripts_len} word=\{info.word} used=\{info.used}"
+      "Failed to find any fallback for \{scripts} locale '\{info.locale}': '\{info.word}'"
+    PresetFallback => {
+      let used = match info.used {
+        None => "invalid font id"
+        Some(v) => v
+      }
+      "Failed to find preset fallback for \{scripts} locale '\{info.locale}', used '\{used}': '\{info.word}'"
+    }
+    ScriptFallback => {
+      let used = match info.used {
+        None => "invalid font id"
+        Some(v) => v
+      }
+      "Failed to find script fallback for \{scripts} locale '\{info.locale}', used '\{used}': '\{info.word}'"
+    }
   }
 }
 

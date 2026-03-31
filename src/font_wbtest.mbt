@@ -592,3 +592,69 @@ test "fallback missing check records script fallback status" {
     }
   }
 }
+
+///|
+test "fallback missing message matches upstream exhausted format" {
+  let info = FontFallbackMissingInfo::{
+    kind: Exhausted,
+    scripts: [@moon_swash.Script::Arabic, @moon_swash.Script::Han],
+    locale: "zh-CN",
+    word: "abc",
+    used: None,
+  }
+  inspect(
+    font_fallback_missing_message(info),
+    content="Failed to find any fallback for [Arabic, Han] locale 'zh-CN': 'abc'",
+  )
+}
+
+///|
+test "fallback missing message matches upstream preset format" {
+  let info = FontFallbackMissingInfo::{
+    kind: PresetFallback,
+    scripts: [@moon_swash.Script::Arabic],
+    locale: "en-US",
+    word: "xyz",
+    used: Some("Last Resort"),
+  }
+  inspect(
+    font_fallback_missing_message(info),
+    content="Failed to find preset fallback for [Arabic] locale 'en-US', used 'Last Resort': 'xyz'",
+  )
+}
+
+///|
+test "fallback missing message matches upstream script format" {
+  let info = FontFallbackMissingInfo::{
+    kind: ScriptFallback,
+    scripts: [@moon_swash.Script::Arabic],
+    locale: "en-US",
+    word: "مرحبا",
+    used: Some("Noto Sans Arabic"),
+  }
+  inspect(
+    font_fallback_missing_message(info),
+    content="Failed to find script fallback for [Arabic] locale 'en-US', used 'Noto Sans Arabic': 'مرحبا'",
+  )
+}
+
+///|
+test "fallback warning handler receives emitted message" {
+  let logs : Array[String] = []
+  let fs = FontSystem::new().set_fallback_warning_handler(fn(message) {
+    logs.push(message)
+  })
+  let info = FontFallbackMissingInfo::{
+    kind: Exhausted,
+    scripts: [@moon_swash.Script::Arabic],
+    locale: "en-US",
+    word: "abc",
+    used: None,
+  }
+  font_fallback_emit_missing_warning(fs, info)
+  inspect(logs.length(), content="1")
+  inspect(
+    logs[0],
+    content="Failed to find any fallback for [Arabic] locale 'en-US': 'abc'",
+  )
+}

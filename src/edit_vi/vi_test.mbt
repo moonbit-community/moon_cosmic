@@ -119,3 +119,57 @@ test "ViEditor supports di( text-object" {
   let vi1 = vi0.feed_string("ldi(")
   inspect(vi1.editor().buffer().lines()[0].text(), content="() xyz")
 }
+
+///|
+test "ViEditor supports A and I insert-entry motions" {
+  let vi1 = mk_vi("abc\n").feed_string("A!\u{1B}")
+  inspect(vi1.editor().buffer().lines()[0].text(), content="abc!")
+  inspect(vi1.mode() is Normal, content="true")
+
+  let vi2 = mk_vi("abc\n").feed_string("I#\u{1B}")
+  inspect(vi2.editor().buffer().lines()[0].text(), content="#abc")
+  inspect(vi2.mode() is Normal, content="true")
+}
+
+///|
+test "ViEditor supports o and O open-line commands" {
+  let vi1 = mk_vi("abc\ndef\n").feed_string("joX\u{1B}")
+  inspect(vi1.editor().buffer().lines()[0].text(), content="abc")
+  inspect(vi1.editor().buffer().lines()[1].text(), content="def")
+  inspect(vi1.editor().buffer().lines()[2].text(), content="X")
+
+  let vi2 = mk_vi("abc\ndef\n").feed_string("jOY\u{1B}")
+  inspect(vi2.editor().buffer().lines()[0].text(), content="abc")
+  inspect(vi2.editor().buffer().lines()[1].text(), content="Y")
+  inspect(vi2.editor().buffer().lines()[2].text(), content="def")
+}
+
+///|
+test "ViEditor supports D C S and u/<C-r>" {
+  let vi1 = mk_vi("abc def\n").feed_string("lD")
+  inspect(vi1.editor().buffer().lines()[0].text(), content="a")
+
+  let vi2 = mk_vi("abc def\n").feed_string("lCX\u{1B}")
+  inspect(vi2.editor().buffer().lines()[0].text(), content="aX")
+  inspect(vi2.mode() is Normal, content="true")
+
+  let vi3 = mk_vi("abc\ndef\n").feed_string("Sx\u{1B}")
+  inspect(vi3.editor().buffer().lines()[0].text(), content="x")
+
+  let vi4 = mk_vi("abc\n").feed_string("iX\u{1B}u")
+  inspect(vi4.editor().buffer().lines()[0].text(), content="abc")
+  let vi5 = vi4.feed_string("\u{12}")
+  inspect(vi5.editor().buffer().lines()[0].text(), content="Xabc")
+}
+
+///|
+test "ViEditor supports ^ gg and G motions" {
+  let vi1 = mk_vi("  abc\n").feed_string("$^")
+  inspect(vi1.editor().cursor().index, content="2")
+
+  let vi2 = mk_vi("a\nb\nc\n").feed_string("G")
+  inspect(vi2.editor().cursor().line, content="3")
+
+  let vi3 = mk_vi("a\nb\nc\n").feed_string("Ggg")
+  inspect(vi3.editor().cursor().line, content="0")
+}
