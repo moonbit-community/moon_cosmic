@@ -30,9 +30,18 @@ test "SyntaxSystem resolves themes and file extensions" {
     syntax_system.theme("base16-eighties.dark") is Some(_),
     content="true",
   )
+  inspect(syntax_system.theme("base16-ocean.dark") is Some(_), content="true")
+  inspect(syntax_system.theme("inspiredGitHub") is Some(_), content="true")
   inspect(syntax_system.theme("missing-theme") is None, content="true")
   inspect(syntax_system.syntax_for_extension(".RS"), content="Some(\"rust\")")
   inspect(syntax_system.syntax_for_extension("py"), content="Some(\"python\")")
+  inspect(syntax_system.syntax_for_extension("PYI"), content="Some(\"python\")")
+  inspect(syntax_system.syntax_for_extension("jsonc"), content="Some(\"json\")")
+  inspect(
+    syntax_system.syntax_for_extension("mdown"),
+    content="Some(\"markdown\")",
+  )
+  inspect(syntax_system.syntax_for_extension("kt"), content="Some(\"clike\")")
 }
 
 ///|
@@ -356,6 +365,50 @@ test "SyntaxEditor highlights markdown inline code spans" {
   let line0 = syntax_editor.editor().buffer().lines()[0]
   inspect(
     line0.attrs_list().get_span(4).color_opt_value() == Some(theme.string_lit),
+    content="true",
+  )
+}
+
+///|
+test "SyntaxEditor highlights clike preprocessor directives" {
+  let syntax_system = SyntaxSystem::new()
+  let editor = mk_editor("#include <stdio.h>\nint x = 1;\n")
+  let syntax_editor0 = match
+    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    Some(s) => s
+    None => abort("theme should exist")
+  }
+  let syntax_editor = syntax_editor0.syntax_by_extension("c").rehighlight()
+  let theme = syntax_editor.theme()
+  let lines = syntax_editor.editor().buffer().lines()
+  inspect(
+    lines[0].attrs_list().get_span(0).color_opt_value() == Some(theme.keyword),
+    content="true",
+  )
+  inspect(
+    lines[1].attrs_list().get_span(0).color_opt_value() == Some(theme.type_name),
+    content="true",
+  )
+}
+
+///|
+test "SyntaxEditor highlights Rust outer attributes as keywords" {
+  let syntax_system = SyntaxSystem::new()
+  let editor = mk_editor("#[derive(Debug)]\nstruct X;\n")
+  let syntax_editor0 = match
+    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    Some(s) => s
+    None => abort("theme should exist")
+  }
+  let syntax_editor = syntax_editor0.syntax_by_extension("rs").rehighlight()
+  let theme = syntax_editor.theme()
+  let lines = syntax_editor.editor().buffer().lines()
+  inspect(
+    lines[0].attrs_list().get_span(0).color_opt_value() == Some(theme.keyword),
+    content="true",
+  )
+  inspect(
+    lines[1].attrs_list().get_span(0).color_opt_value() == Some(theme.keyword),
     content="true",
   )
 }

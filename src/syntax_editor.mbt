@@ -133,9 +133,14 @@ pub fn SyntaxSystem::theme(
   theme_name : String,
 ) -> SyntaxTheme? {
   let name = ascii_lower(theme_name)
-  if name == "base16-eighties.dark" {
+  if name == "base16-eighties.dark" ||
+    name == "base16-ocean.dark" ||
+    name == "base16-mocha.dark" ||
+    name == "solarized (dark)" {
     Some(theme_base16_eighties_dark())
-  } else if name == "base16-ocean.light" {
+  } else if name == "base16-ocean.light" ||
+    name == "inspiredgithub" ||
+    name == "solarized (light)" {
     Some(theme_base16_ocean_light())
   } else {
     None
@@ -160,8 +165,19 @@ pub fn SyntaxSystem::syntax_for_extension(
   extension : String,
 ) -> String? {
   let ext = normalize_extension(extension)
-  if ext == "rs" {
+  if ext == "rs" || ext == "rlib" {
     Some("rust")
+  } else if ext == "py" || ext == "pyi" || ext == "pyw" {
+    Some("python")
+  } else if ext == "json" || ext == "jsonc" || ext == "json5" {
+    Some("json")
+  } else if ext == "md" ||
+    ext == "markdown" ||
+    ext == "mdown" ||
+    ext == "mkd" ||
+    ext == "mkdn" ||
+    ext == "mdx" {
+    Some("markdown")
   } else if ext == "c" ||
     ext == "h" ||
     ext == "cc" ||
@@ -174,15 +190,29 @@ pub fn SyntaxSystem::syntax_for_extension(
     ext == "ts" ||
     ext == "tsx" ||
     ext == "jsx" ||
+    ext == "mjs" ||
+    ext == "cjs" ||
     ext == "java" ||
-    ext == "go" {
+    ext == "go" ||
+    ext == "kt" ||
+    ext == "kts" ||
+    ext == "swift" ||
+    ext == "cs" ||
+    ext == "php" ||
+    ext == "css" ||
+    ext == "scss" ||
+    ext == "sass" ||
+    ext == "less" ||
+    ext == "html" ||
+    ext == "htm" ||
+    ext == "xml" ||
+    ext == "sql" ||
+    ext == "sh" ||
+    ext == "bash" ||
+    ext == "zsh" ||
+    ext == "rb" ||
+    ext == "lua" {
     Some("clike")
-  } else if ext == "py" {
-    Some("python")
-  } else if ext == "json" {
-    Some("json")
-  } else if ext == "md" || ext == "markdown" {
-    Some("markdown")
   } else {
     None
   }
@@ -619,6 +649,7 @@ fn tokenize_line(
   let mut state = state_in
   let mut i = 0
   let n = chars.length()
+  let line_first = markdown_first_non_whitespace(chars)
 
   if syntax_name == "markdown" {
     let first = markdown_first_non_whitespace(chars)
@@ -848,6 +879,23 @@ fn tokenize_line(
 
     if has_line_comment_prefix(syntax_name, chars, i) {
       push_token(spans, offset_at(text, offsets, i), text.length(), Comment)
+      break
+    }
+
+    if i == line_first && syntax_name == "clike" && chars[i] == '#' {
+      push_token(spans, offset_at(text, offsets, i), text.length(), Keyword)
+      break
+    }
+
+    if i == line_first &&
+      syntax_name == "rust" &&
+      chars[i] == '#' &&
+      i + 1 < n &&
+      (
+        chars[i + 1] == '[' ||
+        (chars[i + 1] == '!' && i + 2 < n && chars[i + 2] == '[')
+      ) {
+      push_token(spans, offset_at(text, offsets, i), text.length(), Keyword)
       break
     }
 
