@@ -47,6 +47,11 @@ test "SyntaxSystem resolves themes and file extensions" {
   inspect(syntax_system.syntax_for_extension("toml"), content="Some(\"toml\")")
   inspect(syntax_system.syntax_for_extension("yml"), content="Some(\"yaml\")")
   inspect(
+    syntax_system.syntax_for_extension("html"),
+    content="Some(\"markup\")",
+  )
+  inspect(syntax_system.syntax_for_extension("xml"), content="Some(\"markup\")")
+  inspect(
     syntax_system.syntax_for_extension("mdown"),
     content="Some(\"markdown\")",
   )
@@ -537,6 +542,32 @@ test "SyntaxEditor highlights toml hash comments and booleans" {
   )
   inspect(
     lines[1].attrs_list().get_span(0).color_opt_value() == Some(theme.keyword),
+    content="true",
+  )
+}
+
+///|
+test "SyntaxEditor highlights markup comments across lines" {
+  let syntax_system = SyntaxSystem::new()
+  let editor = mk_editor("<!-- open\nstill comment -->\n<div>\n")
+  let syntax_editor0 = match
+    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    Some(s) => s
+    None => abort("theme should exist")
+  }
+  let syntax_editor = syntax_editor0.syntax_by_extension("html").rehighlight()
+  let theme = syntax_editor.theme()
+  let lines = syntax_editor.editor().buffer().lines()
+  inspect(
+    lines[0].attrs_list().get_span(0).color_opt_value() == Some(theme.comment),
+    content="true",
+  )
+  inspect(
+    lines[1].attrs_list().get_span(0).color_opt_value() == Some(theme.comment),
+    content="true",
+  )
+  inspect(
+    lines[2].attrs_list().get_span(0).color_opt_value() != Some(theme.comment),
     content="true",
   )
 }

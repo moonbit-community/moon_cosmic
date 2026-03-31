@@ -179,6 +179,8 @@ pub fn SyntaxSystem::syntax_for_extension(
     Some("toml")
   } else if ext == "yaml" || ext == "yml" {
     Some("yaml")
+  } else if ext == "html" || ext == "htm" || ext == "xml" {
+    Some("markup")
   } else if ext == "md" ||
     ext == "markdown" ||
     ext == "mdown" ||
@@ -218,10 +220,7 @@ pub fn SyntaxSystem::syntax_for_extension(
     ext == "css" ||
     ext == "scss" ||
     ext == "sass" ||
-    ext == "less" ||
-    ext == "html" ||
-    ext == "htm" ||
-    ext == "xml" {
+    ext == "less" {
     Some("clike")
   } else {
     None
@@ -245,6 +244,7 @@ pub(all) enum TokenClass {
 ///|
 pub struct LineState {
   block_comment_depth : Int
+  markup_comment_open : Bool
   string_delim_opt : Char?
   string_is_triple : Bool
   raw_hash_count_opt : Int?
@@ -256,6 +256,7 @@ pub struct LineState {
 pub fn LineState::new() -> LineState {
   LineState::{
     block_comment_depth: 0,
+    markup_comment_open: false,
     string_delim_opt: None,
     string_is_triple: false,
     raw_hash_count_opt: None,
@@ -267,6 +268,7 @@ pub fn LineState::new() -> LineState {
 ///|
 pub impl Eq for LineState with equal(self, other) {
   self.block_comment_depth == other.block_comment_depth &&
+  self.markup_comment_open == other.markup_comment_open &&
   self.string_delim_opt == other.string_delim_opt &&
   self.string_is_triple == other.string_is_triple &&
   self.raw_hash_count_opt == other.raw_hash_count_opt &&
@@ -1042,6 +1044,30 @@ fn tokenize_line(
       }
     }
 
+    if syntax_name == "markup" && state.markup_comment_open {
+      let start_i = i
+      let mut closed = false
+      while i + 2 < n {
+        if chars[i] == '-' && chars[i + 1] == '-' && chars[i + 2] == '>' {
+          i = i + 3
+          closed = true
+          break
+        }
+        i = i + 1
+      }
+      if !closed {
+        i = n
+      }
+      push_token(
+        spans,
+        offset_at(text, offsets, start_i),
+        offset_at(text, offsets, i),
+        Comment,
+      )
+      state = LineState::{ ..state, markup_comment_open: !closed }
+      continue
+    }
+
     if state.block_comment_depth > 0 {
       let start_i = i
       let nested = supports_nested_block_comment(syntax_name)
@@ -1142,6 +1168,38 @@ fn tokenize_line(
         continue
       }
       None => ()
+    }
+
+    if syntax_name == "markup" &&
+      i + 3 < n &&
+      chars[i] == '<' &&
+      chars[i + 1] == '!' &&
+      chars[i + 2] == '-' &&
+      chars[i + 3] == '-' {
+      let start_i = i
+      i = i + 4
+      let mut closed = false
+      while i + 2 < n {
+        if chars[i] == '-' && chars[i + 1] == '-' && chars[i + 2] == '>' {
+          i = i + 3
+          closed = true
+          break
+        }
+        i = i + 1
+      }
+      if !closed {
+        i = n
+      }
+      push_token(
+        spans,
+        offset_at(text, offsets, start_i),
+        offset_at(text, offsets, i),
+        Comment,
+      )
+      if !closed {
+        state = LineState::{ ..state, markup_comment_open: true }
+      }
+      continue
     }
 
     if has_line_comment_prefix(syntax_name, chars, i) {
