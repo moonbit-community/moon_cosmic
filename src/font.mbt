@@ -85,6 +85,7 @@ pub struct FontSystem {
   locale : String
   fonts : Array[FontEntry]
   priv mut fallback_profile_opt : FallbackProfile?
+  priv fallback_warning_handler_opt : ((String) -> Unit)?
   font_matches_cache : @hashmap.HashMap[FontMatchAttrs, Array[Int]]
   codepoint_support_cache : @hashmap.HashMap[
     Int,
@@ -155,6 +156,7 @@ pub fn FontSystem::new_with_locale(locale : String) -> FontSystem {
     locale,
     fonts: [],
     fallback_profile_opt: None,
+    fallback_warning_handler_opt: None,
     font_matches_cache: @hashmap.HashMap::default(),
     codepoint_support_cache: @hashmap.HashMap::default(),
     hb_font_cache: @hashmap.HashMap::default(),
@@ -457,6 +459,21 @@ pub fn FontSystem::set_fallback_profile(
 ///|
 pub fn FontSystem::clear_fallback_profile(self : FontSystem) -> FontSystem {
   FontSystem::{ ..self, fallback_profile_opt: None }
+}
+
+///|
+pub fn FontSystem::set_fallback_warning_handler(
+  self : FontSystem,
+  handler : (String) -> Unit,
+) -> FontSystem {
+  FontSystem::{ ..self, fallback_warning_handler_opt: Some(handler) }
+}
+
+///|
+pub fn FontSystem::clear_fallback_warning_handler(
+  self : FontSystem,
+) -> FontSystem {
+  FontSystem::{ ..self, fallback_warning_handler_opt: None }
 }
 
 ///|
@@ -931,6 +948,18 @@ fn font_fallback_missing_message(info : FontFallbackMissingInfo) -> String {
       "fallback-preset locale=\{info.locale} scripts=\{scripts_len} word=\{info.word} used=\{info.used}"
     ScriptFallback =>
       "fallback-script locale=\{info.locale} scripts=\{scripts_len} word=\{info.word} used=\{info.used}"
+  }
+}
+
+///|
+fn font_fallback_emit_missing_warning(
+  fs : FontSystem,
+  info : FontFallbackMissingInfo,
+) -> Unit {
+  let message = font_fallback_missing_message(info)
+  match fs.fallback_warning_handler_opt {
+    None => ()
+    Some(handler) => handler(message)
   }
 }
 
