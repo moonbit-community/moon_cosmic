@@ -730,75 +730,57 @@ fn attrs_for_token(
 }
 
 ///|
-fn push_text_span(
-  rich_spans : Array[(String, Attrs)],
-  text : String,
-  start : Int,
-  end : Int,
-  attrs : Attrs,
-) -> Unit {
-  if end > start {
-    rich_spans.push((syntax_slice_string(text, start, end), attrs))
-  }
-}
-
-///|
-fn append_highlighted_line_spans(
-  rich_spans : Array[(String, Attrs)],
-  text : String,
-  defaults : Attrs,
-  theme : SyntaxTheme,
-  token_spans : Array[TokenSpan],
-) -> Unit {
-  let mut cursor = 0
-  for span in token_spans {
-    let start = span.start
-    let end = span.end
-    if start > cursor {
-      push_text_span(rich_spans, text, cursor, start, defaults)
-    }
-    push_text_span(
-      rich_spans,
-      text,
-      start,
-      end,
-      attrs_for_token(defaults, theme, span.class),
-    )
-    cursor = end
-  }
-  if cursor < text.length() {
-    push_text_span(rich_spans, text, cursor, text.length(), defaults)
-  }
-}
-
-///|
 fn themed_defaults(defaults : Attrs, theme : SyntaxTheme) -> Attrs {
   defaults.color(theme.foreground)
 }
 
 ///|
-fn rebuild_editor_with_highlight(
-  editor : Editor,
+fn copy_token_spans(spans : Array[TokenSpan]) -> Array[TokenSpan] {
+  let copied : Array[TokenSpan] = []
+  for span in spans {
+    copied.push(span)
+  }
+  copied
+}
+
+///|
+fn highlighted_attrs_list_for_line(
+  defaults : Attrs,
+  theme : SyntaxTheme,
+  spans : Array[TokenSpan],
+) -> AttrsList {
+  let mut attrs_list = AttrsList::new(defaults)
+  for span in spans {
+    let attrs = attrs_for_token(defaults, theme, span.class)
+    if attrs != defaults {
+      attrs_list = attrs_list.add_span(span.start, span.end, attrs)
+    }
+  }
+  attrs_list
+}
+
+///|
+fn syntax_highlight_buffer(
+  buffer : Buffer,
   theme : SyntaxTheme,
   syntax_name : String,
   old_cache : Array[CachedLine],
-) -> (Editor, Array[CachedLine]) {
-  let old_buffer = editor.buffer()
-  let old_cursor = editor.cursor()
-  let old_selection = editor.selection()
-  let old_auto_indent = editor.auto_indent()
-  let old_tab_width = editor.tab_width()
-  let old_scroll = old_buffer.scroll()
-  let lines = old_buffer.lines()
-  let rich_spans : Array[(String, Attrs)] = []
+  allow_cache : Bool,
+) -> (Buffer, Array[CachedLine], Int) {
+  let lines = buffer.lines()
+  let new_lines : Array[BufferLine] = []
   let new_cache : Array[CachedLine] = []
   let mut state = LineState::new()
+  let mut highlighted = 0
+  let mut changed = false
   for p in lines.iter2() {
     let line_i = p.0
     let line = p.1
     let text = line.text()
-    let defaults = themed_defaults(line.attrs_list().defaults(), theme)
-    let cache_hit = if line_i < old_cache.length() {
+    let defaults = line.attrs_list().defaults()
+    let cache_hit = if allow_cache &&
+      line_i < old_cache.length() &&
+      line.metadata() is Some(_) {
       let cached = old_cache[line_i]
       cached.text == text && cached.state_in == state
     } else {
@@ -807,42 +789,69 @@ fn rebuild_editor_with_highlight(
     let spans_and_state = if cache_hit {
       (old_cache[line_i].spans, old_cache[line_i].state_out)
     } else {
+      highlighted = highlighted + 1
       tokenize_line(text, syntax_name, state)
     }
     let spans = spans_and_state.0
     let state_out = spans_and_state.1
-    append_highlighted_line_spans(rich_spans, text, defaults, theme, spans)
-    let ending = line.ending().as_str()
-    if ending.length() > 0 {
-      rich_spans.push((ending, defaults))
+    let attrs_list = highlighted_attrs_list_for_line(defaults, theme, spans)
+    let set_attrs = line.set_attrs_list(attrs_list)
+    let mut updated_line = set_attrs.0
+    if set_attrs.1 {
+      changed = true
     }
-    let spans_copy : Array[TokenSpan] = []
-    for span in spans {
-      spans_copy.push(span)
+    let metadata_set = match updated_line.metadata() {
+      Some(v) => v != line_i
+      None => true
     }
+    if metadata_set {
+      updated_line = updated_line.set_metadata(line_i)
+    }
+    new_lines.push(updated_line)
     new_cache.push(CachedLine::{
       text,
       state_in: state,
       state_out,
-      spans: spans_copy,
+      spans: copy_token_spans(spans),
     })
     state = state_out
   }
+  let redraw = buffer.redraw() || changed || highlighted > 0
+  (Buffer::{ ..buffer, lines: new_lines, redraw }, new_cache, highlighted)
+}
 
-  let default_attrs = if lines.length() > 0 {
-    themed_defaults(lines[0].attrs_list().defaults(), theme)
-  } else {
-    themed_defaults(Attrs::new(), theme)
+///|
+fn syntax_apply_theme_defaults(buffer : Buffer, theme : SyntaxTheme) -> Buffer {
+  let lines = buffer.lines()
+  let new_lines : Array[BufferLine] = []
+  let mut changed = false
+  for line in lines {
+    let defaults = themed_defaults(line.attrs_list().defaults(), theme)
+    let set_line = line.set_attrs_list(AttrsList::new(defaults))
+    if set_line.1 {
+      changed = true
+    }
+    new_lines.push(set_line.0)
   }
-  let new_buffer = old_buffer
-    .set_rich_text(rich_spans, default_attrs, Advanced, None)
-    .set_scroll(old_scroll)
-  let new_editor = Editor::new(new_buffer)
-    .set_cursor(old_cursor)
-    .set_selection(old_selection)
-    .set_auto_indent(old_auto_indent)
-    .set_tab_width(old_tab_width)
-  (new_editor, new_cache)
+  Buffer::{ ..buffer, lines: new_lines, redraw: buffer.redraw() || changed }
+}
+
+///|
+fn syntax_rehighlight_editor(
+  editor : Editor,
+  theme : SyntaxTheme,
+  syntax_name : String,
+  old_cache : Array[CachedLine],
+  allow_cache : Bool,
+) -> (Editor, Array[CachedLine], Int) {
+  let highlighted = syntax_highlight_buffer(
+    editor.buffer(),
+    theme,
+    syntax_name,
+    old_cache,
+    allow_cache,
+  )
+  (Editor::{ ..editor, buffer: highlighted.0 }, highlighted.1, highlighted.2)
 }
 
 ///|
@@ -855,18 +864,12 @@ pub fn SyntaxEditor::new(
     None => None
     Some(theme) => {
       let syntax_name = syntax_system.plain_text_syntax()
-      let (new_editor, cache) = rebuild_editor_with_highlight(
-        editor,
-        theme,
-        syntax_name,
-        [],
-      )
       Some(SyntaxEditor::{
-        editor: new_editor,
+        editor,
         syntax_system,
         syntax_name,
         theme,
-        cache,
+        cache: [],
       })
     }
   }
@@ -912,13 +915,14 @@ pub fn SyntaxEditor::set_editor(
   self : SyntaxEditor,
   editor : Editor,
 ) -> SyntaxEditor {
-  let (new_editor, cache) = rebuild_editor_with_highlight(
+  let highlighted = syntax_rehighlight_editor(
     editor,
     self.theme,
     self.syntax_name,
     self.cache,
+    true,
   )
-  SyntaxEditor::{ ..self, editor: new_editor, cache }
+  SyntaxEditor::{ ..self, editor: highlighted.0, cache: highlighted.1 }
 }
 
 ///|
@@ -929,13 +933,12 @@ pub fn SyntaxEditor::update_theme(
   match self.syntax_system.theme(theme_name) {
     None => (self, false)
     Some(theme) => {
-      let (new_editor, cache) = rebuild_editor_with_highlight(
-        self.editor,
+      let themed_buffer = syntax_apply_theme_defaults(
+        self.editor.buffer(),
         theme,
-        self.syntax_name,
-        [],
       )
-      (SyntaxEditor::{ ..self, editor: new_editor, theme, cache }, true)
+      let themed_editor = Editor::{ ..self.editor, buffer: themed_buffer }
+      (SyntaxEditor::{ ..self, editor: themed_editor, theme, cache: [] }, true)
     }
   }
 }
@@ -949,24 +952,19 @@ pub fn SyntaxEditor::syntax_by_extension(
     None => self.syntax_system.plain_text_syntax()
     Some(name) => name
   }
-  let (new_editor, cache) = rebuild_editor_with_highlight(
-    self.editor,
-    self.theme,
-    syntax_name,
-    [],
-  )
-  SyntaxEditor::{ ..self, editor: new_editor, syntax_name, cache }
+  SyntaxEditor::{ ..self, syntax_name, cache: [] }
 }
 
 ///|
 pub fn SyntaxEditor::rehighlight(self : SyntaxEditor) -> SyntaxEditor {
-  let (new_editor, cache) = rebuild_editor_with_highlight(
+  let highlighted = syntax_rehighlight_editor(
     self.editor,
     self.theme,
     self.syntax_name,
     self.cache,
+    true,
   )
-  SyntaxEditor::{ ..self, editor: new_editor, cache }
+  SyntaxEditor::{ ..self, editor: highlighted.0, cache: highlighted.1 }
 }
 
 ///|

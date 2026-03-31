@@ -44,7 +44,7 @@ test "SyntaxEditor highlights rust keyword and number spans" {
     Some(s) => s
     None => abort("theme should exist")
   }
-  let syntax_editor = syntax_editor0.syntax_by_extension("rs")
+  let syntax_editor = syntax_editor0.syntax_by_extension("rs").rehighlight()
   let theme = syntax_editor.theme()
   let line0 = syntax_editor.editor().buffer().lines()[0]
   let line1 = syntax_editor.editor().buffer().lines()[1]
@@ -71,7 +71,7 @@ test "SyntaxEditor update_theme retints defaults" {
     Some(s) => s
     None => abort("theme should exist")
   }
-  let syntax_editor1 = syntax_editor0.syntax_by_extension("rs")
+  let syntax_editor1 = syntax_editor0.syntax_by_extension("rs").rehighlight()
   let before = syntax_editor1.foreground_color()
   let updated = syntax_editor1.update_theme("base16-ocean.light")
   inspect(updated.1, content="true")

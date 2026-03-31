@@ -44,7 +44,7 @@ test "SyntaxEditor highlights rust keyword and number spans" {
     Some(s) => s
     None => abort("theme should exist")
   }
-  let syntax_editor = syntax_editor0.syntax_by_extension("rs")
+  let syntax_editor = syntax_editor0.syntax_by_extension("rs").rehighlight()
   let theme = syntax_editor.theme()
   let line0 = syntax_editor.editor().buffer().lines()[0]
   let line1 = syntax_editor.editor().buffer().lines()[1]
@@ -71,10 +71,30 @@ test "SyntaxEditor update_theme retints defaults" {
     Some(s) => s
     None => abort("theme should exist")
   }
-  let syntax_editor1 = syntax_editor0.syntax_by_extension("rs")
+  let syntax_editor1 = syntax_editor0.syntax_by_extension("rs").rehighlight()
   let before = syntax_editor1.foreground_color()
   let updated = syntax_editor1.update_theme("base16-ocean.light")
   inspect(updated.1, content="true")
   let syntax_editor2 = updated.0
   inspect(syntax_editor2.foreground_color() == before, content="false")
+}
+
+///|
+test "SyntaxEditor syntax switch is lazy until rehighlight" {
+  let syntax_system = SyntaxSystem::new()
+  let editor = mk_editor("fn main() {}\n")
+  let syntax_editor0 = match
+    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    Some(s) => s
+    None => abort("theme should exist")
+  }
+  let switched = syntax_editor0.syntax_by_extension("rs")
+  let attrs_before = switched.editor().buffer().lines()[0]
+    .attrs_list()
+    .get_span(0)
+  inspect(attrs_before.weight_value() == Weight::bold(), content="false")
+  let attrs_after = switched.rehighlight().editor().buffer().lines()[0]
+    .attrs_list()
+    .get_span(0)
+  inspect(attrs_after.weight_value(), content="700")
 }
