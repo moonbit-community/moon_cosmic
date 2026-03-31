@@ -1886,7 +1886,7 @@ fn tokenize_line(
     if chars[i] == '"' || chars[i] == '\'' {
       let delim = chars[i]
       let start_i = i
-      let triple = syntax_name == "python" &&
+      let triple = (syntax_name == "python" || syntax_name == "toml") &&
         i + 2 < n &&
         chars[i + 1] == delim &&
         chars[i + 2] == delim

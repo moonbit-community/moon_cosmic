@@ -547,6 +547,64 @@ test "SyntaxEditor highlights toml hash comments and booleans" {
 }
 
 ///|
+test "SyntaxEditor tracks toml triple-quoted basic strings across lines" {
+  let syntax_system = SyntaxSystem::new()
+  let editor = mk_editor("key = \"\"\"a\nb\"\"\"\nok = true\n")
+  let syntax_editor0 = match
+    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    Some(s) => s
+    None => abort("theme should exist")
+  }
+  let syntax_editor = syntax_editor0.syntax_by_extension("toml").rehighlight()
+  let theme = syntax_editor.theme()
+  let lines = syntax_editor.editor().buffer().lines()
+  inspect(
+    lines[0].attrs_list().get_span("key = ".length()).color_opt_value() ==
+    Some(theme.string_lit),
+    content="true",
+  )
+  inspect(
+    lines[1].attrs_list().get_span(0).color_opt_value() ==
+    Some(theme.string_lit),
+    content="true",
+  )
+  inspect(
+    lines[2].attrs_list().get_span("ok = ".length()).color_opt_value() ==
+    Some(theme.keyword),
+    content="true",
+  )
+}
+
+///|
+test "SyntaxEditor tracks toml triple-quoted literal strings across lines" {
+  let syntax_system = SyntaxSystem::new()
+  let editor = mk_editor("key = '''a\nb'''\nflag = false\n")
+  let syntax_editor0 = match
+    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    Some(s) => s
+    None => abort("theme should exist")
+  }
+  let syntax_editor = syntax_editor0.syntax_by_extension("toml").rehighlight()
+  let theme = syntax_editor.theme()
+  let lines = syntax_editor.editor().buffer().lines()
+  inspect(
+    lines[0].attrs_list().get_span("key = ".length()).color_opt_value() ==
+    Some(theme.string_lit),
+    content="true",
+  )
+  inspect(
+    lines[1].attrs_list().get_span(0).color_opt_value() ==
+    Some(theme.string_lit),
+    content="true",
+  )
+  inspect(
+    lines[2].attrs_list().get_span("flag = ".length()).color_opt_value() ==
+    Some(theme.keyword),
+    content="true",
+  )
+}
+
+///|
 test "SyntaxEditor highlights markup comments across lines" {
   let syntax_system = SyntaxSystem::new()
   let editor = mk_editor("<!-- open\nstill comment -->\n<div>\n")
