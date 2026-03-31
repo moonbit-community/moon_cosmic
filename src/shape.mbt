@@ -757,6 +757,7 @@ fn shape_harfbuzz_variations(
 
 ///|
 fn shape_run_with_harfbuzz(
+  font_system : FontSystem,
   entry : FontEntry,
   attrs_list : AttrsList,
   levels : Array[Int],
@@ -794,9 +795,7 @@ fn shape_run_with_harfbuzz(
   if upem <= 0 {
     return None
   }
-  let hb_font = @font.Font::new(
-    @face.Face::from_bytes(entry.source_data(), index=entry.source_index()),
-  )
+  let hb_font = font_system.hb_font_for_entry(entry)
   hb_font.set_scale(upem, upem)
   let axis_coords = shape_harfbuzz_variations(entry.font, run_attrs)
   match hb_font.set_variations(axis_coords) {
@@ -804,9 +803,11 @@ fn shape_run_with_harfbuzz(
     Ok(_) => ()
   }
 
-  let hb_buffer = @buffer.Buffer::new()
+  let hb_buffer = font_system.shape_hb_buffer()
+  hb_buffer.clear()
   hb_buffer.set_direction(hb_direction_from_run_rtl(run_rtl))
   hb_buffer.set_script(hb_script_from_swash_script(script))
+  hb_buffer.set_language(@common.Language::from_string("und"))
   for t in run_tokens {
     let ch = if t.ch() == '\t' { ' ' } else { t.ch() }
     hb_buffer.add_codepoint(
@@ -814,7 +815,7 @@ fn shape_run_with_harfbuzz(
       cluster=t.offset().reinterpret_as_int() - source_start,
     )
   }
-  match hb_buffer.shape_ot(hb_font) {
+  match @hb_shape.shape(hb_font, hb_buffer, shapers=["ot"]) {
     Err(_) => return None
     Ok(_) => ()
   }
@@ -994,8 +995,9 @@ fn shape_run_with_font(
   }
   match
     shape_run_with_harfbuzz(
-      entry, attrs_list, levels, text_len, line_rtl, run_rtl, script, run_tokens,
-      run_attrs, font_id, font_ascent, font_descent, underline_metrics, strikethrough_metrics,
+      font_system, entry, attrs_list, levels, text_len, line_rtl, run_rtl, script,
+      run_tokens, run_attrs, font_id, font_ascent, font_descent, underline_metrics,
+      strikethrough_metrics,
     ) {
     None => ([], shape_run_missing_tokens(run_tokens))
     Some(ret) => ret

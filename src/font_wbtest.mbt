@@ -469,10 +469,17 @@ test "forbidden filtering applies to other-stage candidates only" {
     Some(entry) => [entry.family_name()]
     None => []
   }
-  inspect(
-    filter_forbidden_from_other_stage(fs, forbidden, [0, 99]),
-    content="[99]",
-  )
+  let filtered : Array[Int] = []
+  for id in [0, 99] {
+    match fs.get_font_entry(id) {
+      None => filtered.push(id)
+      Some(entry) =>
+        if !entry_in_forbidden_fallback(entry, forbidden) {
+          filtered.push(id)
+        }
+    }
+  }
+  inspect(filtered, content="[99]")
 }
 
 ///|

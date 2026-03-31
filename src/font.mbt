@@ -90,6 +90,8 @@ pub struct FontSystem {
     Int,
     FontCachedCodepointSupportInfo,
   ]
+  hb_font_cache : @hashmap.HashMap[Int, @font.Font]
+  hb_shape_buffer : @buffer.Buffer
   shape_run_cache : ShapeRunCache
 
   fn new() -> FontSystem
@@ -139,6 +141,8 @@ pub fn FontSystem::new_with_locale(locale : String) -> FontSystem {
     fallback_profile_opt: None,
     font_matches_cache: @hashmap.HashMap::default(),
     codepoint_support_cache: @hashmap.HashMap::default(),
+    hb_font_cache: @hashmap.HashMap::default(),
+    hb_shape_buffer: @buffer.Buffer::new(),
     shape_run_cache: ShapeRunCache::new(),
   }
 }
@@ -151,6 +155,28 @@ pub fn FontSystem::locale(self : FontSystem) -> String {
 ///|
 pub fn FontSystem::fonts(self : FontSystem) -> Array[FontEntry] {
   self.fonts
+}
+
+///|
+fn FontSystem::hb_font_for_entry(
+  self : FontSystem,
+  entry : FontEntry,
+) -> @font.Font {
+  match self.hb_font_cache.get(entry.id) {
+    Some(font) => font
+    None => {
+      let font = @font.Font::new(
+        @face.Face::from_bytes(entry.source_data, index=entry.source_index),
+      )
+      self.hb_font_cache.set(entry.id, font)
+      font
+    }
+  }
+}
+
+///|
+fn FontSystem::shape_hb_buffer(self : FontSystem) -> @buffer.Buffer {
+  self.hb_shape_buffer
 }
 
 ///|
@@ -425,29 +451,6 @@ fn forbidden_fallback_family_names(profile : FallbackProfile) -> Array[String] {
 }
 
 ///|
-fn filter_forbidden_from_other_stage(
-  fs : FontSystem,
-  forbidden_families : Array[String],
-  ids : Array[Int],
-) -> Array[Int] {
-  if forbidden_families.length() == 0 {
-    return ids
-  }
-  let head : Array[Int] = []
-  for id in ids {
-    if id < 0 || id >= fs.fonts.length() {
-      head.push(id)
-      continue
-    }
-    let entry = fs.fonts[id]
-    if !entry_in_forbidden_fallback(entry, forbidden_families) {
-      head.push(id)
-    }
-  }
-  head
-}
-
-///|
 fn split_default_stage_candidates(
   fs : FontSystem,
   family : Family,
@@ -534,6 +537,114 @@ fn script_in_array(
     }
   }
   false
+}
+
+///|
+priv struct FontFallbackIterState {
+  ids : Array[Int]
+  defaults : Array[Int]
+  scripts : Array[@moon_swash.Script]
+  common_families : Array[String]
+  forbidden_families : Array[String]
+  req_weight : Weight
+  locale : String
+  profile : FallbackProfile
+  mut default_i : Int
+  mut script_i : Int
+  mut script_family_i : Int
+  mut common_i : Int
+  mut other_i : Int
+}
+
+///|
+fn FontFallbackIterState::new(
+  ids : Array[Int],
+  defaults : Array[Int],
+  scripts : Array[@moon_swash.Script],
+  common_families : Array[String],
+  forbidden_families : Array[String],
+  req_weight : Weight,
+  locale : String,
+  profile : FallbackProfile,
+) -> FontFallbackIterState {
+  FontFallbackIterState::{
+    ids,
+    defaults,
+    scripts,
+    common_families,
+    forbidden_families,
+    req_weight,
+    locale,
+    profile,
+    default_i: 0,
+    script_i: 0,
+    script_family_i: 0,
+    common_i: 0,
+    other_i: 0,
+  }
+}
+
+///|
+fn font_fallback_next(fs : FontSystem, state : FontFallbackIterState) -> Int? {
+  if state.default_i < state.defaults.length() {
+    let next = state.defaults[state.default_i]
+    state.default_i = state.default_i + 1
+    return Some(next)
+  }
+
+  while state.script_i < state.scripts.length() {
+    let script = state.scripts[state.script_i]
+    let script_families = script_fallback_family_names(
+      script,
+      state.locale,
+      state.profile,
+    )
+    while state.script_family_i < script_families.length() {
+      let family_name = script_families[state.script_family_i]
+      state.script_family_i = state.script_family_i + 1
+      match
+        first_named_fallback_candidate(
+          fs,
+          state.req_weight,
+          state.ids,
+          family_name,
+        ) {
+        None => ()
+        Some(id) => return Some(id)
+      }
+    }
+    state.script_i = state.script_i + 1
+    state.script_family_i = 0
+  }
+
+  while state.common_i < state.common_families.length() {
+    let family_name = state.common_families[state.common_i]
+    state.common_i = state.common_i + 1
+    match
+      first_named_fallback_candidate(
+        fs,
+        state.req_weight,
+        state.ids,
+        family_name,
+      ) {
+      None => ()
+      Some(id) => return Some(id)
+    }
+  }
+
+  while state.other_i < state.ids.length() {
+    let id = state.ids[state.other_i]
+    state.other_i = state.other_i + 1
+    if id < 0 || id >= fs.fonts.length() {
+      continue
+    }
+    let entry = fs.fonts[id]
+    if !entry_in_forbidden_fallback(entry, state.forbidden_families) {
+      return Some(id)
+    }
+  }
+
+  None
 }
 
 ///|
@@ -876,44 +987,29 @@ pub fn FontSystem::font_matches_for_scripts(
   let defaults = defaults_and_rest.0
 
   let seen_scripts : Array[@moon_swash.Script] = []
-  let script_stage : Array[Int] = []
   for script in scripts {
     if !script_uses_fallback_stage(script) ||
       script_in_array(seen_scripts, script) {
       continue
     }
     seen_scripts.push(script)
-    let families = script_fallback_family_names(script, self.locale, profile)
-    for family_name in families {
-      match first_named_fallback_candidate(self, req_weight, ids, family_name) {
-        None => ()
-        Some(id) => script_stage.push(id)
-      }
-    }
   }
-  let common_stage : Array[Int] = []
-  for family_name in common_fallback_family_names(profile) {
-    match first_named_fallback_candidate(self, req_weight, ids, family_name) {
-      None => ()
-      Some(id) => common_stage.push(id)
-    }
-  }
-  let other_stage = filter_forbidden_from_other_stage(
-    self, forbidden_families, ids,
+  let iter = FontFallbackIterState::new(
+    ids,
+    defaults,
+    seen_scripts,
+    common_fallback_family_names(profile),
+    forbidden_families,
+    req_weight,
+    self.locale,
+    profile,
   )
-
   let staged : Array[Int] = []
-  for id in defaults {
-    staged.push(id)
-  }
-  for id in script_stage {
-    staged.push(id)
-  }
-  for id in common_stage {
-    staged.push(id)
-  }
-  for id in other_stage {
-    staged.push(id)
+  while true {
+    match font_fallback_next(self, iter) {
+      None => break
+      Some(id) => staged.push(id)
+    }
   }
   staged
 }

@@ -52,6 +52,18 @@ test "Buffer.set_text empty text produces one empty LineEnding::None line" {
 }
 
 ///|
+test "Buffer.set_text resets scroll to default" {
+  let attrs = AttrsList::new(Attrs::new())
+  let buf0 = Buffer::new(Metrics::new(12.0F, 14.0F))
+    .set_text("A\nB", attrs, Advanced)
+    .set_scroll(Scroll::new(1, 2.0F, 3.0F))
+  let buf1 = buf0.set_text("C", attrs, Advanced)
+  inspect(buf1.scroll().line, content="0")
+  inspect(buf1.scroll().vertical, content="0")
+  inspect(buf1.scroll().horizontal, content="0")
+}
+
+///|
 test "Buffer.set_rich_text builds per-line AttrsList spans and uses default line ending" {
   let bold = Attrs::new().weight(Weight::bold())
   let spans : Array[(String, Attrs)] = [

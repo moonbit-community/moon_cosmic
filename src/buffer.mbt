@@ -26,6 +26,10 @@ pub struct Buffer {
   monospace_width : Float?
   tab_width : Int
   hinting : Hinting
+  dirty_relayout : Bool
+  dirty_tab_shape : Bool
+  dirty_text_set : Bool
+  dirty_scroll : Bool
 
   fn new(metrics : Metrics) -> Buffer
 }
@@ -55,6 +59,10 @@ pub fn Buffer::new_empty(metrics : Metrics) -> Buffer {
     monospace_width: None,
     tab_width: 8,
     hinting: Hinting::Disabled,
+    dirty_relayout: false,
+    dirty_tab_shape: false,
+    dirty_text_set: false,
+    dirty_scroll: false,
   }
 }
 
@@ -94,7 +102,7 @@ pub fn Buffer::set_scroll(self : Buffer, scroll : Scroll) -> Buffer {
     self.scroll.horizontal == scroll.horizontal {
     self
   } else {
-    Buffer::{ ..self, scroll, redraw: true }
+    Buffer::{ ..self, scroll, redraw: true, dirty_scroll: true }
   }
 }
 
@@ -254,16 +262,57 @@ fn reset_shaping_lines_for_tab_width(
 }
 
 ///|
+fn buffer_has_dirty(buffer : Buffer) -> Bool {
+  buffer.dirty_relayout ||
+  buffer.dirty_tab_shape ||
+  buffer.dirty_text_set ||
+  buffer.dirty_scroll
+}
+
+///|
+fn buffer_resolve_dirty(buffer : Buffer) -> Buffer? {
+  if !buffer_has_dirty(buffer) {
+    return None
+  }
+  let lines = buffer.lines
+  if !buffer.dirty_text_set {
+    let lines = if buffer.dirty_tab_shape {
+      reset_shaping_lines_for_tab_width(lines)
+    } else {
+      lines
+    }
+    let lines = if buffer.dirty_relayout {
+      reset_layout_lines(lines)
+    } else {
+      lines
+    }
+    return Some(Buffer::{
+      ..buffer,
+      lines,
+      redraw: true,
+      dirty_relayout: false,
+      dirty_tab_shape: false,
+      dirty_text_set: false,
+      dirty_scroll: false,
+    })
+  }
+  Some(Buffer::{
+    ..buffer,
+    lines,
+    redraw: true,
+    dirty_relayout: false,
+    dirty_tab_shape: false,
+    dirty_text_set: false,
+    dirty_scroll: false,
+  })
+}
+
+///|
 pub fn Buffer::set_wrap(self : Buffer, wrap : Wrap) -> Buffer {
   if wrap_eq(self.wrap, wrap) {
     self
   } else {
-    Buffer::{
-      ..self,
-      wrap,
-      lines: reset_layout_lines(self.lines),
-      redraw: true,
-    }
+    Buffer::{ ..self, wrap, redraw: true, dirty_relayout: true }
   }
 }
 
@@ -272,12 +321,7 @@ pub fn Buffer::set_ellipsize(self : Buffer, ellipsize : Ellipsize) -> Buffer {
   if ellipsize_eq(self.ellipsize, ellipsize) {
     self
   } else {
-    Buffer::{
-      ..self,
-      ellipsize,
-      lines: reset_layout_lines(self.lines),
-      redraw: true,
-    }
+    Buffer::{ ..self, ellipsize, redraw: true, dirty_relayout: true }
   }
 }
 
@@ -289,8 +333,9 @@ pub fn Buffer::set_tab_width(self : Buffer, tab_width : Int) -> Buffer {
     Buffer::{
       ..self,
       tab_width,
-      lines: reset_shaping_lines_for_tab_width(self.lines),
       redraw: true,
+      dirty_tab_shape: true,
+      dirty_relayout: true,
     }
   }
 }
@@ -300,12 +345,7 @@ pub fn Buffer::set_hinting(self : Buffer, hinting : Hinting) -> Buffer {
   if hinting_eq(self.hinting, hinting) {
     self
   } else {
-    Buffer::{
-      ..self,
-      hinting,
-      lines: reset_layout_lines(self.lines),
-      redraw: true,
-    }
+    Buffer::{ ..self, hinting, redraw: true, dirty_relayout: true }
   }
 }
 
@@ -317,12 +357,7 @@ pub fn Buffer::set_monospace_width(
   if float_opt_eq(self.monospace_width, monospace_width) {
     self
   } else {
-    Buffer::{
-      ..self,
-      monospace_width,
-      lines: reset_layout_lines(self.lines),
-      redraw: true,
-    }
+    Buffer::{ ..self, monospace_width, redraw: true, dirty_relayout: true }
   }
 }
 
@@ -357,8 +392,8 @@ pub fn Buffer::set_metrics_and_size(
     metrics,
     width_opt: clamped_width_opt,
     height_opt: clamped_height_opt,
-    lines: reset_layout_lines(self.lines),
     redraw: true,
+    dirty_relayout: true,
   }
 }
 
@@ -394,7 +429,8 @@ pub fn Buffer::set_text(
   shaping : Shaping,
 ) -> Buffer {
   let mut iter = LineIter::new(text)
-  let new_lines : Array[BufferLine] = []
+  let new_lines = self.lines
+  let mut line_count = 0
   while true {
     let (next_iter, item_opt) = iter.next()
     iter = next_iter
@@ -403,25 +439,51 @@ pub fn Buffer::set_text(
       let end = item.1
       let ending = item.2
       let line_text = slice_string(text, start, end)
-      // `attrs_list` is currently shared across split lines.
-      new_lines.push(BufferLine::new(line_text, ending, attrs_list, shaping))
+      if line_count < new_lines.length() {
+        let line = new_lines[line_count]
+        let (next_line0, _) = line.set_text(line_text, ending, attrs_list)
+        let (next_line, _) = next_line0.set_align(None)
+        new_lines.set(line_count, next_line)
+      } else {
+        // `attrs_list` is currently shared across split lines.
+        new_lines.push(BufferLine::new(line_text, ending, attrs_list, shaping))
+      }
+      line_count = line_count + 1
     } else {
       break
     }
   }
   // Upstream behavior: ensure there is a trailing line with `LineEnding::None`.
-  let need_trailing = if new_lines.length() == 0 {
+  let need_trailing = if line_count == 0 {
     true
   } else {
-    match new_lines[new_lines.length() - 1].ending() {
+    match new_lines[line_count - 1].ending() {
       None => false
       _ => true
     }
   }
   if need_trailing {
-    new_lines.push(BufferLine::new("", LineEnding::None, attrs_list, shaping))
+    if line_count < new_lines.length() {
+      let line = new_lines[line_count]
+      let (next_line0, _) = line.set_text("", LineEnding::None, attrs_list)
+      let (next_line, _) = next_line0.set_align(None)
+      new_lines.set(line_count, next_line)
+    } else {
+      new_lines.push(BufferLine::new("", LineEnding::None, attrs_list, shaping))
+    }
+    line_count = line_count + 1
   }
-  Buffer::{ ..self, lines: new_lines, redraw: true }
+  new_lines.truncate(line_count)
+  Buffer::{
+    ..self,
+    lines: new_lines,
+    scroll: Scroll::default(),
+    redraw: true,
+    dirty_relayout: false,
+    dirty_tab_shape: false,
+    dirty_text_set: true,
+    dirty_scroll: false,
+  }
 }
 
 ///|
@@ -466,6 +528,10 @@ pub fn Buffer::set_rich_text(
       lines: [line2],
       scroll: Scroll::default(),
       redraw: true,
+      dirty_relayout: false,
+      dirty_tab_shape: false,
+      dirty_text_set: true,
+      dirty_scroll: false,
     }
   }
   let lines : Array[BufferLine] = []
@@ -504,7 +570,16 @@ pub fn Buffer::set_rich_text(
       }
     }
   }
-  Buffer::{ ..self, lines, scroll: Scroll::default(), redraw: true }
+  Buffer::{
+    ..self,
+    lines,
+    scroll: Scroll::default(),
+    redraw: true,
+    dirty_relayout: false,
+    dirty_tab_shape: false,
+    dirty_text_set: true,
+    dirty_scroll: false,
+  }
 }
 
 ///|
@@ -516,11 +591,15 @@ pub fn Buffer::shape_all_with_font_system(
   self : Buffer,
   font_system : FontSystem,
 ) -> Buffer {
-  let lines : Array[BufferLine] = []
-  for line in self.lines {
-    lines.push(line.shape_with_font_system(font_system, self.tab_width))
+  let resolved = match buffer_resolve_dirty(self) {
+    None => self
+    Some(v) => v
   }
-  Buffer::{ ..self, lines, }
+  let lines : Array[BufferLine] = []
+  for line in resolved.lines {
+    lines.push(line.shape_with_font_system(font_system, resolved.tab_width))
+  }
+  Buffer::{ ..resolved, lines, }
 }
 
 ///|
@@ -529,42 +608,50 @@ pub fn Buffer::layout_all_with_font_system(
   self : Buffer,
   font_system : FontSystem,
 ) -> Buffer {
+  let resolved = match buffer_resolve_dirty(self) {
+    None => self
+    Some(v) => v
+  }
   let lines : Array[BufferLine] = []
-  for line in self.lines {
+  for line in resolved.lines {
     lines.push(
       line.layout_with_font_system(
         font_system,
-        self.metrics.font_size,
-        self.width_opt,
-        self.wrap,
-        self.ellipsize,
-        self.monospace_width,
-        self.tab_width,
-        self.hinting,
+        resolved.metrics.font_size,
+        resolved.width_opt,
+        resolved.wrap,
+        resolved.ellipsize,
+        resolved.monospace_width,
+        resolved.tab_width,
+        resolved.hinting,
       ),
     )
   }
-  Buffer::{ ..self, lines, }
+  Buffer::{ ..resolved, lines, }
 }
 
 ///|
 /// Layout all lines using the built-in shaping (no font system).
 pub fn Buffer::layout_all(self : Buffer) -> Buffer {
+  let resolved = match buffer_resolve_dirty(self) {
+    None => self
+    Some(v) => v
+  }
   let lines : Array[BufferLine] = []
-  for line in self.lines {
+  for line in resolved.lines {
     lines.push(
       line.layout(
-        self.metrics.font_size,
-        self.width_opt,
-        self.wrap,
-        self.ellipsize,
-        self.monospace_width,
-        self.tab_width,
-        self.hinting,
+        resolved.metrics.font_size,
+        resolved.width_opt,
+        resolved.wrap,
+        resolved.ellipsize,
+        resolved.monospace_width,
+        resolved.tab_width,
+        resolved.hinting,
       ),
     )
   }
-  Buffer::{ ..self, lines, }
+  Buffer::{ ..resolved, lines, }
 }
 
 ///|
@@ -610,10 +697,14 @@ pub fn Buffer::shape_until_scroll(
   font_system : FontSystem,
   prune : Bool,
 ) -> Buffer {
-  let metrics = self.metrics
-  let old_scroll = self.scroll
-  let mut scroll = self.scroll
-  let lines = self.lines
+  let resolved = match buffer_resolve_dirty(self) {
+    None => return self
+    Some(v) => v
+  }
+  let metrics = resolved.metrics
+  let old_scroll = resolved.scroll
+  let mut scroll = resolved.scroll
+  let lines = resolved.lines
 
   while true {
     // Keep vertical offset non-negative by moving to previous lines.
@@ -624,13 +715,13 @@ pub fn Buffer::shape_until_scroll(
           lines,
           line_i,
           font_system,
-          self.metrics.font_size,
-          self.width_opt,
-          self.wrap,
-          self.ellipsize,
-          self.monospace_width,
-          self.tab_width,
-          self.hinting,
+          resolved.metrics.font_size,
+          resolved.width_opt,
+          resolved.wrap,
+          resolved.ellipsize,
+          resolved.monospace_width,
+          resolved.tab_width,
+          resolved.hinting,
         )
         let layout_height = layout_total_height(metrics, layout_opt)
         scroll = Scroll::{
@@ -671,13 +762,13 @@ pub fn Buffer::shape_until_scroll(
         lines,
         line_i,
         font_system,
-        self.metrics.font_size,
-        self.width_opt,
-        self.wrap,
-        self.ellipsize,
-        self.monospace_width,
-        self.tab_width,
-        self.hinting,
+        resolved.metrics.font_size,
+        resolved.width_opt,
+        resolved.wrap,
+        resolved.ellipsize,
+        resolved.monospace_width,
+        resolved.tab_width,
+        resolved.hinting,
       )
       let layout_height = layout_total_height(metrics, layout_opt)
       total_height = total_height + layout_height
@@ -701,11 +792,11 @@ pub fn Buffer::shape_until_scroll(
     }
   }
 
-  let redraw = self.redraw ||
+  let redraw = resolved.redraw ||
     old_scroll.line != scroll.line ||
     old_scroll.vertical != scroll.vertical ||
     old_scroll.horizontal != scroll.horizontal
-  Buffer::{ ..self, lines, scroll, redraw }
+  Buffer::{ ..resolved, lines, scroll, redraw }
 }
 
 ///|
@@ -752,23 +843,24 @@ pub fn Buffer::shape_until_cursor(
   cursor : Cursor,
   prune : Bool,
 ) -> Buffer {
-  if cursor.line < 0 || cursor.line >= self.lines.length() {
-    return self.shape_until_scroll(font_system, prune)
+  let base = self.shape_until_scroll(font_system, prune)
+  if cursor.line < 0 || cursor.line >= base.lines.length() {
+    return base
   }
 
-  let metrics = self.metrics
-  let old_scroll = self.scroll
+  let metrics = base.metrics
+  let old_scroll = base.scroll
 
-  let layout_cursor = match self.layout_cursor(font_system, cursor) {
+  let layout_cursor = match base.layout_cursor(font_system, cursor) {
     Some(v) => v
-    None => return self.shape_until_scroll(font_system, prune)
+    None => return base
   }
-  let layout = match self.line_layout(font_system, layout_cursor.line) {
+  let layout = match base.line_layout(font_system, layout_cursor.line) {
     Some(v) => v
-    None => return self.shape_until_scroll(font_system, prune)
+    None => return base
   }
   if layout_cursor.layout < 0 || layout_cursor.layout >= layout.length() {
-    return self.shape_until_scroll(font_system, prune)
+    return base
   }
 
   let mut layout_y = 0.0F
@@ -788,11 +880,11 @@ pub fn Buffer::shape_until_cursor(
   }
   let mut total_height = layout_y + current_line_height
 
-  let mut scroll = self.scroll
+  let mut scroll = base.scroll
   if scroll.line > layout_cursor.line ||
     (scroll.line == layout_cursor.line && scroll.vertical > layout_y) {
     scroll = Scroll::{ ..scroll, line: layout_cursor.line, vertical: layout_y }
-  } else if self.height_opt is Some(height) {
+  } else if base.height_opt is Some(height) {
     let mut line_i = layout_cursor.line
     if line_i <= scroll.line {
       if total_height > height + scroll.vertical {
@@ -801,7 +893,7 @@ pub fn Buffer::shape_until_cursor(
     } else {
       while line_i > scroll.line {
         line_i = line_i - 1
-        match self.line_layout(font_system, line_i) {
+        match base.line_layout(font_system, line_i) {
           Some(line_layout) =>
             for layout_line in line_layout {
               let line_height = if layout_line.line_height_opt is Some(v) {
@@ -824,12 +916,12 @@ pub fn Buffer::shape_until_cursor(
     }
   }
 
-  let mut buffer = if scroll.line != self.scroll.line ||
-    scroll.vertical != self.scroll.vertical ||
-    scroll.horizontal != self.scroll.horizontal {
-    Buffer::{ ..self, scroll, redraw: true }
+  let mut buffer = if scroll.line != base.scroll.line ||
+    scroll.vertical != base.scroll.vertical ||
+    scroll.horizontal != base.scroll.horizontal {
+    Buffer::{ ..base, scroll, redraw: true, dirty_scroll: true }
   } else {
-    self
+    base
   }
 
   buffer = buffer.shape_until_scroll(font_system, prune)

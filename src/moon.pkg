@@ -10,5 +10,6 @@ import {
   "moonbit-community/harfbuzz/face",
   "moonbit-community/harfbuzz/font",
   "moonbit-community/harfbuzz/buffer",
+  "moonbit-community/harfbuzz/shape" @hb_shape,
   "moonbit-community/harfbuzz/ot/var",
 }
