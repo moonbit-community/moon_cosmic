@@ -211,3 +211,47 @@ test "ViEditor supports numeric count for dd and p" {
   let vi2 = mk_vi("abc\n").feed_string("yiw3p")
   inspect(vi2.editor().buffer().lines()[0].text(), content="abcabcabcabc")
 }
+
+///|
+test "ViEditor supports backward search with ?" {
+  let vi = mk_vi("alpha beta alpha\n").feed_string("$?alpha\n")
+  inspect(vi.editor().cursor().index, content="11")
+}
+
+///|
+test "ViEditor supports ; and , to repeat/reverse find" {
+  let vi1 = mk_vi("a b c d\n").feed_string("f ;")
+  inspect(vi1.editor().cursor().index, content="3")
+  let vi2 = vi1.feed_string(",")
+  inspect(vi2.editor().cursor().index, content="1")
+}
+
+///|
+test "ViEditor supports r R X s commands" {
+  let vi1 = mk_vi("abc\n").feed_string("lrZ")
+  inspect(vi1.editor().buffer().lines()[0].text(), content="aZc")
+
+  let vi2 = mk_vi("abc\n").feed_string("lRXY\u{1B}")
+  inspect(vi2.editor().buffer().lines()[0].text(), content="aXY")
+
+  let vi3 = mk_vi("abc\n").feed_string("lX")
+  inspect(vi3.editor().buffer().lines()[0].text(), content="bc")
+
+  let vi4 = mk_vi("abc\n").feed_string("2sZ\u{1B}")
+  inspect(vi4.editor().buffer().lines()[0].text(), content="Zc")
+}
+
+///|
+test "ViEditor supports Y and shift operators" {
+  let vi1 = mk_vi("a\nb\nc\n").feed_string("2Yp")
+  inspect(vi1.register_opt, content="Some(\"a\\nb\\n\")")
+  inspect(vi1.editor().buffer().lines()[0].text(), content="a")
+  inspect(vi1.editor().buffer().lines()[1].text(), content="a")
+  inspect(vi1.editor().buffer().lines()[2].text(), content="b")
+  inspect(vi1.editor().buffer().lines()[3].text(), content="b")
+
+  let vi2 = mk_vi("a\n").feed_string(">>")
+  inspect(vi2.editor().buffer().lines()[0].text(), content="        a")
+  let vi3 = vi2.feed_string("<<")
+  inspect(vi3.editor().buffer().lines()[0].text(), content="a")
+}

@@ -978,7 +978,10 @@ pub struct ViEditor {
   changed : Bool
   search_opt : (String, Bool)?
   search_input_opt : String?
-  pending_find_opt : (Bool, Bool)?
+  search_input_forwards : Bool
+  pending_find_opt : (Bool, Bool, Int)?
+  last_find_opt : (Bool, Bool, Char)?
+  pending_replace_char : Bool
   pending_text_object_opt : (ViOperator, Bool)?
   pending_g : Bool
   pending_count_opt : Int?
@@ -1007,6 +1010,7 @@ pub impl Edit for ViEditor
 pub(all) enum ViMode {
   Normal
   Insert
+  Replace
   Visual
   VisualLine
   Search
@@ -1016,6 +1020,8 @@ pub(all) enum ViOperator {
   Delete
   Change
   Yank
+  ShiftLeft
+  ShiftRight
 }
 
 pub struct Weight {
