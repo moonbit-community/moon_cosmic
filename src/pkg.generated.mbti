@@ -693,6 +693,7 @@ pub fn LineIter::next(Self) -> (Self, (Int, Int, LineEnding)?)
 pub struct LineState {
   block_comment_depth : Int
   markup_comment_open : Bool
+  markup_tag_open : Bool
   string_delim_opt : Char?
   string_is_triple : Bool
   raw_hash_count_opt : Int?

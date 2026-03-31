@@ -245,6 +245,7 @@ pub(all) enum TokenClass {
 pub struct LineState {
   block_comment_depth : Int
   markup_comment_open : Bool
+  markup_tag_open : Bool
   string_delim_opt : Char?
   string_is_triple : Bool
   raw_hash_count_opt : Int?
@@ -257,6 +258,7 @@ pub fn LineState::new() -> LineState {
   LineState::{
     block_comment_depth: 0,
     markup_comment_open: false,
+    markup_tag_open: false,
     string_delim_opt: None,
     string_is_triple: false,
     raw_hash_count_opt: None,
@@ -269,6 +271,7 @@ pub fn LineState::new() -> LineState {
 pub impl Eq for LineState with equal(self, other) {
   self.block_comment_depth == other.block_comment_depth &&
   self.markup_comment_open == other.markup_comment_open &&
+  self.markup_tag_open == other.markup_tag_open &&
   self.string_delim_opt == other.string_delim_opt &&
   self.string_is_triple == other.string_is_triple &&
   self.raw_hash_count_opt == other.raw_hash_count_opt &&
@@ -1068,6 +1071,27 @@ fn tokenize_line(
       continue
     }
 
+    if syntax_name == "markup" && state.markup_tag_open {
+      let start_i = i
+      let mut closed = false
+      while i < n {
+        if chars[i] == '>' {
+          i = i + 1
+          closed = true
+          break
+        }
+        i = i + 1
+      }
+      push_token(
+        spans,
+        offset_at(text, offsets, start_i),
+        offset_at(text, offsets, i),
+        Keyword,
+      )
+      state = LineState::{ ..state, markup_tag_open: !closed }
+      continue
+    }
+
     if state.block_comment_depth > 0 {
       let start_i = i
       let nested = supports_nested_block_comment(syntax_name)
@@ -1198,6 +1222,38 @@ fn tokenize_line(
       )
       if !closed {
         state = LineState::{ ..state, markup_comment_open: true }
+      }
+      continue
+    }
+
+    if syntax_name == "markup" &&
+      chars[i] == '<' &&
+      i + 1 < n &&
+      (
+        chars[i + 1] == '/' ||
+        chars[i + 1] == '!' ||
+        chars[i + 1] == '?' ||
+        is_identifier_start(chars[i + 1])
+      ) {
+      let start_i = i
+      i = i + 1
+      let mut closed = false
+      while i < n {
+        if chars[i] == '>' {
+          i = i + 1
+          closed = true
+          break
+        }
+        i = i + 1
+      }
+      push_token(
+        spans,
+        offset_at(text, offsets, start_i),
+        offset_at(text, offsets, i),
+        Keyword,
+      )
+      if !closed {
+        state = LineState::{ ..state, markup_tag_open: true }
       }
       continue
     }

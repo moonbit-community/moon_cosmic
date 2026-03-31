@@ -553,6 +553,60 @@ test "SyntaxEditor highlights markup comments across lines" {
 }
 
 ///|
+test "SyntaxEditor highlights markup tags as keywords" {
+  let syntax_system = SyntaxSystem::new()
+  let editor = mk_editor("<div class=\"a\">x</div>\n")
+  let syntax_editor0 = match
+    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    Some(s) => s
+    None => abort("theme should exist")
+  }
+  let syntax_editor = syntax_editor0.syntax_by_extension("html").rehighlight()
+  let theme = syntax_editor.theme()
+  let line0 = syntax_editor.editor().buffer().lines()[0]
+  inspect(
+    line0.attrs_list().get_span(0).color_opt_value() == Some(theme.keyword),
+    content="true",
+  )
+  inspect(
+    line0.attrs_list().get_span("<div class=\"a\">".length()).color_opt_value() !=
+    Some(theme.keyword),
+    content="true",
+  )
+  inspect(
+    line0.attrs_list().get_span("<div class=\"a\">x".length()).color_opt_value() ==
+    Some(theme.keyword),
+    content="true",
+  )
+}
+
+///|
+test "SyntaxEditor keeps markup tag state across lines" {
+  let syntax_system = SyntaxSystem::new()
+  let editor = mk_editor("<div\n class=\"a\">\ntext\n")
+  let syntax_editor0 = match
+    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    Some(s) => s
+    None => abort("theme should exist")
+  }
+  let syntax_editor = syntax_editor0.syntax_by_extension("html").rehighlight()
+  let theme = syntax_editor.theme()
+  let lines = syntax_editor.editor().buffer().lines()
+  inspect(
+    lines[0].attrs_list().get_span(0).color_opt_value() == Some(theme.keyword),
+    content="true",
+  )
+  inspect(
+    lines[1].attrs_list().get_span(1).color_opt_value() == Some(theme.keyword),
+    content="true",
+  )
+  inspect(
+    lines[2].attrs_list().get_span(0).color_opt_value() != Some(theme.keyword),
+    content="true",
+  )
+}
+
+///|
 test "SyntaxEditor highlights shell hash comments" {
   let syntax_system = SyntaxSystem::new()
   let editor = mk_editor("# comment\necho hi\n")
