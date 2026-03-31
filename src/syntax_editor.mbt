@@ -239,6 +239,7 @@ pub struct LineState {
   string_is_triple : Bool
   raw_hash_count_opt : Int?
   markdown_fence_char_opt : Char?
+  clike_preproc_continuation : Bool
 }
 
 ///|
@@ -249,6 +250,7 @@ pub fn LineState::new() -> LineState {
     string_is_triple: false,
     raw_hash_count_opt: None,
     markdown_fence_char_opt: None,
+    clike_preproc_continuation: false,
   }
 }
 
@@ -258,7 +260,8 @@ pub impl Eq for LineState with equal(self, other) {
   self.string_delim_opt == other.string_delim_opt &&
   self.string_is_triple == other.string_is_triple &&
   self.raw_hash_count_opt == other.raw_hash_count_opt &&
-  self.markdown_fence_char_opt == other.markdown_fence_char_opt
+  self.markdown_fence_char_opt == other.markdown_fence_char_opt &&
+  self.clike_preproc_continuation == other.clike_preproc_continuation
 }
 
 ///|
@@ -638,6 +641,19 @@ fn markdown_fence_char(chars : Array[Char], start : Int) -> Char? {
 }
 
 ///|
+fn line_ends_with_backslash(chars : Array[Char]) -> Bool {
+  let mut i = chars.length()
+  while i > 0 {
+    i = i - 1
+    if chars[i].is_whitespace() {
+      continue
+    }
+    return chars[i] == '\\'
+  }
+  false
+}
+
+///|
 fn tokenize_line(
   text : String,
   syntax_name : String,
@@ -650,6 +666,33 @@ fn tokenize_line(
   let mut i = 0
   let n = chars.length()
   let line_first = markdown_first_non_whitespace(chars)
+
+  if syntax_name == "clike" {
+    let preproc_line = state.clike_preproc_continuation ||
+      (line_first < n && chars[line_first] == '#')
+    if preproc_line {
+      let continuation = line_ends_with_backslash(chars)
+      return (
+        if text.length() == 0 {
+          []
+        } else {
+          [
+            TokenSpan::{
+              start: offset_at(text, offsets, line_first),
+              end: text.length(),
+              class: Keyword,
+            },
+          ]
+        },
+        LineState::{ ..state, clike_preproc_continuation: continuation },
+      )
+    }
+    if state.clike_preproc_continuation {
+      state = LineState::{ ..state, clike_preproc_continuation: false }
+    }
+  } else if state.clike_preproc_continuation {
+    state = LineState::{ ..state, clike_preproc_continuation: false }
+  }
 
   if syntax_name == "markdown" {
     let first = markdown_first_non_whitespace(chars)
@@ -879,11 +922,6 @@ fn tokenize_line(
 
     if has_line_comment_prefix(syntax_name, chars, i) {
       push_token(spans, offset_at(text, offsets, i), text.length(), Comment)
-      break
-    }
-
-    if i == line_first && syntax_name == "clike" && chars[i] == '#' {
-      push_token(spans, offset_at(text, offsets, i), text.length(), Keyword)
       break
     }
 

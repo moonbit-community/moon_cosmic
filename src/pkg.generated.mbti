@@ -696,6 +696,7 @@ pub struct LineState {
   string_is_triple : Bool
   raw_hash_count_opt : Int?
   markdown_fence_char_opt : Char?
+  clike_preproc_continuation : Bool
 }
 pub fn LineState::new() -> Self
 pub impl Eq for LineState
