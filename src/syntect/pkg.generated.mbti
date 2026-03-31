@@ -22,6 +22,8 @@ pub struct LineState {
   markup_comment_open : Bool
   markup_tag_open : Bool
   ruby_block_comment_open : Bool
+  shell_heredoc_delim_opt : String?
+  shell_heredoc_strip_tabs : Bool
   lua_long_eq_count_opt : Int?
   lua_long_is_comment : Bool
   string_delim_opt : Char?

@@ -247,6 +247,8 @@ pub struct LineState {
   markup_comment_open : Bool
   markup_tag_open : Bool
   ruby_block_comment_open : Bool
+  shell_heredoc_delim_opt : String?
+  shell_heredoc_strip_tabs : Bool
   lua_long_eq_count_opt : Int?
   lua_long_is_comment : Bool
   string_delim_opt : Char?
@@ -263,6 +265,8 @@ pub fn LineState::new() -> LineState {
     markup_comment_open: false,
     markup_tag_open: false,
     ruby_block_comment_open: false,
+    shell_heredoc_delim_opt: None,
+    shell_heredoc_strip_tabs: false,
     lua_long_eq_count_opt: None,
     lua_long_is_comment: false,
     string_delim_opt: None,
@@ -279,6 +283,8 @@ pub impl Eq for LineState with equal(self, other) {
   self.markup_comment_open == other.markup_comment_open &&
   self.markup_tag_open == other.markup_tag_open &&
   self.ruby_block_comment_open == other.ruby_block_comment_open &&
+  self.shell_heredoc_delim_opt == other.shell_heredoc_delim_opt &&
+  self.shell_heredoc_strip_tabs == other.shell_heredoc_strip_tabs &&
   self.lua_long_eq_count_opt == other.lua_long_eq_count_opt &&
   self.lua_long_is_comment == other.lua_long_is_comment &&
   self.string_delim_opt == other.string_delim_opt &&
@@ -915,6 +921,95 @@ fn line_starts_with(chars : Array[Char], start : Int, token : String) -> Bool {
 }
 
 ///|
+fn trim_leading_tabs(text : String) -> String {
+  let chars = text.to_array()
+  let offsets = code_unit_offsets(text, chars)
+  let mut i = 0
+  while i < chars.length() && chars[i] == '\t' {
+    i = i + 1
+  }
+  slice_string(text, offset_at(text, offsets, i), text.length())
+}
+
+///|
+fn shell_heredoc_start(
+  text : String,
+  chars : Array[Char],
+  offsets : Array[Int],
+  start : Int,
+) -> (String, Bool, Int)? {
+  let n = chars.length()
+  if start + 1 >= n || chars[start] != '<' || chars[start + 1] != '<' {
+    return None
+  }
+  let mut i = start + 2
+  let mut strip_tabs = false
+  if i < n && chars[i] == '-' {
+    strip_tabs = true
+    i = i + 1
+  }
+  while i < n && chars[i].is_whitespace() {
+    i = i + 1
+  }
+  if i >= n {
+    return None
+  }
+  let delim_start = i
+  let delim_end = if chars[i] == '"' || chars[i] == '\'' {
+    let quote = chars[i]
+    i = i + 1
+    let start_quoted = i
+    while i < n && chars[i] != quote {
+      i = i + 1
+    }
+    if i >= n {
+      return None
+    }
+    let end_quoted = i
+    i = i + 1
+    if end_quoted == start_quoted {
+      return None
+    }
+    return Some(
+      (
+        slice_string(
+          text,
+          offset_at(text, offsets, start_quoted),
+          offset_at(text, offsets, end_quoted),
+        ),
+        strip_tabs,
+        i,
+      ),
+    )
+  } else {
+    while i < n &&
+          !chars[i].is_whitespace() &&
+          chars[i] != ';' &&
+          chars[i] != ')' &&
+          chars[i] != '<' &&
+          chars[i] != '>' {
+      i = i + 1
+    }
+    i
+  }
+  if delim_end == delim_start {
+    None
+  } else {
+    Some(
+      (
+        slice_string(
+          text,
+          offset_at(text, offsets, delim_start),
+          offset_at(text, offsets, delim_end),
+        ),
+        strip_tabs,
+        delim_end,
+      ),
+    )
+  }
+}
+
+///|
 fn markdown_fence_char(chars : Array[Char], start : Int) -> Char? {
   if start + 2 >= chars.length() {
     return None
@@ -1014,6 +1109,40 @@ fn tokenize_line(
         },
         LineState::{ ..state, ruby_block_comment_open: true },
       )
+    }
+  }
+
+  if syntax_name == "shell" {
+    match state.shell_heredoc_delim_opt {
+      None => ()
+      Some(delim) => {
+        let candidate = if state.shell_heredoc_strip_tabs {
+          trim_leading_tabs(text)
+        } else {
+          text
+        }
+        let closes = candidate == delim
+        return (
+          if text.length() == 0 {
+            []
+          } else {
+            [TokenSpan::{ start: 0, end: text.length(), class: StringLit }]
+          },
+          LineState::{
+            ..state,
+            shell_heredoc_delim_opt: if closes {
+              None
+            } else {
+              Some(delim)
+            },
+            shell_heredoc_strip_tabs: if closes {
+              false
+            } else {
+              state.shell_heredoc_strip_tabs
+            },
+          },
+        )
+      }
     }
   }
 
@@ -1457,6 +1586,30 @@ fn tokenize_line(
               lua_long_is_comment: false,
             }
           }
+          continue
+        }
+      }
+    }
+
+    if syntax_name == "shell" {
+      match shell_heredoc_start(text, chars, offsets, i) {
+        None => ()
+        Some(info) => {
+          let delimiter = info.0
+          let strip_tabs = info.1
+          let end_i = info.2
+          push_token(
+            spans,
+            offset_at(text, offsets, i),
+            offset_at(text, offsets, end_i),
+            Keyword,
+          )
+          state = LineState::{
+            ..state,
+            shell_heredoc_delim_opt: Some(delimiter),
+            shell_heredoc_strip_tabs: strip_tabs,
+          }
+          i = end_i
           continue
         }
       }
