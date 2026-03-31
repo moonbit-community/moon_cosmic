@@ -1040,7 +1040,14 @@ pub fn ShapeLine::build_with_font_system(
     }
 
     let run_attrs = attrs_for_position(attrs_list, run_start, text.length())
-    let run_font_id = match font_system.resolve(run_attrs) {
+    let run_codepoints : Array[UInt] = []
+    for t in run_tokens {
+      run_codepoints.push(t.ch().to_int().reinterpret_as_uint())
+    }
+    let fallback_iter = font_fallback_iter_init(
+      font_system, run_attrs, run_scripts, run_codepoints,
+    )
+    let run_font_id = match font_fallback_next(font_system, fallback_iter) {
       None => default_font_id
       Some(id) => id
     }
@@ -1058,16 +1065,10 @@ pub fn ShapeLine::build_with_font_system(
     let mut run_glyphs = default_glyphs
     let missing = default_missing
     if missing.length() > 0 {
-      let run_codepoints : Array[UInt] = []
-      for t in run_tokens {
-        run_codepoints.push(t.ch().to_int().reinterpret_as_uint())
-      }
-      let ordered = font_system.font_matches_for_scripts_with_codepoints(
-        run_attrs, run_scripts, run_codepoints,
-      )
-      for alt_font_id in ordered {
-        if alt_font_id == run_font_id {
-          continue
+      while true {
+        let alt_font_id = match font_fallback_next(font_system, fallback_iter) {
+          None => break
+          Some(id) => if id == run_font_id { continue } else { id }
         }
         let (fb_glyphs, fb_missing) = shape_run_with_font(
           font_system,

@@ -802,6 +802,46 @@ fn font_fallback_next(fs : FontSystem, state : FontFallbackIterState) -> Int? {
 }
 
 ///|
+fn font_fallback_iter_init(
+  fs : FontSystem,
+  attrs : Attrs,
+  scripts : Array[@moon_swash.Script],
+  codepoints : Array[UInt],
+) -> FontFallbackIterState {
+  let req_weight = attrs.weight_value()
+  let profile = fallback_profile(fs)
+  let ids0 = get_font_matches(fs, attrs)
+  let ids = reorder_monospace_fallback_candidates(
+    fs, attrs, scripts, ids0, codepoints,
+  )
+  let forbidden_families = forbidden_fallback_family_names(profile)
+  let defaults = split_default_stage_candidates(
+    fs,
+    attrs.family_value(),
+    req_weight,
+    ids,
+  )
+  let seen_scripts : Array[@moon_swash.Script] = []
+  for script in scripts {
+    if !script_uses_fallback_stage(script) ||
+      script_in_array(seen_scripts, script) {
+      continue
+    }
+    seen_scripts.push(script)
+  }
+  FontFallbackIterState::new(
+    ids,
+    defaults,
+    seen_scripts,
+    common_fallback_family_names(profile),
+    forbidden_families,
+    req_weight,
+    fs.locale,
+    profile,
+  )
+}
+
+///|
 fn font_maps_codepoint(
   fs : FontSystem,
   entry : FontEntry,
@@ -1138,38 +1178,7 @@ pub fn FontSystem::font_matches_for_scripts_with_codepoints(
   scripts : Array[@moon_swash.Script],
   codepoints : Array[UInt],
 ) -> Array[Int] {
-  let req_weight = attrs.weight_value()
-  let profile = fallback_profile(self)
-  let ids0 = get_font_matches(self, attrs)
-  let ids = reorder_monospace_fallback_candidates(
-    self, attrs, scripts, ids0, codepoints,
-  )
-  let forbidden_families = forbidden_fallback_family_names(profile)
-  let defaults = split_default_stage_candidates(
-    self,
-    attrs.family_value(),
-    req_weight,
-    ids,
-  )
-
-  let seen_scripts : Array[@moon_swash.Script] = []
-  for script in scripts {
-    if !script_uses_fallback_stage(script) ||
-      script_in_array(seen_scripts, script) {
-      continue
-    }
-    seen_scripts.push(script)
-  }
-  let iter = FontFallbackIterState::new(
-    ids,
-    defaults,
-    seen_scripts,
-    common_fallback_family_names(profile),
-    forbidden_families,
-    req_weight,
-    self.locale,
-    profile,
-  )
+  let iter = font_fallback_iter_init(self, attrs, scripts, codepoints)
   let staged : Array[Int] = []
   while true {
     match font_fallback_next(self, iter) {
