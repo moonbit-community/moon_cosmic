@@ -1,4 +1,4 @@
 import {
   "moonbitlang/core/string",
-  "Milky2018/moon_swash",
+  "Milky2018/moon_cosmic/unicode_linebreak",
 }

@@ -128,8 +128,108 @@ pub fn is_ligature_guard_pair(left : Char, right : Char) -> Bool {
 }
 
 ///|
+const LB_ALLOWED_BREAK_BIT : Int = 0x80
+
+///|
+const LB_MANDATORY_BREAK_BIT : Int = 0x40
+
+///|
+const LB_STATE_MASK : Int = 0x3F
+
+///|
+const LB_ZWJ_CLASS : Int = 10
+
+///|
+const LB_EOT_CLASS : Int = 43
+
+///|
+const LB_SOT_STATE : Int = 44
+
+///|
+fn lb_class_index(ch : Char) -> Int {
+  let cls = @moon_swash.CharInfo::from_char(ch).properties().line_break()
+  match cls {
+    BK => 0
+    CR => 1
+    LF => 2
+    CM => 3
+    NL => 4
+    SG => 5
+    WJ => 6
+    ZW => 7
+    GL => 8
+    SP => 9
+    ZWJ => 10
+    B2 => 11
+    BA => 12
+    BB => 13
+    HY => 14
+    CB => 15
+    CL => 16
+    CP => 17
+    EX => 18
+    IN => 19
+    NS => 20
+    OP => 21
+    QU => 22
+    IS => 23
+    NU => 24
+    PO => 25
+    PR => 26
+    SY => 27
+    AI => 28
+    AL => 29
+    CJ => 30
+    EB => 31
+    EM => 32
+    H2 => 33
+    H3 => 34
+    HL => 35
+    ID => 36
+    JL => 37
+    JV => 38
+    JT => 39
+    RI => 40
+    // Keep consistent with upstream unicode-linebreak tailoring:
+    // SA is resolved as AL in default mode.
+    SA => 29
+    XX => 42
+  }
+}
+
+///|
+fn lb_push_break(
+  out : Array[(Int, BreakOpportunity)],
+  chars : Array[Char],
+  offs : Array[Int],
+  i : Int,
+  is_mandatory : Bool,
+) -> Unit {
+  if i < chars.length() &&
+    i > 0 &&
+    is_ligature_guard_pair(chars[i - 1], chars[i]) {
+    return
+  }
+  let pos = offs[i]
+  out.push(
+    (
+      pos,
+      if is_mandatory {
+        BreakOpportunity::Mandatory
+      } else {
+        BreakOpportunity::Allowed
+      },
+    ),
+  )
+}
+
+///|
 /// Returns `(utf16_offset, break_opportunity)` pairs.
 pub fn linebreaks(s : String) -> Array[(Int, BreakOpportunity)] {
+  if false {
+    try! (@fs.read_file_to_string("src/unicode_linebreak/LineBreakTest.txt")
+    |> ignore)
+  }
   let chars = s.to_array()
   if chars.length() == 0 {
     return [(0, BreakOpportunity::Mandatory)]
@@ -140,26 +240,32 @@ pub fn linebreaks(s : String) -> Array[(Int, BreakOpportunity)] {
     offs.push(pos)
     pos = pos + ch.utf16_len()
   }
-  let analyze = @moon_swash.analyze(chars.iter())
-  analyze.set_break_strength(@moon_swash.WordBreakStrength::Normal)
-  let out : Array[(Int, BreakOpportunity)] = []
-  for i in 0..<chars.length() {
-    match analyze.next() {
-      None => break
-      Some((_props, boundary)) =>
-        match boundary {
-          Mandatory => out.push((offs[i], BreakOpportunity::Mandatory))
-          Line =>
-            if i > 0 && is_ligature_guard_pair(chars[i - 1], chars[i]) {
-              ()
-            } else {
-              out.push((offs[i], BreakOpportunity::Allowed))
-            }
-          _ => ()
-        }
-    }
+  offs.push(pos)
+  let classes : Array[Int] = []
+  for ch in chars {
+    classes.push(lb_class_index(ch))
   }
-  if out.length() == 0 || out[out.length() - 1].0 != s.length() {
+  let out : Array[(Int, BreakOpportunity)] = []
+  let mut state = LB_SOT_STATE
+  let mut prev_is_zwj = false
+  for i in 0..<chars.length() {
+    let cls = classes[i]
+    let val = pair_table_value(state, cls)
+    let is_mandatory = (val & LB_MANDATORY_BREAK_BIT) != 0
+    let is_allowed = (val & LB_ALLOWED_BREAK_BIT) != 0
+    if is_allowed && (!prev_is_zwj || is_mandatory) {
+      lb_push_break(out, chars, offs, i, is_mandatory)
+    }
+    state = val & LB_STATE_MASK
+    prev_is_zwj = cls == LB_ZWJ_CLASS
+  }
+  let eot_val = pair_table_value(state, LB_EOT_CLASS)
+  let eot_is_mandatory = (eot_val & LB_MANDATORY_BREAK_BIT) != 0
+  let eot_is_allowed = (eot_val & LB_ALLOWED_BREAK_BIT) != 0
+  if eot_is_allowed && (!prev_is_zwj || eot_is_mandatory) {
+    lb_push_break(out, chars, offs, chars.length(), eot_is_mandatory)
+  }
+  if out.length() == 0 || out[out.length() - 1].0 != pos {
     out.push((s.length(), BreakOpportunity::Mandatory))
   }
   out
@@ -222,51 +328,29 @@ pub fn wrap_word_segments(s : String) -> Array[(Int, Int, Bool)] {
     }
   }
 
-  let analyze = @moon_swash.analyze(chars.iter())
-  analyze.set_break_strength(@moon_swash.WordBreakStrength::Normal)
   let out : Array[(Int, Int, Bool)] = []
+  let breaks = linebreaks(s)
   let mut start_char_i = 0
   let mut start_word = 0
-  for i in 0..<chars.length() {
-    match analyze.next() {
-      None => break
-      Some((_props, boundary)) =>
-        match boundary {
-          Line | Mandatory => {
-            if boundary is Line &&
-              i > 0 &&
-              is_ligature_guard_pair(chars[i - 1], chars[i]) {
-              continue
-            }
-            let end_pos = offs[i]
-            emit_segment(
-              out,
-              chars,
-              offs,
-              lens,
-              start_char_i,
-              i - 1,
-              start_word,
-              end_pos,
-            )
-            start_char_i = i
-            start_word = end_pos
-          }
-          _ => ()
-        }
+  let mut break_i = 0
+  for br in breaks {
+    let end_pos = br.0
+    while break_i < chars.length() && offs[break_i] < end_pos {
+      break_i = break_i + 1
     }
+    emit_segment(
+      out,
+      chars,
+      offs,
+      lens,
+      start_char_i,
+      break_i - 1,
+      start_word,
+      end_pos,
+    )
+    start_char_i = break_i
+    start_word = end_pos
   }
-
-  emit_segment(
-    out,
-    chars,
-    offs,
-    lens,
-    start_char_i,
-    chars.length() - 1,
-    start_word,
-    s.length(),
-  )
   out
 }
 
