@@ -35,8 +35,7 @@ test "ViEditor insert mode edits and escapes to normal" {
 test "ViEditor dd deletes current line content" {
   let vi = mk_vi("abc\ndef\n")
   let out = vi.feed_string("dd")
-  inspect(out.editor().buffer().lines()[0].text(), content="")
-  inspect(out.editor().buffer().lines()[1].text(), content="def")
+  inspect(out.editor().buffer().lines()[0].text(), content="def")
 }
 
 ///|
@@ -195,4 +194,23 @@ test "ViEditor stores D deletions into unnamed register" {
   let out = mk_vi("abc def\n").feed_string("lDp")
   inspect(out.register_opt, content="Some(\"bc def\")")
   inspect(out.editor().buffer().lines()[0].text(), content="abc def")
+}
+
+///|
+test "ViEditor supports numeric count for motions and G" {
+  let vi1 = mk_vi("a b c d\n").feed_string("2w")
+  inspect(vi1.editor().cursor().index, content="3")
+
+  let vi2 = mk_vi("a\nb\nc\nd\n").feed_string("3G")
+  inspect(vi2.editor().cursor().line, content="2")
+}
+
+///|
+test "ViEditor supports numeric count for dd and p" {
+  let vi1 = mk_vi("a\nb\nc\nd\n").feed_string("2dd")
+  inspect(vi1.editor().buffer().lines()[0].text(), content="c")
+  inspect(vi1.register_opt, content="Some(\"a\\nb\\n\")")
+
+  let vi2 = mk_vi("abc\n").feed_string("yiw3p")
+  inspect(vi2.editor().buffer().lines()[0].text(), content="abcabcabcabc")
 }
