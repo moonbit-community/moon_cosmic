@@ -199,24 +199,6 @@ fn shape_levels_require_new_run(prev_level : Int, new_level : Int) -> Bool {
 }
 
 ///|
-fn entry_supports_any_run_script(
-  entry : FontEntry,
-  scripts : Array[@moon_swash.Script],
-) -> Bool {
-  if scripts.length() == 0 {
-    return false
-  }
-  let systems = entry.font().writing_systems()
-  for ws in systems.iter() {
-    match ws.script() {
-      None => ()
-      Some(s) => if shape_script_in_array(scripts, s) { return true }
-    }
-  }
-  false
-}
-
-///|
 fn attrs_for_position(
   attrs_list : AttrsList,
   pos : Int,
@@ -541,151 +523,6 @@ fn merge_fallback_glyphs(
     merged = replace_cluster_glyphs(merged, start, end, replacement)
   }
   merged
-}
-
-///|
-fn better_monospace_fallback_candidate(
-  cand : (Int, Bool, Int, Int, Int),
-  best : (Int, Bool, Int, Int, Int),
-) -> Bool {
-  let cand_id = cand.0
-  let cand_is_primary_default = cand.1
-  let cand_weight_diff = cand.2
-  let cand_non_matches = cand.3
-  let cand_weight = cand.4
-  let best_id = best.0
-  let best_is_primary_default = best.1
-  let best_weight_diff = best.2
-  let best_non_matches = best.3
-  let best_weight = best.4
-  if cand_is_primary_default != best_is_primary_default {
-    return cand_is_primary_default
-  }
-  if cand_weight_diff != best_weight_diff {
-    return cand_weight_diff < best_weight_diff
-  }
-  if cand_non_matches != best_non_matches {
-    return cand_non_matches < best_non_matches
-  }
-  if cand_weight != best_weight {
-    return cand_weight < best_weight
-  }
-  cand_id < best_id
-}
-
-///|
-fn reorder_monospace_fallback_candidates(
-  font_system : FontSystem,
-  run_attrs : Attrs,
-  run_scripts : Array[@moon_swash.Script],
-  run_tokens : Array[@moon_swash.Token],
-  ordered : Array[Int],
-) -> Array[Int] {
-  if !(run_attrs.family_value() is Monospace) {
-    return ordered
-  }
-  let codepoints : Array[UInt] = []
-  for t in run_tokens {
-    codepoints.push(t.ch().to_int().reinterpret_as_uint())
-  }
-  if codepoints.length() == 0 || ordered.length() <= 1 {
-    return ordered
-  }
-
-  let req_weight = run_attrs.weight_value()
-  let mut primary_default_mono_id : Int? = None
-  for id in ordered {
-    match font_system.get_font_entry(id) {
-      None => ()
-      Some(entry) =>
-        if entry.is_monospace() && entry_weight_diff(entry, req_weight) == 0 {
-          primary_default_mono_id = Some(id)
-          break
-        }
-    }
-  }
-
-  let mut has_script_specific_monospace = false
-  for id in ordered {
-    match font_system.get_font_entry(id) {
-      None => ()
-      Some(entry) =>
-        if entry.is_monospace() &&
-          entry_supports_any_run_script(entry, run_scripts) {
-          has_script_specific_monospace = true
-          break
-        }
-    }
-  }
-
-  let mono_candidates : Array[(Int, Bool, Int, Int, Int)] = []
-  let non_mono_candidates : Array[Int] = []
-  for id in ordered {
-    match font_system.get_font_entry(id) {
-      None => non_mono_candidates.push(id)
-      Some(entry) => {
-        let keep_as_mono = if !entry.is_monospace() {
-          false
-        } else if has_script_specific_monospace {
-          match primary_default_mono_id {
-            Some(pid) =>
-              pid == id || entry_supports_any_run_script(entry, run_scripts)
-            None => entry_supports_any_run_script(entry, run_scripts)
-          }
-        } else {
-          true
-        }
-        if keep_as_mono {
-          let supported = font_system.count_supported_codepoints(id, codepoints)
-          let info = (
-            id,
-            match primary_default_mono_id {
-              Some(pid) => pid == id
-              None => false
-            },
-            entry_weight_diff(entry, req_weight),
-            codepoints.length() - supported,
-            entry_weight_raw(entry),
-          )
-          mono_candidates.push(info)
-        } else {
-          non_mono_candidates.push(id)
-        }
-      }
-    }
-  }
-
-  let n = mono_candidates.length()
-  let used : Array[Bool] = Array::makei(n, _ => false)
-  let reordered_mono : Array[Int] = []
-  for _ in 0..<n {
-    let mut best = -1
-    for i in 0..<n {
-      if used[i] {
-        continue
-      }
-      if best < 0 ||
-        better_monospace_fallback_candidate(
-          mono_candidates[i],
-          mono_candidates[best],
-        ) {
-        best = i
-      }
-    }
-    if best >= 0 {
-      used.set(best, true)
-      reordered_mono.push(mono_candidates[best].0)
-    }
-  }
-
-  let reordered : Array[Int] = []
-  for id in reordered_mono {
-    reordered.push(id)
-  }
-  for id in non_mono_candidates {
-    reordered.push(id)
-  }
-  reordered
 }
 
 ///|
@@ -1221,11 +1058,12 @@ pub fn ShapeLine::build_with_font_system(
     let mut run_glyphs = default_glyphs
     let missing = default_missing
     if missing.length() > 0 {
-      let ordered0 = font_system.font_matches_for_scripts(
-        run_attrs, run_scripts,
-      )
-      let ordered = reorder_monospace_fallback_candidates(
-        font_system, run_attrs, run_scripts, run_tokens, ordered0,
+      let run_codepoints : Array[UInt] = []
+      for t in run_tokens {
+        run_codepoints.push(t.ch().to_int().reinterpret_as_uint())
+      }
+      let ordered = font_system.font_matches_for_scripts_with_codepoints(
+        run_attrs, run_scripts, run_codepoints,
       )
       for alt_font_id in ordered {
         if alt_font_id == run_font_id {

@@ -321,14 +321,10 @@ test "default stage keeps only the primary zero-weight explicit-family candidate
     Some(entry) => Name(entry.family_name())
     None => Name("")
   }
-  let (defaults, rest) = split_default_stage_candidates(
-    fs,
-    family,
-    Weight::normal(),
-    [0, 1],
-  )
+  let defaults = split_default_stage_candidates(fs, family, Weight::normal(), [
+    0, 1,
+  ])
   inspect(defaults, content="[0]")
-  inspect(rest, content="[1]")
 }
 
 ///|
@@ -339,14 +335,8 @@ test "default stage allows explicit-family variable-weight candidate" {
     Some(entry) => Name(entry.family_name())
     None => Name("")
   }
-  let (defaults, rest) = split_default_stage_candidates(
-    fs,
-    family,
-    Weight::bold(),
-    [0],
-  )
+  let defaults = split_default_stage_candidates(fs, family, Weight::bold(), [0])
   inspect(defaults, content="[0]")
-  inspect(rest, content="[]")
 }
 
 ///|
