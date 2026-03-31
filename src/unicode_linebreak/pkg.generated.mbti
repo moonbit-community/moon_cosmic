@@ -1,0 +1,29 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "Milky2018/moon_cosmic/unicode_linebreak"
+
+// Values
+pub fn grapheme_indices_uax29(String) -> Array[(Int, Int)]
+
+pub fn is_ligature_guard_pair(Char, Char) -> Bool
+
+pub fn linebreaks(String) -> Array[(Int, BreakOpportunity)]
+
+pub fn word_indices_uax29(String) -> Array[(Int, Int)]
+
+pub fn word_indices_whitespace(String) -> Array[(Int, Int)]
+
+pub fn wrap_word_segments(String) -> Array[(Int, Int, Bool)]
+
+// Errors
+
+// Types and methods
+pub(all) enum BreakOpportunity {
+  Mandatory
+  Allowed
+  Prohibited
+}
+
+// Type aliases
+
+// Traits
+
