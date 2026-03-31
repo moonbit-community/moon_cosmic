@@ -320,6 +320,13 @@ pub fn[T] Cached::set_used(Self[T], T) -> Self[T]
 pub fn[T] Cached::take_unused(Self[T]) -> (Self[T], T?)
 pub fn[T] Cached::take_used(Self[T]) -> (Self[T], T?)
 
+pub struct CachedLine {
+  text : String
+  state_in : LineState
+  state_out : LineState
+  spans : Array[TokenSpan]
+}
+
 pub(all) struct Change {
   items : Array[ChangeItem]
 }
@@ -682,6 +689,13 @@ pub struct LineIter {
 pub fn LineIter::new(String) -> Self
 pub fn LineIter::next(Self) -> (Self, (Int, Int, LineEnding)?)
 
+pub struct LineState {
+  block_comment_depth : Int
+  string_delim_opt : Char?
+}
+pub fn LineState::new() -> Self
+pub impl Eq for LineState
+
 pub struct Metrics {
   font_size : Float
   line_height : Float
@@ -850,6 +864,70 @@ pub fn SwashCache::get_outline_commands_uncached(Self, FontSystem, CacheKey) -> 
 pub fn SwashCache::new() -> Self
 pub fn SwashCache::with_pixels(Self, FontSystem, CacheKey, Color, (Int, Int, Color) -> Unit) -> Unit
 
+pub struct SyntaxEditor {
+  editor : Editor
+  syntax_system : SyntaxSystem
+  syntax_name : String
+  theme : SyntaxTheme
+  cache : Array[CachedLine]
+}
+pub fn SyntaxEditor::action(Self, Action) -> Self
+pub fn SyntaxEditor::apply_change(Self, Change) -> (Self, Bool)
+pub fn SyntaxEditor::auto_indent(Self) -> Bool
+pub fn SyntaxEditor::background_color(Self) -> Color
+pub fn SyntaxEditor::copy_selection(Self) -> String?
+pub fn SyntaxEditor::cursor(Self) -> Cursor
+pub fn SyntaxEditor::cursor_color(Self) -> Color
+pub fn SyntaxEditor::cursor_position(Self) -> (Int, Int)?
+pub fn SyntaxEditor::delete_range(Self, Cursor, Cursor) -> Self
+pub fn SyntaxEditor::delete_selection(Self) -> (Self, Bool)
+pub fn SyntaxEditor::editor(Self) -> Editor
+pub fn SyntaxEditor::finish_change(Self) -> (Self, Change?)
+pub fn SyntaxEditor::foreground_color(Self) -> Color
+pub fn SyntaxEditor::insert_string(Self, String, AttrsList?) -> Self
+pub fn SyntaxEditor::new(Editor, SyntaxSystem, String) -> Self?
+pub fn SyntaxEditor::rehighlight(Self) -> Self
+pub fn[R : Renderer] SyntaxEditor::render(Self, R) -> Unit
+pub fn SyntaxEditor::selection(Self) -> Selection
+pub fn SyntaxEditor::selection_color(Self) -> Color
+pub fn SyntaxEditor::set_auto_indent(Self, Bool) -> Self
+pub fn SyntaxEditor::set_cursor(Self, Cursor) -> Self
+pub fn SyntaxEditor::set_editor(Self, Editor) -> Self
+pub fn SyntaxEditor::set_selection(Self, Selection) -> Self
+pub fn SyntaxEditor::set_tab_width(Self, Int) -> Self
+pub fn SyntaxEditor::start_change(Self) -> Self
+pub fn SyntaxEditor::syntax_by_extension(Self, String) -> Self
+pub fn SyntaxEditor::syntax_name(Self) -> String
+pub fn SyntaxEditor::tab_width(Self) -> Int
+pub fn SyntaxEditor::theme(Self) -> SyntaxTheme
+pub fn SyntaxEditor::update_theme(Self, String) -> (Self, Bool)
+
+pub struct SyntaxSystem {
+  fn new() -> SyntaxSystem
+}
+pub fn SyntaxSystem::new() -> Self
+pub fn SyntaxSystem::plain_text_syntax(Self) -> String
+pub fn SyntaxSystem::syntax_for_extension(Self, String) -> String?
+pub fn SyntaxSystem::theme(Self, String) -> SyntaxTheme?
+
+pub struct SyntaxTheme {
+  name : String
+  background : Color
+  foreground : Color
+  cursor_opt : Color?
+  selection_opt : Color?
+  keyword : Color
+  type_name : Color
+  string_lit : Color
+  comment : Color
+  number : Color
+}
+pub fn SyntaxTheme::background(Self) -> Color
+pub fn SyntaxTheme::cursor(Self) -> Color
+pub fn SyntaxTheme::foreground(Self) -> Color
+pub fn SyntaxTheme::name(Self) -> String
+pub fn SyntaxTheme::selection(Self) -> Color
+
 pub struct TextDecoration {
   underline : UnderlineStyle
   underline_color_opt : Color?
@@ -864,6 +942,20 @@ pub fn TextDecoration::has_decoration(Self) -> Bool
 pub fn TextDecoration::new() -> Self
 pub impl Eq for TextDecoration
 pub impl Hash for TextDecoration
+
+pub(all) enum TokenClass {
+  Keyword
+  TypeName
+  StringLit
+  Comment
+  Number
+}
+
+pub struct TokenSpan {
+  start : Int
+  end : Int
+  class : TokenClass
+}
 
 pub(all) enum UnderlineStyle {
   None
