@@ -1088,6 +1088,17 @@ pub fn ShapeLine::build_with_font_system(
           break
         }
       }
+      if missing.length() > 0 {
+        match
+          font_fallback_check_missing(
+            font_system,
+            fallback_iter,
+            slice_text_utf16(text, run_start, run_end),
+          ) {
+          None => ()
+          Some(info) => font_fallback_missing_message(info) |> ignore
+        }
+      }
     }
     run_glyphs = reorder_run_glyphs_for_bidi(text, run_glyphs, rtl, run_rtl)
     let cached_run_glyphs : Array[ShapeGlyph] = []

@@ -517,3 +517,78 @@ test "clear_fallback_profile returns to platform default" {
   let expected = fallback_profile(FontSystem::new().load_font_data(data))
   inspect(fallback_profile(fs) == expected, content="true")
 }
+
+///|
+test "fallback missing check records exhausted status" {
+  let data = mk_min_font_cmap4_single(b'\x00', b'\x41')
+  let fs = FontSystem::new().load_font_data(data)
+  let state = FontFallbackIterState::new(
+    [0],
+    [],
+    [],
+    [],
+    [],
+    Weight::normal(),
+    fs.locale(),
+    Other,
+  )
+  state.end = true
+  match font_fallback_check_missing(fs, state, "abc") {
+    None => inspect(false, content="true")
+    Some(info) => {
+      inspect(info.kind is Exhausted, content="true")
+      inspect(info.word, content="abc")
+      inspect(info.used, content="None")
+    }
+  }
+}
+
+///|
+test "fallback missing check records preset fallback status" {
+  let data = mk_min_font_cmap4_single(b'\x00', b'\x41')
+  let fs = FontSystem::new().load_font_data(data)
+  let state = FontFallbackIterState::new(
+    [0],
+    [],
+    [],
+    [],
+    [],
+    Weight::normal(),
+    fs.locale(),
+    Other,
+  )
+  state.other_i = 1
+  match font_fallback_check_missing(fs, state, "xyz") {
+    None => inspect(false, content="true")
+    Some(info) => {
+      inspect(info.kind is PresetFallback, content="true")
+      inspect(info.word, content="xyz")
+      inspect(info.used is Some(_), content="true")
+    }
+  }
+}
+
+///|
+test "fallback missing check records script fallback status" {
+  let data = mk_min_font_cmap4_single(b'\x00', b'\x41')
+  let fs = FontSystem::new().load_font_data(data)
+  let state = FontFallbackIterState::new(
+    [0],
+    [],
+    [@moon_swash.Script::Arabic],
+    ["Noto Sans Arabic"],
+    [],
+    Weight::normal(),
+    fs.locale(),
+    Other,
+  )
+  state.common_i = 1
+  match font_fallback_check_missing(fs, state, "مرحبا") {
+    None => inspect(false, content="true")
+    Some(info) => {
+      inspect(info.kind is ScriptFallback, content="true")
+      inspect(info.used, content="Some(\"Noto Sans Arabic\")")
+      inspect(info.scripts.length(), content="1")
+    }
+  }
+}

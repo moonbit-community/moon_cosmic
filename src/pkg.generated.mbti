@@ -422,6 +422,12 @@ pub(all) enum EllipsizeHeightLimit {
   Height(Float)
 }
 
+pub(all) enum FallbackMissingKind {
+  Exhausted
+  PresetFallback
+  ScriptFallback
+}
+
 pub(all) enum FallbackProfile {
   Unix
   MacOS

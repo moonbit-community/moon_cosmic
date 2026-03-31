@@ -117,6 +117,22 @@ pub impl Eq for FallbackProfile with equal(self, other) {
 }
 
 ///|
+pub(all) enum FallbackMissingKind {
+  Exhausted
+  PresetFallback
+  ScriptFallback
+}
+
+///|
+priv struct FontFallbackMissingInfo {
+  kind : FallbackMissingKind
+  scripts : Array[@moon_swash.Script]
+  locale : String
+  word : String
+  used : String?
+}
+
+///|
 const FONT_MATCHES_CACHE_SIZE_LIMIT : Int = 256
 
 ///|
@@ -708,6 +724,7 @@ priv struct FontFallbackIterState {
   mut script_family_i : Int
   mut common_i : Int
   mut other_i : Int
+  mut end : Bool
 }
 
 ///|
@@ -735,6 +752,7 @@ fn FontFallbackIterState::new(
     script_family_i: 0,
     common_i: 0,
     other_i: 0,
+    end: false,
   }
 }
 
@@ -798,6 +816,7 @@ fn font_fallback_next(fs : FontSystem, state : FontFallbackIterState) -> Int? {
     }
   }
 
+  state.end = true
   None
 }
 
@@ -839,6 +858,80 @@ fn font_fallback_iter_init(
     fs.locale,
     profile,
   )
+}
+
+///|
+fn font_face_name(fs : FontSystem, id : Int) -> String {
+  if id < 0 || id >= fs.fonts.length() {
+    return "invalid font id"
+  }
+  let entry = fs.fonts[id]
+  if entry.family_name != "" {
+    entry.family_name
+  } else {
+    entry.postscript_name
+  }
+}
+
+///|
+fn font_fallback_check_missing(
+  fs : FontSystem,
+  state : FontFallbackIterState,
+  word : String,
+) -> FontFallbackMissingInfo? {
+  if state.end {
+    return Some(FontFallbackMissingInfo::{
+      kind: Exhausted,
+      scripts: state.scripts.copy(),
+      locale: fs.locale,
+      word,
+      used: None,
+    })
+  }
+  if state.other_i > 0 {
+    let last_i = state.other_i - 1
+    let used = if last_i >= 0 && last_i < state.ids.length() {
+      Some(font_face_name(fs, state.ids[last_i]))
+    } else {
+      None
+    }
+    return Some(FontFallbackMissingInfo::{
+      kind: PresetFallback,
+      scripts: state.scripts.copy(),
+      locale: fs.locale,
+      word,
+      used,
+    })
+  }
+  if state.scripts.length() > 0 && state.common_i > 0 {
+    let last_i = state.common_i - 1
+    let used = if last_i >= 0 && last_i < state.common_families.length() {
+      Some(state.common_families[last_i])
+    } else {
+      None
+    }
+    return Some(FontFallbackMissingInfo::{
+      kind: ScriptFallback,
+      scripts: state.scripts.copy(),
+      locale: fs.locale,
+      word,
+      used,
+    })
+  }
+  None
+}
+
+///|
+fn font_fallback_missing_message(info : FontFallbackMissingInfo) -> String {
+  let scripts_len = info.scripts.length().to_string()
+  match info.kind {
+    Exhausted =>
+      "fallback-exhausted locale=\{info.locale} scripts=\{scripts_len} word=\{info.word}"
+    PresetFallback =>
+      "fallback-preset locale=\{info.locale} scripts=\{scripts_len} word=\{info.word} used=\{info.used}"
+    ScriptFallback =>
+      "fallback-script locale=\{info.locale} scripts=\{scripts_len} word=\{info.word} used=\{info.used}"
+  }
 }
 
 ///|
