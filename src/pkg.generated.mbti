@@ -539,6 +539,7 @@ pub struct FontSystem {
   fn new() -> FontSystem
 }
 pub fn FontSystem::clear_fallback_profile(Self) -> Self
+pub fn FontSystem::clear_fallback_warning_handler(Self) -> Self
 pub fn FontSystem::count_supported_codepoints(Self, Int, Array[UInt]) -> Int
 pub fn FontSystem::font_matches(Self, Attrs) -> Array[Int]
 pub fn FontSystem::font_matches_for_script(Self, Attrs, @moon_swash.Script) -> Array[Int]
@@ -555,6 +556,7 @@ pub fn FontSystem::resolve(Self, Attrs) -> Int?
 pub fn FontSystem::resolve_for_codepoint(Self, Attrs, UInt) -> Int?
 pub fn FontSystem::select_family(Self, Family) -> Int?
 pub fn FontSystem::set_fallback_profile(Self, FallbackProfile) -> Self
+pub fn FontSystem::set_fallback_warning_handler(Self, (String) -> Unit) -> Self
 
 pub struct GlyphDecorationData {
   text_decoration : TextDecoration
