@@ -78,3 +78,75 @@ test "SyntaxEditor update_theme retints defaults" {
   let syntax_editor2 = updated.0
   inspect(syntax_editor2.foreground_color() == before, content="false")
 }
+
+///|
+test "SyntaxEditor handles nested Rust block comments across lines" {
+  let syntax_system = SyntaxSystem::new()
+  let editor = mk_editor("/* a /* b */\nc */ let x = 1\n")
+  let syntax_editor0 = match
+    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    Some(s) => s
+    None => abort("theme should exist")
+  }
+  let syntax_editor = syntax_editor0.syntax_by_extension("rs").rehighlight()
+  let theme = syntax_editor.theme()
+  let line1 = syntax_editor.editor().buffer().lines()[1]
+  inspect(
+    line1.attrs_list().get_span(0).color_opt_value() == Some(theme.comment),
+    content="true",
+  )
+  inspect(
+    line1.attrs_list().get_span(5).color_opt_value() == Some(theme.keyword),
+    content="true",
+  )
+}
+
+///|
+test "SyntaxEditor tracks Python triple-quoted strings across lines" {
+  let syntax_system = SyntaxSystem::new()
+  let editor = mk_editor("\"\"\"hello\nworld\"\"\"\nx = 1\n")
+  let syntax_editor0 = match
+    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    Some(s) => s
+    None => abort("theme should exist")
+  }
+  let syntax_editor = syntax_editor0.syntax_by_extension("py").rehighlight()
+  let theme = syntax_editor.theme()
+  let line1 = syntax_editor.editor().buffer().lines()[1]
+  let line2 = syntax_editor.editor().buffer().lines()[2]
+  inspect(
+    line1.attrs_list().get_span(0).color_opt_value() == Some(theme.string_lit),
+    content="true",
+  )
+  inspect(
+    line2.attrs_list().get_span(0).color_opt_value() == Some(theme.string_lit),
+    content="false",
+  )
+}
+
+///|
+test "SyntaxEditor tracks Rust raw strings across lines" {
+  let syntax_system = SyntaxSystem::new()
+  let editor = mk_editor("let s = r###\"a\nb\"###;\n")
+  let syntax_editor0 = match
+    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    Some(s) => s
+    None => abort("theme should exist")
+  }
+  let syntax_editor = syntax_editor0.syntax_by_extension("rs").rehighlight()
+  let theme = syntax_editor.theme()
+  let line0 = syntax_editor.editor().buffer().lines()[0]
+  let line1 = syntax_editor.editor().buffer().lines()[1]
+  inspect(
+    line0.attrs_list().get_span(8).color_opt_value() == Some(theme.string_lit),
+    content="true",
+  )
+  inspect(
+    line1.attrs_list().get_span(0).color_opt_value() == Some(theme.string_lit),
+    content="true",
+  )
+  inspect(
+    line1.attrs_list().get_span(5).color_opt_value() == Some(theme.string_lit),
+    content="false",
+  )
+}

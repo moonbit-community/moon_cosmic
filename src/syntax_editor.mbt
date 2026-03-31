@@ -206,17 +206,26 @@ pub(all) enum TokenClass {
 pub struct LineState {
   block_comment_depth : Int
   string_delim_opt : Char?
+  string_is_triple : Bool
+  raw_hash_count_opt : Int?
 }
 
 ///|
 pub fn LineState::new() -> LineState {
-  LineState::{ block_comment_depth: 0, string_delim_opt: None }
+  LineState::{
+    block_comment_depth: 0,
+    string_delim_opt: None,
+    string_is_triple: false,
+    raw_hash_count_opt: None,
+  }
 }
 
 ///|
 pub impl Eq for LineState with equal(self, other) {
   self.block_comment_depth == other.block_comment_depth &&
-  self.string_delim_opt == other.string_delim_opt
+  self.string_delim_opt == other.string_delim_opt &&
+  self.string_is_triple == other.string_is_triple &&
+  self.raw_hash_count_opt == other.raw_hash_count_opt
 }
 
 ///|
@@ -520,6 +529,11 @@ fn supports_block_comment(syntax_name : String) -> Bool {
 }
 
 ///|
+fn supports_nested_block_comment(syntax_name : String) -> Bool {
+  syntax_name == "rust"
+}
+
+///|
 fn tokenize_line(
   text : String,
   syntax_name : String,
@@ -532,16 +546,64 @@ fn tokenize_line(
   let mut i = 0
   let n = chars.length()
   while i < n {
+    match state.raw_hash_count_opt {
+      None => ()
+      Some(hashes) => {
+        let start_i = i
+        let mut closed = false
+        while i < n {
+          if chars[i] == '"' {
+            let mut ok = true
+            let mut j = 0
+            while j < hashes {
+              if i + 1 + j >= n || chars[i + 1 + j] != '#' {
+                ok = false
+                break
+              }
+              j = j + 1
+            }
+            if ok {
+              i = i + 1 + hashes
+              closed = true
+              break
+            }
+          }
+          i = i + 1
+        }
+        push_token(
+          spans,
+          offset_at(text, offsets, start_i),
+          offset_at(text, offsets, i),
+          StringLit,
+        )
+        if closed {
+          state = LineState::{ ..state, raw_hash_count_opt: None }
+        }
+        continue
+      }
+    }
+
     if state.block_comment_depth > 0 {
       let start_i = i
+      let nested = supports_nested_block_comment(syntax_name)
+      let mut depth = state.block_comment_depth
       let mut end_i = n
       let mut close_found = false
       while i + 1 < n {
-        if chars[i] == '*' && chars[i + 1] == '/' {
+        if nested && chars[i] == '/' && chars[i + 1] == '*' {
+          depth = depth + 1
           i = i + 2
-          end_i = i
-          close_found = true
-          break
+          continue
+        }
+        if chars[i] == '*' && chars[i + 1] == '/' {
+          depth = depth - 1
+          i = i + 2
+          if depth == 0 {
+            end_i = i
+            close_found = true
+            break
+          }
+          continue
         }
         i = i + 1
       }
@@ -555,21 +617,33 @@ fn tokenize_line(
         Comment,
       )
       if close_found {
-        state = LineState::{
-          ..state,
-          block_comment_depth: state.block_comment_depth - 1,
-        }
+        state = LineState::{ ..state, block_comment_depth: 0 }
+      } else {
+        state = LineState::{ ..state, block_comment_depth: depth }
       }
       continue
     }
 
     match state.string_delim_opt {
       Some(delim) => {
+        let triple = state.string_is_triple
         let start_i = i
         let mut escaped = false
         let mut closed = false
         while i < n {
           let ch = chars[i]
+          if triple {
+            if i + 2 < n &&
+              chars[i] == delim &&
+              chars[i + 1] == delim &&
+              chars[i + 2] == delim {
+              i = i + 3
+              closed = true
+              break
+            }
+            i = i + 1
+            continue
+          }
           if escaped {
             escaped = false
             i = i + 1
@@ -594,7 +668,11 @@ fn tokenize_line(
           StringLit,
         )
         if closed {
-          state = LineState::{ ..state, string_delim_opt: None }
+          state = LineState::{
+            ..state,
+            string_delim_opt: None,
+            string_is_triple: false,
+          }
         }
         continue
       }
@@ -612,20 +690,31 @@ fn tokenize_line(
       chars[i + 1] == '*' {
       let start_i = i
       i = i + 2
+      let nested = supports_nested_block_comment(syntax_name)
+      let mut depth = 1
       let mut end_i = n
       let mut close_found = false
       while i + 1 < n {
-        if chars[i] == '*' && chars[i + 1] == '/' {
+        if nested && chars[i] == '/' && chars[i + 1] == '*' {
+          depth = depth + 1
           i = i + 2
-          end_i = i
-          close_found = true
-          break
+          continue
+        }
+        if chars[i] == '*' && chars[i + 1] == '/' {
+          depth = depth - 1
+          i = i + 2
+          if depth == 0 {
+            end_i = i
+            close_found = true
+            break
+          }
+          continue
         }
         i = i + 1
       }
       if !close_found {
         i = n
-        state = LineState::{ ..state, block_comment_depth: 1 }
+        state = LineState::{ ..state, block_comment_depth: depth }
       }
       push_token(
         spans,
@@ -636,14 +725,76 @@ fn tokenize_line(
       continue
     }
 
+    if syntax_name == "rust" && chars[i] == 'r' {
+      let start_i = i
+      let mut j = i + 1
+      while j < n && chars[j] == '#' {
+        j = j + 1
+      }
+      if j < n && chars[j] == '"' {
+        let hashes = j - (i + 1)
+        i = j + 1
+        let mut closed = false
+        while i < n {
+          if chars[i] == '"' {
+            let mut ok = true
+            let mut k = 0
+            while k < hashes {
+              if i + 1 + k >= n || chars[i + 1 + k] != '#' {
+                ok = false
+                break
+              }
+              k = k + 1
+            }
+            if ok {
+              i = i + 1 + hashes
+              closed = true
+              break
+            }
+          }
+          i = i + 1
+        }
+        push_token(
+          spans,
+          offset_at(text, offsets, start_i),
+          offset_at(text, offsets, i),
+          StringLit,
+        )
+        if !closed {
+          state = LineState::{ ..state, raw_hash_count_opt: Some(hashes) }
+        }
+        continue
+      }
+    }
+
     if chars[i] == '"' || chars[i] == '\'' {
       let delim = chars[i]
       let start_i = i
-      i = i + 1
+      let triple = syntax_name == "python" &&
+        i + 2 < n &&
+        chars[i + 1] == delim &&
+        chars[i + 2] == delim
+      if triple {
+        i = i + 3
+      } else {
+        i = i + 1
+      }
       let mut escaped = false
       let mut closed = false
       while i < n {
         let ch = chars[i]
+        if triple {
+          if i + 2 < n &&
+            chars[i] == delim &&
+            chars[i + 1] == delim &&
+            chars[i + 2] == delim {
+            i = i + 3
+            closed = true
+            break
+          }
+          i = i + 1
+          continue
+        }
         if escaped {
           escaped = false
           i = i + 1
@@ -668,7 +819,11 @@ fn tokenize_line(
         StringLit,
       )
       if !closed {
-        state = LineState::{ ..state, string_delim_opt: Some(delim) }
+        state = LineState::{
+          ..state,
+          string_delim_opt: Some(delim),
+          string_is_triple: triple,
+        }
       }
       continue
     }

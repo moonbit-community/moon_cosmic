@@ -20,6 +20,8 @@ pub struct CachedLine {
 pub struct LineState {
   block_comment_depth : Int
   string_delim_opt : Char?
+  string_is_triple : Bool
+  raw_hash_count_opt : Int?
 }
 pub fn LineState::new() -> Self
 pub impl Eq for LineState
