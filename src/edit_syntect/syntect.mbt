@@ -246,6 +246,7 @@ pub struct LineState {
   block_comment_depth : Int
   markup_comment_open : Bool
   markup_tag_open : Bool
+  ruby_block_comment_open : Bool
   lua_long_eq_count_opt : Int?
   lua_long_is_comment : Bool
   string_delim_opt : Char?
@@ -261,6 +262,7 @@ pub fn LineState::new() -> LineState {
     block_comment_depth: 0,
     markup_comment_open: false,
     markup_tag_open: false,
+    ruby_block_comment_open: false,
     lua_long_eq_count_opt: None,
     lua_long_is_comment: false,
     string_delim_opt: None,
@@ -276,6 +278,7 @@ pub impl Eq for LineState with equal(self, other) {
   self.block_comment_depth == other.block_comment_depth &&
   self.markup_comment_open == other.markup_comment_open &&
   self.markup_tag_open == other.markup_tag_open &&
+  self.ruby_block_comment_open == other.ruby_block_comment_open &&
   self.lua_long_eq_count_opt == other.lua_long_eq_count_opt &&
   self.lua_long_is_comment == other.lua_long_is_comment &&
   self.string_delim_opt == other.string_delim_opt &&
@@ -896,6 +899,22 @@ fn markdown_first_non_whitespace(chars : Array[Char]) -> Int {
 }
 
 ///|
+fn line_starts_with(chars : Array[Char], start : Int, token : String) -> Bool {
+  let token_chars = token.to_array()
+  if start < 0 || start + token_chars.length() > chars.length() {
+    return false
+  }
+  let mut i = 0
+  while i < token_chars.length() {
+    if chars[start + i] != token_chars[i] {
+      return false
+    }
+    i = i + 1
+  }
+  true
+}
+
+///|
 fn markdown_fence_char(chars : Array[Char], start : Int) -> Char? {
   if start + 2 >= chars.length() {
     return None
@@ -960,6 +979,42 @@ fn tokenize_line(
     }
   } else if state.clike_preproc_continuation {
     state = LineState::{ ..state, clike_preproc_continuation: false }
+  }
+
+  if syntax_name == "ruby" {
+    if state.ruby_block_comment_open {
+      let closes = line_starts_with(chars, line_first, "=end")
+      return (
+        if text.length() == 0 {
+          []
+        } else {
+          [
+            TokenSpan::{
+              start: offset_at(text, offsets, line_first),
+              end: text.length(),
+              class: Comment,
+            },
+          ]
+        },
+        LineState::{ ..state, ruby_block_comment_open: !closes },
+      )
+    }
+    if line_starts_with(chars, line_first, "=begin") {
+      return (
+        if text.length() == 0 {
+          []
+        } else {
+          [
+            TokenSpan::{
+              start: offset_at(text, offsets, line_first),
+              end: text.length(),
+              class: Comment,
+            },
+          ]
+        },
+        LineState::{ ..state, ruby_block_comment_open: true },
+      )
+    }
   }
 
   if syntax_name == "markdown" {
