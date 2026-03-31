@@ -208,6 +208,7 @@ pub struct LineState {
   string_delim_opt : Char?
   string_is_triple : Bool
   raw_hash_count_opt : Int?
+  markdown_fence_char_opt : Char?
 }
 
 ///|
@@ -217,6 +218,7 @@ pub fn LineState::new() -> LineState {
     string_delim_opt: None,
     string_is_triple: false,
     raw_hash_count_opt: None,
+    markdown_fence_char_opt: None,
   }
 }
 
@@ -225,7 +227,8 @@ pub impl Eq for LineState with equal(self, other) {
   self.block_comment_depth == other.block_comment_depth &&
   self.string_delim_opt == other.string_delim_opt &&
   self.string_is_triple == other.string_is_triple &&
-  self.raw_hash_count_opt == other.raw_hash_count_opt
+  self.raw_hash_count_opt == other.raw_hash_count_opt &&
+  self.markdown_fence_char_opt == other.markdown_fence_char_opt
 }
 
 ///|
@@ -582,6 +585,29 @@ fn rust_char_literal_end(chars : Array[Char], start : Int) -> Int? {
 }
 
 ///|
+fn markdown_first_non_whitespace(chars : Array[Char]) -> Int {
+  let n = chars.length()
+  let mut i = 0
+  while i < n && chars[i].is_whitespace() {
+    i = i + 1
+  }
+  i
+}
+
+///|
+fn markdown_fence_char(chars : Array[Char], start : Int) -> Char? {
+  if start + 2 >= chars.length() {
+    return None
+  }
+  let c = chars[start]
+  if (c == '`' || c == '~') && chars[start + 1] == c && chars[start + 2] == c {
+    Some(c)
+  } else {
+    None
+  }
+}
+
+///|
 fn tokenize_line(
   text : String,
   syntax_name : String,
@@ -593,6 +619,93 @@ fn tokenize_line(
   let mut state = state_in
   let mut i = 0
   let n = chars.length()
+
+  if syntax_name == "markdown" {
+    let first = markdown_first_non_whitespace(chars)
+    match state.markdown_fence_char_opt {
+      Some(fence) =>
+        match markdown_fence_char(chars, first) {
+          Some(c) if c == fence =>
+            return (
+              [TokenSpan::{ start: first, end: text.length(), class: Keyword }],
+              LineState::{ ..state, markdown_fence_char_opt: None },
+            )
+          _ =>
+            return (
+              if text.length() == 0 {
+                []
+              } else {
+                [TokenSpan::{ start: 0, end: text.length(), class: StringLit }]
+              },
+              state,
+            )
+        }
+      None => {
+        let spans_md : Array[TokenSpan] = []
+        let mut next_state = state
+        match markdown_fence_char(chars, first) {
+          Some(c) => {
+            spans_md.push(TokenSpan::{
+              start: first,
+              end: text.length(),
+              class: Keyword,
+            })
+            next_state = LineState::{
+              ..next_state,
+              markdown_fence_char_opt: Some(c),
+            }
+            return (spans_md, next_state)
+          }
+          None => ()
+        }
+        if first < n && chars[first] == '#' {
+          spans_md.push(TokenSpan::{
+            start: first,
+            end: text.length(),
+            class: Keyword,
+          })
+        }
+        let mut p = 0
+        while p < n {
+          if chars[p] == '`' {
+            let mut run = 1
+            while p + run < n && chars[p + run] == '`' {
+              run = run + 1
+            }
+            let start_i = p
+            p = p + run
+            let mut closed = false
+            while p < n {
+              if chars[p] == '`' {
+                let mut run2 = 1
+                while p + run2 < n && chars[p + run2] == '`' {
+                  run2 = run2 + 1
+                }
+                if run2 == run {
+                  p = p + run2
+                  closed = true
+                  break
+                }
+                p = p + run2
+              } else {
+                p = p + 1
+              }
+            }
+            let end_i = if closed { p } else { n }
+            spans_md.push(TokenSpan::{
+              start: offset_at(text, offsets, start_i),
+              end: offset_at(text, offsets, end_i),
+              class: StringLit,
+            })
+            continue
+          }
+          p = p + 1
+        }
+        return (spans_md, next_state)
+      }
+    }
+  }
+
   while i < n {
     match state.raw_hash_count_opt {
       None => ()

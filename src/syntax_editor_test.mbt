@@ -330,3 +330,52 @@ test "SyntaxEditor treats Rust char literals as strings" {
     content="true",
   )
 }
+
+///|
+test "SyntaxEditor tracks markdown fenced code blocks and headings" {
+  let syntax_system = SyntaxSystem::new()
+  let editor = mk_editor("```rust\nfn main() {}\n```\n# Title\n")
+  let syntax_editor0 = match
+    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    Some(s) => s
+    None => abort("theme should exist")
+  }
+  let syntax_editor = syntax_editor0.syntax_by_extension("md").rehighlight()
+  let theme = syntax_editor.theme()
+  let lines = syntax_editor.editor().buffer().lines()
+  inspect(
+    lines[0].attrs_list().get_span(0).color_opt_value() == Some(theme.keyword),
+    content="true",
+  )
+  inspect(
+    lines[1].attrs_list().get_span(0).color_opt_value() ==
+    Some(theme.string_lit),
+    content="true",
+  )
+  inspect(
+    lines[2].attrs_list().get_span(0).color_opt_value() == Some(theme.keyword),
+    content="true",
+  )
+  inspect(
+    lines[3].attrs_list().get_span(0).color_opt_value() == Some(theme.keyword),
+    content="true",
+  )
+}
+
+///|
+test "SyntaxEditor highlights markdown inline code spans" {
+  let syntax_system = SyntaxSystem::new()
+  let editor = mk_editor("Use `code` here\n")
+  let syntax_editor0 = match
+    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    Some(s) => s
+    None => abort("theme should exist")
+  }
+  let syntax_editor = syntax_editor0.syntax_by_extension("md").rehighlight()
+  let theme = syntax_editor.theme()
+  let line0 = syntax_editor.editor().buffer().lines()[0]
+  inspect(
+    line0.attrs_list().get_span(4).color_opt_value() == Some(theme.string_lit),
+    content="true",
+  )
+}
