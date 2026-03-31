@@ -175,6 +175,10 @@ pub fn SyntaxSystem::syntax_for_extension(
     Some("jsonc")
   } else if ext == "json5" {
     Some("json5")
+  } else if ext == "toml" {
+    Some("toml")
+  } else if ext == "yaml" || ext == "yml" {
+    Some("yaml")
   } else if ext == "md" ||
     ext == "markdown" ||
     ext == "mdown" ||
@@ -666,6 +670,18 @@ fn is_sql_type(word : String) -> Bool {
 }
 
 ///|
+fn is_yaml_toml_keyword(word : String) -> Bool {
+  let lower = ascii_lower(word)
+  lower == "true" ||
+  lower == "false" ||
+  lower == "null" ||
+  lower == "yes" ||
+  lower == "no" ||
+  lower == "on" ||
+  lower == "off"
+}
+
+///|
 fn classify_identifier(word : String, syntax_name : String) -> TokenClass? {
   if syntax_name == "rust" {
     if is_rust_keyword(word) {
@@ -715,6 +731,12 @@ fn classify_identifier(word : String, syntax_name : String) -> TokenClass? {
     } else {
       None
     }
+  } else if syntax_name == "yaml" || syntax_name == "toml" {
+    if is_yaml_toml_keyword(word) {
+      Some(Keyword)
+    } else {
+      None
+    }
   } else if syntax_name == "json" ||
     syntax_name == "jsonc" ||
     syntax_name == "json5" {
@@ -734,7 +756,11 @@ fn has_line_comment_prefix(
   chars : Array[Char],
   i : Int,
 ) -> Bool {
-  if syntax_name == "python" || syntax_name == "shell" || syntax_name == "ruby" {
+  if syntax_name == "python" ||
+    syntax_name == "shell" ||
+    syntax_name == "ruby" ||
+    syntax_name == "yaml" ||
+    syntax_name == "toml" {
     i < chars.length() && chars[i] == '#'
   } else if syntax_name == "lua" || syntax_name == "sql" {
     i + 1 < chars.length() && chars[i] == '-' && chars[i + 1] == '-'

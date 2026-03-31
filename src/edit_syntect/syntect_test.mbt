@@ -44,6 +44,8 @@ test "SyntaxSystem resolves themes and file extensions" {
   inspect(syntax_system.syntax_for_extension("bash"), content="Some(\"shell\")")
   inspect(syntax_system.syntax_for_extension("rb"), content="Some(\"ruby\")")
   inspect(syntax_system.syntax_for_extension("lua"), content="Some(\"lua\")")
+  inspect(syntax_system.syntax_for_extension("toml"), content="Some(\"toml\")")
+  inspect(syntax_system.syntax_for_extension("yml"), content="Some(\"yaml\")")
   inspect(
     syntax_system.syntax_for_extension("mdown"),
     content="Some(\"markdown\")",
@@ -471,6 +473,50 @@ test "SyntaxEditor highlights jsonc comments and json keywords" {
   )
   inspect(
     lines[2].attrs_list().get_span(0).color_opt_value() == Some(theme.comment),
+    content="true",
+  )
+}
+
+///|
+test "SyntaxEditor highlights yaml hash comments and booleans" {
+  let syntax_system = SyntaxSystem::new()
+  let editor = mk_editor("# note\ntrue\n")
+  let syntax_editor0 = match
+    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    Some(s) => s
+    None => abort("theme should exist")
+  }
+  let syntax_editor = syntax_editor0.syntax_by_extension("yaml").rehighlight()
+  let theme = syntax_editor.theme()
+  let lines = syntax_editor.editor().buffer().lines()
+  inspect(
+    lines[0].attrs_list().get_span(0).color_opt_value() == Some(theme.comment),
+    content="true",
+  )
+  inspect(
+    lines[1].attrs_list().get_span(0).color_opt_value() == Some(theme.keyword),
+    content="true",
+  )
+}
+
+///|
+test "SyntaxEditor highlights toml hash comments and booleans" {
+  let syntax_system = SyntaxSystem::new()
+  let editor = mk_editor("# note\nfalse\n")
+  let syntax_editor0 = match
+    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    Some(s) => s
+    None => abort("theme should exist")
+  }
+  let syntax_editor = syntax_editor0.syntax_by_extension("toml").rehighlight()
+  let theme = syntax_editor.theme()
+  let lines = syntax_editor.editor().buffer().lines()
+  inspect(
+    lines[0].attrs_list().get_span(0).color_opt_value() == Some(theme.comment),
+    content="true",
+  )
+  inspect(
+    lines[1].attrs_list().get_span(0).color_opt_value() == Some(theme.keyword),
     content="true",
   )
 }
