@@ -1,11 +1,11 @@
 {
   "name": "Milky2018/moon_cosmic",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "deps": {
-    "Milky2018/moon_swash": "0.1.5",
-    "Milky2018/moon_zeno": "0.1.0",
+    "Milky2018/moon_swash": "0.1.7",
+    "Milky2018/moon_zeno": "0.1.1",
     "Milky2018/moon_skrifa": "0.1.6",
-    "moonbitlang/x": "0.4.40",
+    "moonbitlang/x": "0.4.41",
     "moonbit-community/harfbuzz": "0.1.0"
   },
   "readme": "README.mbt.md",
