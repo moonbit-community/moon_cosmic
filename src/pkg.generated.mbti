@@ -694,6 +694,8 @@ pub struct LineState {
   block_comment_depth : Int
   markup_comment_open : Bool
   markup_tag_open : Bool
+  lua_long_eq_count_opt : Int?
+  lua_long_is_comment : Bool
   string_delim_opt : Char?
   string_is_triple : Bool
   raw_hash_count_opt : Int?

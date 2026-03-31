@@ -246,6 +246,8 @@ pub struct LineState {
   block_comment_depth : Int
   markup_comment_open : Bool
   markup_tag_open : Bool
+  lua_long_eq_count_opt : Int?
+  lua_long_is_comment : Bool
   string_delim_opt : Char?
   string_is_triple : Bool
   raw_hash_count_opt : Int?
@@ -259,6 +261,8 @@ pub fn LineState::new() -> LineState {
     block_comment_depth: 0,
     markup_comment_open: false,
     markup_tag_open: false,
+    lua_long_eq_count_opt: None,
+    lua_long_is_comment: false,
     string_delim_opt: None,
     string_is_triple: false,
     raw_hash_count_opt: None,
@@ -272,6 +276,8 @@ pub impl Eq for LineState with equal(self, other) {
   self.block_comment_depth == other.block_comment_depth &&
   self.markup_comment_open == other.markup_comment_open &&
   self.markup_tag_open == other.markup_tag_open &&
+  self.lua_long_eq_count_opt == other.lua_long_eq_count_opt &&
+  self.lua_long_is_comment == other.lua_long_is_comment &&
   self.string_delim_opt == other.string_delim_opt &&
   self.string_is_triple == other.string_is_triple &&
   self.raw_hash_count_opt == other.raw_hash_count_opt &&
@@ -805,6 +811,45 @@ fn is_python_string_prefix_char(ch : Char) -> Bool {
 }
 
 ///|
+fn lua_long_bracket_open_count(chars : Array[Char], start : Int) -> Int? {
+  let n = chars.length()
+  if start >= n || chars[start] != '[' {
+    return None
+  }
+  let mut i = start + 1
+  while i < n && chars[i] == '=' {
+    i = i + 1
+  }
+  if i < n && chars[i] == '[' {
+    Some(i - (start + 1))
+  } else {
+    None
+  }
+}
+
+///|
+fn lua_long_bracket_close(
+  chars : Array[Char],
+  start : Int,
+  eq_count : Int,
+) -> Bool {
+  let n = chars.length()
+  if start >= n || chars[start] != ']' {
+    return false
+  }
+  let mut i = start + 1
+  let mut j = 0
+  while j < eq_count {
+    if i >= n || chars[i] != '=' {
+      return false
+    }
+    i = i + 1
+    j = j + 1
+  }
+  i < n && chars[i] == ']'
+}
+
+///|
 fn rust_char_literal_end(chars : Array[Char], start : Int) -> Int? {
   let n = chars.length()
   if start + 2 >= n || chars[start] != '\'' {
@@ -1047,6 +1092,40 @@ fn tokenize_line(
       }
     }
 
+    match state.lua_long_eq_count_opt {
+      None => ()
+      Some(eq_count) => {
+        let start_i = i
+        let mut closed = false
+        while i < n {
+          if lua_long_bracket_close(chars, i, eq_count) {
+            i = i + eq_count + 2
+            closed = true
+            break
+          }
+          i = i + 1
+        }
+        push_token(
+          spans,
+          offset_at(text, offsets, start_i),
+          offset_at(text, offsets, i),
+          if state.lua_long_is_comment {
+            Comment
+          } else {
+            StringLit
+          },
+        )
+        if closed {
+          state = LineState::{
+            ..state,
+            lua_long_eq_count_opt: None,
+            lua_long_is_comment: false,
+          }
+        }
+        continue
+      }
+    }
+
     if syntax_name == "markup" && state.markup_comment_open {
       let start_i = i
       let mut closed = false
@@ -1256,6 +1335,76 @@ fn tokenize_line(
         state = LineState::{ ..state, markup_tag_open: true }
       }
       continue
+    }
+
+    if syntax_name == "lua" &&
+      i + 2 < n &&
+      chars[i] == '-' &&
+      chars[i + 1] == '-' &&
+      chars[i + 2] == '[' {
+      match lua_long_bracket_open_count(chars, i + 2) {
+        None => ()
+        Some(eq_count) => {
+          let start_i = i
+          i = i + 4 + eq_count
+          let mut closed = false
+          while i < n {
+            if lua_long_bracket_close(chars, i, eq_count) {
+              i = i + eq_count + 2
+              closed = true
+              break
+            }
+            i = i + 1
+          }
+          push_token(
+            spans,
+            offset_at(text, offsets, start_i),
+            offset_at(text, offsets, i),
+            Comment,
+          )
+          if !closed {
+            state = LineState::{
+              ..state,
+              lua_long_eq_count_opt: Some(eq_count),
+              lua_long_is_comment: true,
+            }
+          }
+          continue
+        }
+      }
+    }
+
+    if syntax_name == "lua" && chars[i] == '[' {
+      match lua_long_bracket_open_count(chars, i) {
+        None => ()
+        Some(eq_count) => {
+          let start_i = i
+          i = i + 2 + eq_count
+          let mut closed = false
+          while i < n {
+            if lua_long_bracket_close(chars, i, eq_count) {
+              i = i + eq_count + 2
+              closed = true
+              break
+            }
+            i = i + 1
+          }
+          push_token(
+            spans,
+            offset_at(text, offsets, start_i),
+            offset_at(text, offsets, i),
+            StringLit,
+          )
+          if !closed {
+            state = LineState::{
+              ..state,
+              lua_long_eq_count_opt: Some(eq_count),
+              lua_long_is_comment: false,
+            }
+          }
+          continue
+        }
+      }
     }
 
     if has_line_comment_prefix(syntax_name, chars, i) {
