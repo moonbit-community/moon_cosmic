@@ -483,6 +483,18 @@ test "forbidden filtering applies to other-stage candidates only" {
 }
 
 ///|
+#cfg(target="native")
+test "native fallback profile defaults to MacOS" {
+  let data = mk_min_font_cmap4_single(b'\x00', b'\x41')
+  let fs = FontSystem::new().load_font_data(data)
+  let is_macos = match fallback_profile(fs) {
+    MacOS => true
+    _ => false
+  }
+  inspect(is_macos, content="true")
+}
+
+///|
 #cfg(not(target="native"))
 test "non-native fallback profile defaults to Other" {
   let data = mk_min_font_cmap4_single(b'\x00', b'\x41')

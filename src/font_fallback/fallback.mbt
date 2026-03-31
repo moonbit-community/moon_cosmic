@@ -23,9 +23,8 @@ pub(all) enum FallbackProfile {
 ///|
 #cfg(target="native")
 pub fn platform_default_fallback_profile() -> FallbackProfile {
-  // NOTE: MoonBit currently exposes coarse compile targets here, so native
-  // builds default to Unix profile unless explicitly overridden by caller.
-  Unix
+  // Project scope: native path targets macOS fallback behavior by default.
+  MacOS
 }
 
 ///|
