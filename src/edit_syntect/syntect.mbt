@@ -534,6 +534,18 @@ fn supports_nested_block_comment(syntax_name : String) -> Bool {
 }
 
 ///|
+fn is_python_string_prefix_char(ch : Char) -> Bool {
+  ch == 'r' ||
+  ch == 'R' ||
+  ch == 'b' ||
+  ch == 'B' ||
+  ch == 'f' ||
+  ch == 'F' ||
+  ch == 'u' ||
+  ch == 'U'
+}
+
+///|
 fn tokenize_line(
   text : String,
   syntax_name : String,
@@ -673,6 +685,12 @@ fn tokenize_line(
             string_delim_opt: None,
             string_is_triple: false,
           }
+        } else if !triple {
+          state = LineState::{
+            ..state,
+            string_delim_opt: None,
+            string_is_triple: false,
+          }
         }
         continue
       }
@@ -723,6 +741,153 @@ fn tokenize_line(
         Comment,
       )
       continue
+    }
+
+    if syntax_name == "python" && is_python_string_prefix_char(chars[i]) {
+      let start_i = i
+      let mut j = i
+      while j < n && j - start_i < 2 && is_python_string_prefix_char(chars[j]) {
+        j = j + 1
+      }
+      if j < n && (chars[j] == '"' || chars[j] == '\'') {
+        let delim = chars[j]
+        let triple = j + 2 < n && chars[j + 1] == delim && chars[j + 2] == delim
+        if triple {
+          i = j + 3
+        } else {
+          i = j + 1
+        }
+        let mut escaped = false
+        let mut closed = false
+        while i < n {
+          let ch = chars[i]
+          if triple {
+            if i + 2 < n &&
+              chars[i] == delim &&
+              chars[i + 1] == delim &&
+              chars[i + 2] == delim {
+              i = i + 3
+              closed = true
+              break
+            }
+            i = i + 1
+            continue
+          }
+          if escaped {
+            escaped = false
+            i = i + 1
+            continue
+          }
+          if ch == '\\' {
+            escaped = true
+            i = i + 1
+            continue
+          }
+          if ch == delim {
+            i = i + 1
+            closed = true
+            break
+          }
+          i = i + 1
+        }
+        push_token(
+          spans,
+          offset_at(text, offsets, start_i),
+          offset_at(text, offsets, i),
+          StringLit,
+        )
+        if !closed {
+          let continue_string = triple || escaped
+          if continue_string {
+            state = LineState::{
+              ..state,
+              string_delim_opt: Some(delim),
+              string_is_triple: triple,
+            }
+          }
+        }
+        continue
+      }
+    }
+
+    if syntax_name == "rust" && chars[i] == 'b' && i + 1 < n {
+      if chars[i + 1] == '"' || chars[i + 1] == '\'' {
+        let start_i = i
+        let delim = chars[i + 1]
+        i = i + 2
+        let mut escaped = false
+        let mut closed = false
+        while i < n {
+          let ch = chars[i]
+          if escaped {
+            escaped = false
+            i = i + 1
+            continue
+          }
+          if ch == '\\' {
+            escaped = true
+            i = i + 1
+            continue
+          }
+          if ch == delim {
+            i = i + 1
+            closed = true
+            break
+          }
+          i = i + 1
+        }
+        push_token(
+          spans,
+          offset_at(text, offsets, start_i),
+          offset_at(text, offsets, i),
+          StringLit,
+        )
+        if !closed && escaped {
+          state = LineState::{ ..state, string_delim_opt: Some(delim) }
+        }
+        continue
+      }
+      if chars[i + 1] == 'r' {
+        let start_i = i
+        let mut j = i + 2
+        while j < n && chars[j] == '#' {
+          j = j + 1
+        }
+        if j < n && chars[j] == '"' {
+          let hashes = j - (i + 2)
+          i = j + 1
+          let mut closed = false
+          while i < n {
+            if chars[i] == '"' {
+              let mut ok = true
+              let mut k = 0
+              while k < hashes {
+                if i + 1 + k >= n || chars[i + 1 + k] != '#' {
+                  ok = false
+                  break
+                }
+                k = k + 1
+              }
+              if ok {
+                i = i + 1 + hashes
+                closed = true
+                break
+              }
+            }
+            i = i + 1
+          }
+          push_token(
+            spans,
+            offset_at(text, offsets, start_i),
+            offset_at(text, offsets, i),
+            StringLit,
+          )
+          if !closed {
+            state = LineState::{ ..state, raw_hash_count_opt: Some(hashes) }
+          }
+          continue
+        }
+      }
     }
 
     if syntax_name == "rust" && chars[i] == 'r' {
@@ -819,10 +984,13 @@ fn tokenize_line(
         StringLit,
       )
       if !closed {
-        state = LineState::{
-          ..state,
-          string_delim_opt: Some(delim),
-          string_is_triple: triple,
+        let continue_string = triple || (syntax_name == "python" && escaped)
+        if continue_string {
+          state = LineState::{
+            ..state,
+            string_delim_opt: Some(delim),
+            string_is_triple: triple,
+          }
         }
       }
       continue
@@ -831,9 +999,25 @@ fn tokenize_line(
     if is_ascii_digit(chars[i]) {
       let start_i = i
       i = i + 1
+      let allow_alpha = syntax_name == "rust" ||
+        syntax_name == "clike" ||
+        syntax_name == "python"
       while i < n {
         let ch = chars[i]
-        if is_ascii_digit(ch) || ch == '.' || ch == '_' {
+        if is_ascii_digit(ch) ||
+          ch == '.' ||
+          ch == '_' ||
+          (allow_alpha && is_ascii_alpha(ch)) {
+          i = i + 1
+        } else if allow_alpha &&
+          (ch == '+' || ch == '-') &&
+          i > start_i &&
+          (
+            chars[i - 1] == 'e' ||
+            chars[i - 1] == 'E' ||
+            chars[i - 1] == 'p' ||
+            chars[i - 1] == 'P'
+          ) {
           i = i + 1
         } else {
           break
@@ -1100,13 +1284,7 @@ pub fn SyntaxEditor::set_editor(
   self : SyntaxEditor,
   editor : @cosmic.Editor,
 ) -> SyntaxEditor {
-  let (new_editor, cache) = rebuild_editor_with_highlight(
-    editor,
-    self.theme,
-    self.syntax_name,
-    self.cache,
-  )
-  SyntaxEditor::{ ..self, editor: new_editor, cache }
+  SyntaxEditor::{ ..self, editor, }
 }
 
 ///|
@@ -1157,7 +1335,7 @@ pub fn SyntaxEditor::action(
   self : SyntaxEditor,
   action : @cosmic.Action,
 ) -> SyntaxEditor {
-  self.set_editor(self.editor.action(action))
+  SyntaxEditor::{ ..self, editor: self.editor.action(action) }
 }
 
 ///|
@@ -1244,7 +1422,10 @@ pub fn SyntaxEditor::delete_range(
   start : @cosmic.Cursor,
   end : @cosmic.Cursor,
 ) -> SyntaxEditor {
-  self.set_editor(self.editor.start_change().delete_range(start, end))
+  SyntaxEditor::{
+    ..self,
+    editor: self.editor.start_change().delete_range(start, end),
+  }
 }
 
 ///|
@@ -1253,9 +1434,10 @@ pub fn SyntaxEditor::insert_string(
   data : String,
   attrs_list_opt : @cosmic.AttrsList?,
 ) -> SyntaxEditor {
-  self.set_editor(
-    self.editor.start_change().insert_string(data, attrs_list_opt),
-  )
+  SyntaxEditor::{
+    ..self,
+    editor: self.editor.start_change().insert_string(data, attrs_list_opt),
+  }
 }
 
 ///|

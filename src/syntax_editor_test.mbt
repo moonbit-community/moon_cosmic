@@ -170,3 +170,123 @@ test "SyntaxEditor tracks Rust raw strings across lines" {
     content="false",
   )
 }
+
+///|
+test "SyntaxEditor keeps Rust unclosed plain strings line-local" {
+  let syntax_system = SyntaxSystem::new()
+  let editor = mk_editor("\"abc\nlet x = 1\n")
+  let syntax_editor0 = match
+    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    Some(s) => s
+    None => abort("theme should exist")
+  }
+  let syntax_editor = syntax_editor0.syntax_by_extension("rs").rehighlight()
+  let theme = syntax_editor.theme()
+  let line1 = syntax_editor.editor().buffer().lines()[1]
+  inspect(
+    line1.attrs_list().get_span(0).color_opt_value() == Some(theme.keyword),
+    content="true",
+  )
+}
+
+///|
+test "SyntaxEditor highlights Python f-string prefix as string" {
+  let syntax_system = SyntaxSystem::new()
+  let editor = mk_editor("f\"value {x}\"\n")
+  let syntax_editor0 = match
+    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    Some(s) => s
+    None => abort("theme should exist")
+  }
+  let syntax_editor = syntax_editor0.syntax_by_extension("py").rehighlight()
+  let theme = syntax_editor.theme()
+  let line0 = syntax_editor.editor().buffer().lines()[0]
+  inspect(
+    line0.attrs_list().get_span(0).color_opt_value() == Some(theme.string_lit),
+    content="true",
+  )
+}
+
+///|
+test "SyntaxEditor highlights Rust numeric prefixes and suffixes" {
+  let syntax_system = SyntaxSystem::new()
+  let editor = mk_editor("let n = 0xffu8;\n")
+  let syntax_editor0 = match
+    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    Some(s) => s
+    None => abort("theme should exist")
+  }
+  let syntax_editor = syntax_editor0.syntax_by_extension("rs").rehighlight()
+  let theme = syntax_editor.theme()
+  let line0 = syntax_editor.editor().buffer().lines()[0]
+  inspect(
+    line0.attrs_list().get_span(8).color_opt_value() == Some(theme.number),
+    content="true",
+  )
+  inspect(
+    line0.attrs_list().get_span(14).color_opt_value() == Some(theme.number),
+    content="false",
+  )
+}
+
+///|
+test "SyntaxEditor highlights Python scientific notation" {
+  let syntax_system = SyntaxSystem::new()
+  let editor = mk_editor("x = 1e-6\n")
+  let syntax_editor0 = match
+    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    Some(s) => s
+    None => abort("theme should exist")
+  }
+  let syntax_editor = syntax_editor0.syntax_by_extension("py").rehighlight()
+  let theme = syntax_editor.theme()
+  let line0 = syntax_editor.editor().buffer().lines()[0]
+  inspect(
+    line0.attrs_list().get_span(4).color_opt_value() == Some(theme.number),
+    content="true",
+  )
+  inspect(
+    line0.attrs_list().get_span(8).color_opt_value() == Some(theme.number),
+    content="false",
+  )
+}
+
+///|
+test "SyntaxEditor updates token attrs lazily after edit actions" {
+  let syntax_system = SyntaxSystem::new()
+  let editor = mk_editor("fn\n")
+  let syntax_editor0 = match
+    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    Some(s) => s
+    None => abort("theme should exist")
+  }
+  let syntax_editor1 = syntax_editor0.syntax_by_extension("rs").rehighlight()
+  let theme = syntax_editor1.theme()
+  inspect(
+    syntax_editor1.editor().buffer().lines()[0]
+    .attrs_list()
+    .get_span(0)
+    .color_opt_value() ==
+    Some(theme.keyword),
+    content="true",
+  )
+  let syntax_editor2 = syntax_editor1
+    .set_cursor(Cursor::new(0, 0))
+    .action(Insert('x'))
+  inspect(
+    syntax_editor2.editor().buffer().lines()[0]
+    .attrs_list()
+    .get_span(1)
+    .color_opt_value() ==
+    Some(theme.keyword),
+    content="true",
+  )
+  inspect(
+    syntax_editor2.rehighlight().editor().buffer().lines()[0]
+    .attrs_list()
+    .get_span(1)
+    .color_opt_value() ==
+    Some(theme.keyword),
+    content="false",
+  )
+}
