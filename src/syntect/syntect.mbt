@@ -546,6 +546,42 @@ fn is_python_string_prefix_char(ch : Char) -> Bool {
 }
 
 ///|
+fn rust_char_literal_end(chars : Array[Char], start : Int) -> Int? {
+  let n = chars.length()
+  if start + 2 >= n || chars[start] != '\'' {
+    return None
+  }
+  let mut j = start + 1
+  if chars[j] == '\\' {
+    j = j + 1
+    if j >= n {
+      return None
+    }
+    if chars[j] == 'u' && j + 1 < n && chars[j + 1] == '{' {
+      j = j + 2
+      while j < n && chars[j] != '}' {
+        j = j + 1
+      }
+      if j >= n {
+        return None
+      }
+      j = j + 1
+    } else if chars[j] == 'x' && j + 2 < n {
+      j = j + 3
+    } else {
+      j = j + 1
+    }
+  } else {
+    j = j + 1
+  }
+  if j < n && chars[j] == '\'' {
+    Some(j + 1)
+  } else {
+    None
+  }
+}
+
+///|
 fn tokenize_line(
   text : String,
   syntax_name : String,
@@ -929,6 +965,27 @@ fn tokenize_line(
           state = LineState::{ ..state, raw_hash_count_opt: Some(hashes) }
         }
         continue
+      }
+    }
+
+    if syntax_name == "rust" && chars[i] == '\'' {
+      match rust_char_literal_end(chars, i) {
+        Some(end_i) => {
+          push_token(
+            spans,
+            offset_at(text, offsets, i),
+            offset_at(text, offsets, end_i),
+            StringLit,
+          )
+          i = end_i
+          continue
+        }
+        None =>
+          if i + 1 < n && is_identifier_start(chars[i + 1]) {
+            // Rust lifetime like `'a` should not be tokenized as a string.
+            i = i + 1
+            continue
+          }
       }
     }
 

@@ -290,3 +290,43 @@ test "SyntaxEditor updates token attrs lazily after edit actions" {
     content="false",
   )
 }
+
+///|
+test "SyntaxEditor treats Rust lifetimes as non-string tokens" {
+  let syntax_system = SyntaxSystem::new()
+  let editor = mk_editor("fn f<'a>(x: &'a str) {}\n")
+  let syntax_editor0 = match
+    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    Some(s) => s
+    None => abort("theme should exist")
+  }
+  let syntax_editor = syntax_editor0.syntax_by_extension("rs").rehighlight()
+  let theme = syntax_editor.theme()
+  let line0 = syntax_editor.editor().buffer().lines()[0]
+  inspect(
+    line0.attrs_list().get_span(5).color_opt_value() == Some(theme.string_lit),
+    content="false",
+  )
+  inspect(
+    line0.attrs_list().get_span(14).color_opt_value() == Some(theme.string_lit),
+    content="false",
+  )
+}
+
+///|
+test "SyntaxEditor treats Rust char literals as strings" {
+  let syntax_system = SyntaxSystem::new()
+  let editor = mk_editor("let c = 'x';\n")
+  let syntax_editor0 = match
+    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    Some(s) => s
+    None => abort("theme should exist")
+  }
+  let syntax_editor = syntax_editor0.syntax_by_extension("rs").rehighlight()
+  let theme = syntax_editor.theme()
+  let line0 = syntax_editor.editor().buffer().lines()[0]
+  inspect(
+    line0.attrs_list().get_span(8).color_opt_value() == Some(theme.string_lit),
+    content="true",
+  )
+}
