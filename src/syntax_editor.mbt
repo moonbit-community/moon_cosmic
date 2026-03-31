@@ -169,8 +169,12 @@ pub fn SyntaxSystem::syntax_for_extension(
     Some("rust")
   } else if ext == "py" || ext == "pyi" || ext == "pyw" {
     Some("python")
-  } else if ext == "json" || ext == "jsonc" || ext == "json5" {
+  } else if ext == "json" {
     Some("json")
+  } else if ext == "jsonc" {
+    Some("jsonc")
+  } else if ext == "json5" {
+    Some("json5")
   } else if ext == "md" ||
     ext == "markdown" ||
     ext == "mdown" ||
@@ -178,6 +182,14 @@ pub fn SyntaxSystem::syntax_for_extension(
     ext == "mkdn" ||
     ext == "mdx" {
     Some("markdown")
+  } else if ext == "sql" {
+    Some("sql")
+  } else if ext == "sh" || ext == "bash" || ext == "zsh" {
+    Some("shell")
+  } else if ext == "rb" {
+    Some("ruby")
+  } else if ext == "lua" {
+    Some("lua")
   } else if ext == "c" ||
     ext == "h" ||
     ext == "cc" ||
@@ -205,13 +217,7 @@ pub fn SyntaxSystem::syntax_for_extension(
     ext == "less" ||
     ext == "html" ||
     ext == "htm" ||
-    ext == "xml" ||
-    ext == "sql" ||
-    ext == "sh" ||
-    ext == "bash" ||
-    ext == "zsh" ||
-    ext == "rb" ||
-    ext == "lua" {
+    ext == "xml" {
     Some("clike")
   } else {
     None
@@ -510,6 +516,156 @@ fn is_python_keyword(word : String) -> Bool {
 }
 
 ///|
+fn is_shell_keyword(word : String) -> Bool {
+  word == "if" ||
+  word == "then" ||
+  word == "else" ||
+  word == "elif" ||
+  word == "fi" ||
+  word == "for" ||
+  word == "while" ||
+  word == "until" ||
+  word == "do" ||
+  word == "done" ||
+  word == "case" ||
+  word == "esac" ||
+  word == "in" ||
+  word == "function" ||
+  word == "select"
+}
+
+///|
+fn is_ruby_keyword(word : String) -> Bool {
+  word == "BEGIN" ||
+  word == "END" ||
+  word == "alias" ||
+  word == "and" ||
+  word == "begin" ||
+  word == "break" ||
+  word == "case" ||
+  word == "class" ||
+  word == "def" ||
+  word == "defined?" ||
+  word == "do" ||
+  word == "else" ||
+  word == "elsif" ||
+  word == "end" ||
+  word == "ensure" ||
+  word == "false" ||
+  word == "for" ||
+  word == "if" ||
+  word == "in" ||
+  word == "module" ||
+  word == "next" ||
+  word == "nil" ||
+  word == "not" ||
+  word == "or" ||
+  word == "redo" ||
+  word == "rescue" ||
+  word == "retry" ||
+  word == "return" ||
+  word == "self" ||
+  word == "super" ||
+  word == "then" ||
+  word == "true" ||
+  word == "undef" ||
+  word == "unless" ||
+  word == "until" ||
+  word == "when" ||
+  word == "while" ||
+  word == "yield"
+}
+
+///|
+fn is_lua_keyword(word : String) -> Bool {
+  word == "and" ||
+  word == "break" ||
+  word == "do" ||
+  word == "else" ||
+  word == "elseif" ||
+  word == "end" ||
+  word == "false" ||
+  word == "for" ||
+  word == "function" ||
+  word == "goto" ||
+  word == "if" ||
+  word == "in" ||
+  word == "local" ||
+  word == "nil" ||
+  word == "not" ||
+  word == "or" ||
+  word == "repeat" ||
+  word == "return" ||
+  word == "then" ||
+  word == "true" ||
+  word == "until" ||
+  word == "while"
+}
+
+///|
+fn is_sql_keyword(word : String) -> Bool {
+  let lower = ascii_lower(word)
+  lower == "select" ||
+  lower == "from" ||
+  lower == "where" ||
+  lower == "group" ||
+  lower == "by" ||
+  lower == "order" ||
+  lower == "having" ||
+  lower == "limit" ||
+  lower == "offset" ||
+  lower == "join" ||
+  lower == "inner" ||
+  lower == "left" ||
+  lower == "right" ||
+  lower == "full" ||
+  lower == "cross" ||
+  lower == "on" ||
+  lower == "as" ||
+  lower == "insert" ||
+  lower == "into" ||
+  lower == "values" ||
+  lower == "update" ||
+  lower == "set" ||
+  lower == "delete" ||
+  lower == "create" ||
+  lower == "table" ||
+  lower == "alter" ||
+  lower == "drop" ||
+  lower == "distinct" ||
+  lower == "union" ||
+  lower == "all" ||
+  lower == "and" ||
+  lower == "or" ||
+  lower == "not" ||
+  lower == "null" ||
+  lower == "is" ||
+  lower == "between" ||
+  lower == "like" ||
+  lower == "exists"
+}
+
+///|
+fn is_sql_type(word : String) -> Bool {
+  let lower = ascii_lower(word)
+  lower == "int" ||
+  lower == "integer" ||
+  lower == "bigint" ||
+  lower == "smallint" ||
+  lower == "text" ||
+  lower == "varchar" ||
+  lower == "char" ||
+  lower == "boolean" ||
+  lower == "float" ||
+  lower == "double" ||
+  lower == "decimal" ||
+  lower == "numeric" ||
+  lower == "date" ||
+  lower == "time" ||
+  lower == "timestamp"
+}
+
+///|
 fn classify_identifier(word : String, syntax_name : String) -> TokenClass? {
   if syntax_name == "rust" {
     if is_rust_keyword(word) {
@@ -533,7 +689,35 @@ fn classify_identifier(word : String, syntax_name : String) -> TokenClass? {
     } else {
       None
     }
-  } else if syntax_name == "json" {
+  } else if syntax_name == "shell" {
+    if is_shell_keyword(word) {
+      Some(Keyword)
+    } else {
+      None
+    }
+  } else if syntax_name == "ruby" {
+    if is_ruby_keyword(word) {
+      Some(Keyword)
+    } else {
+      None
+    }
+  } else if syntax_name == "lua" {
+    if is_lua_keyword(word) {
+      Some(Keyword)
+    } else {
+      None
+    }
+  } else if syntax_name == "sql" {
+    if is_sql_keyword(word) {
+      Some(Keyword)
+    } else if is_sql_type(word) {
+      Some(TypeName)
+    } else {
+      None
+    }
+  } else if syntax_name == "json" ||
+    syntax_name == "jsonc" ||
+    syntax_name == "json5" {
     if word == "true" || word == "false" || word == "null" {
       Some(Keyword)
     } else {
@@ -550,8 +734,12 @@ fn has_line_comment_prefix(
   chars : Array[Char],
   i : Int,
 ) -> Bool {
-  if syntax_name == "python" {
+  if syntax_name == "python" || syntax_name == "shell" || syntax_name == "ruby" {
     i < chars.length() && chars[i] == '#'
+  } else if syntax_name == "lua" || syntax_name == "sql" {
+    i + 1 < chars.length() && chars[i] == '-' && chars[i + 1] == '-'
+  } else if syntax_name == "jsonc" || syntax_name == "json5" {
+    i + 1 < chars.length() && chars[i] == '/' && chars[i + 1] == '/'
   } else if syntax_name == "rust" || syntax_name == "clike" {
     i + 1 < chars.length() && chars[i] == '/' && chars[i + 1] == '/'
   } else {
@@ -561,7 +749,11 @@ fn has_line_comment_prefix(
 
 ///|
 fn supports_block_comment(syntax_name : String) -> Bool {
-  syntax_name == "rust" || syntax_name == "clike"
+  syntax_name == "rust" ||
+  syntax_name == "clike" ||
+  syntax_name == "sql" ||
+  syntax_name == "jsonc" ||
+  syntax_name == "json5"
 }
 
 ///|
@@ -701,7 +893,13 @@ fn tokenize_line(
         match markdown_fence_char(chars, first) {
           Some(c) if c == fence =>
             return (
-              [TokenSpan::{ start: first, end: text.length(), class: Keyword }],
+              [
+                TokenSpan::{
+                  start: offset_at(text, offsets, first),
+                  end: text.length(),
+                  class: Keyword,
+                },
+              ],
               LineState::{ ..state, markdown_fence_char_opt: None },
             )
           _ =>
@@ -720,7 +918,7 @@ fn tokenize_line(
         match markdown_fence_char(chars, first) {
           Some(c) => {
             spans_md.push(TokenSpan::{
-              start: first,
+              start: offset_at(text, offsets, first),
               end: text.length(),
               class: Keyword,
             })
@@ -734,7 +932,7 @@ fn tokenize_line(
         }
         if first < n && chars[first] == '#' {
           spans_md.push(TokenSpan::{
-            start: first,
+            start: offset_at(text, offsets, first),
             end: text.length(),
             class: Keyword,
           })

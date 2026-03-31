@@ -36,7 +36,14 @@ test "SyntaxSystem resolves themes and file extensions" {
   inspect(syntax_system.syntax_for_extension(".RS"), content="Some(\"rust\")")
   inspect(syntax_system.syntax_for_extension("py"), content="Some(\"python\")")
   inspect(syntax_system.syntax_for_extension("PYI"), content="Some(\"python\")")
-  inspect(syntax_system.syntax_for_extension("jsonc"), content="Some(\"json\")")
+  inspect(
+    syntax_system.syntax_for_extension("jsonc"),
+    content="Some(\"jsonc\")",
+  )
+  inspect(syntax_system.syntax_for_extension("sql"), content="Some(\"sql\")")
+  inspect(syntax_system.syntax_for_extension("bash"), content="Some(\"shell\")")
+  inspect(syntax_system.syntax_for_extension("rb"), content="Some(\"ruby\")")
+  inspect(syntax_system.syntax_for_extension("lua"), content="Some(\"lua\")")
   inspect(
     syntax_system.syntax_for_extension("mdown"),
     content="Some(\"markdown\")",
@@ -372,6 +379,29 @@ test "SyntaxEditor tracks markdown fenced code blocks and headings" {
 }
 
 ///|
+test "SyntaxEditor computes markdown heading span offsets with multibyte leading space" {
+  let syntax_system = SyntaxSystem::new()
+  let editor = mk_editor("　# heading\n")
+  let syntax_editor0 = match
+    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    Some(s) => s
+    None => abort("theme should exist")
+  }
+  let syntax_editor = syntax_editor0.syntax_by_extension("md").rehighlight()
+  let theme = syntax_editor.theme()
+  let line0 = syntax_editor.editor().buffer().lines()[0]
+  inspect(
+    line0.attrs_list().get_span(0).color_opt_value() != Some(theme.keyword),
+    content="true",
+  )
+  inspect(
+    line0.attrs_list().get_span("　".length()).color_opt_value() ==
+    Some(theme.keyword),
+    content="true",
+  )
+}
+
+///|
 test "SyntaxEditor highlights markdown inline code spans" {
   let syntax_system = SyntaxSystem::new()
   let editor = mk_editor("Use `code` here\n")
@@ -414,7 +444,9 @@ test "SyntaxEditor highlights clike preprocessor directives" {
 ///|
 test "SyntaxEditor keeps clike preprocessor continuation lines as keywords" {
   let syntax_system = SyntaxSystem::new()
-  let editor = mk_editor("#define A(x) \\\n+  ((x) + 1)\nint y = A(1);\n")
+  let editor = mk_editor(
+    "#define A(x) " + "\\" + "\n  ((x) + 1)\nint y = A(1);\n",
+  )
   let syntax_editor0 = match
     SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
     Some(s) => s
@@ -428,11 +460,85 @@ test "SyntaxEditor keeps clike preprocessor continuation lines as keywords" {
     content="true",
   )
   inspect(
-    lines[1].attrs_list().get_span(0).color_opt_value() == Some(theme.keyword),
+    lines[1].attrs_list().get_span(2).color_opt_value() == Some(theme.keyword),
     content="true",
   )
   inspect(
     lines[2].attrs_list().get_span(0).color_opt_value() == Some(theme.type_name),
+    content="true",
+  )
+}
+
+///|
+test "SyntaxEditor highlights jsonc comments and json keywords" {
+  let syntax_system = SyntaxSystem::new()
+  let editor = mk_editor("// note\ntrue\n/* block */\n")
+  let syntax_editor0 = match
+    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    Some(s) => s
+    None => abort("theme should exist")
+  }
+  let syntax_editor = syntax_editor0.syntax_by_extension("jsonc").rehighlight()
+  let theme = syntax_editor.theme()
+  let lines = syntax_editor.editor().buffer().lines()
+  inspect(
+    lines[0].attrs_list().get_span(0).color_opt_value() == Some(theme.comment),
+    content="true",
+  )
+  inspect(
+    lines[1].attrs_list().get_span(0).color_opt_value() == Some(theme.keyword),
+    content="true",
+  )
+  inspect(
+    lines[2].attrs_list().get_span(0).color_opt_value() == Some(theme.comment),
+    content="true",
+  )
+}
+
+///|
+test "SyntaxEditor highlights shell hash comments" {
+  let syntax_system = SyntaxSystem::new()
+  let editor = mk_editor("# comment\necho hi\n")
+  let syntax_editor0 = match
+    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    Some(s) => s
+    None => abort("theme should exist")
+  }
+  let syntax_editor = syntax_editor0.syntax_by_extension("sh").rehighlight()
+  let theme = syntax_editor.theme()
+  let lines = syntax_editor.editor().buffer().lines()
+  inspect(
+    lines[0].attrs_list().get_span(0).color_opt_value() == Some(theme.comment),
+    content="true",
+  )
+  inspect(
+    lines[1].attrs_list().get_span(0).color_opt_value() != Some(theme.comment),
+    content="true",
+  )
+}
+
+///|
+test "SyntaxEditor highlights sql comments and keywords" {
+  let syntax_system = SyntaxSystem::new()
+  let editor = mk_editor("-- comment\nSELECT col FROM t;\n/* block */\n")
+  let syntax_editor0 = match
+    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    Some(s) => s
+    None => abort("theme should exist")
+  }
+  let syntax_editor = syntax_editor0.syntax_by_extension("sql").rehighlight()
+  let theme = syntax_editor.theme()
+  let lines = syntax_editor.editor().buffer().lines()
+  inspect(
+    lines[0].attrs_list().get_span(0).color_opt_value() == Some(theme.comment),
+    content="true",
+  )
+  inspect(
+    lines[1].attrs_list().get_span(0).color_opt_value() == Some(theme.keyword),
+    content="true",
+  )
+  inspect(
+    lines[2].attrs_list().get_span(0).color_opt_value() == Some(theme.comment),
     content="true",
   )
 }
