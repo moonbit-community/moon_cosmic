@@ -20,9 +20,11 @@ test "LineIter (upstream test vector)" {
   inspect(r1.map(v => v.0), content="Some(0)")
   inspect(r1.map(v => v.1), content="Some(2)")
   inspect(
-    r1.map(v => match v.2 {
-      Lf => true
-      _ => false
+    r1.map(v => {
+      match v.2 {
+        Lf => true
+        _ => false
+      }
     }),
     content="Some(true)",
   )
@@ -30,9 +32,11 @@ test "LineIter (upstream test vector)" {
   inspect(r2.map(v => v.0), content="Some(3)")
   inspect(r2.map(v => v.1), content="Some(7)")
   inspect(
-    r2.map(v => match v.2 {
-      CrLf => true
-      _ => false
+    r2.map(v => {
+      match v.2 {
+        CrLf => true
+        _ => false
+      }
     }),
     content="Some(true)",
   )
@@ -40,9 +44,11 @@ test "LineIter (upstream test vector)" {
   inspect(r3.map(v => v.0), content="Some(9)")
   inspect(r3.map(v => v.1), content="Some(11)")
   inspect(
-    r3.map(v => match v.2 {
-      Cr => true
-      _ => false
+    r3.map(v => {
+      match v.2 {
+        Cr => true
+        _ => false
+      }
     }),
     content="Some(true)",
   )
@@ -50,9 +56,11 @@ test "LineIter (upstream test vector)" {
   inspect(r4.map(v => v.0), content="Some(12)")
   inspect(r4.map(v => v.1), content="Some(16)")
   inspect(
-    r4.map(v => match v.2 {
-      LfCr => true
-      _ => false
+    r4.map(v => {
+      match v.2 {
+        LfCr => true
+        _ => false
+      }
     }),
     content="Some(true)",
   )
@@ -60,9 +68,11 @@ test "LineIter (upstream test vector)" {
   inspect(r5.map(v => v.0), content="Some(18)")
   inspect(r5.map(v => v.1), content="Some(22)")
   inspect(
-    r5.map(v => match v.2 {
-      None => true
-      _ => false
+    r5.map(v => {
+      match v.2 {
+        None => true
+        _ => false
+      }
     }),
     content="Some(true)",
   )
