@@ -24,8 +24,6 @@ pub struct ViEditor {
   pending_find_opt : (Bool, Bool)?
   pending_text_object_opt : (ViOperator, Bool)?
   register_opt : String?
-
-  fn new(@moon_cosmic.Editor) -> ViEditor
 }
 pub fn ViEditor::changed(Self) -> Bool
 pub fn ViEditor::editor(Self) -> @moon_cosmic.Editor

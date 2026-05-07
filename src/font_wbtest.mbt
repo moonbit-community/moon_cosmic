@@ -348,8 +348,9 @@ test "named fallback candidate accepts variable-weight match" {
     None => ""
   }
   inspect(
-    first_named_fallback_candidate(fs, Weight::bold(), [0], family_name),
-    content="Some(0)",
+    first_named_fallback_candidate(fs, Weight::bold(), [0], family_name) ==
+    Some(0),
+    content="true",
   )
 }
 
@@ -362,8 +363,9 @@ test "named fallback candidate rejects variable-weight outside axis range" {
     None => ""
   }
   inspect(
-    first_named_fallback_candidate(fs, Weight::new(950), [0], family_name),
-    content="None",
+    first_named_fallback_candidate(fs, Weight::new(950), [0], family_name)
+    is None,
+    content="true",
   )
 }
 
@@ -376,8 +378,8 @@ test "named fallback candidate still rejects non-variable non-zero weight diff" 
     None => ""
   }
   inspect(
-    first_named_fallback_candidate(fs, Weight::bold(), [0], family_name),
-    content="None",
+    first_named_fallback_candidate(fs, Weight::bold(), [0], family_name) is None,
+    content="true",
   )
 }
 
@@ -437,7 +439,7 @@ test "first_named_fallback_candidate returns first valid weight-zero match" {
     [2, 99, 1, 0],
     family_name,
   )
-  inspect(selected, content="Some(2)")
+  inspect(selected == Some(2), content="true")
 }
 
 ///|
@@ -538,7 +540,7 @@ test "fallback missing check records exhausted status" {
     Some(info) => {
       inspect(info.kind is Exhausted, content="true")
       inspect(info.word, content="abc")
-      inspect(info.used, content="None")
+      inspect(info.used is None, content="true")
     }
   }
 }
@@ -587,7 +589,7 @@ test "fallback missing check records script fallback status" {
     None => inspect(false, content="true")
     Some(info) => {
       inspect(info.kind is ScriptFallback, content="true")
-      inspect(info.used, content="Some(\"Noto Sans Arabic\")")
+      inspect(info.used == Some("Noto Sans Arabic"), content="true")
       inspect(info.scripts.length(), content="1")
     }
   }

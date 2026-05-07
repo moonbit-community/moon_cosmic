@@ -98,10 +98,7 @@ fn theme_base16_ocean_light() -> SyntaxTheme {
 }
 
 ///|
-pub struct SyntaxSystem {
-
-  fn new() -> SyntaxSystem
-}
+pub struct SyntaxSystem {}
 
 ///|
 pub fn SyntaxSystem::new() -> SyntaxSystem {

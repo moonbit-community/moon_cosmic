@@ -922,8 +922,6 @@ pub struct ViEditor {
   active_register_opt : Char?
   registers : Array[(Char, Selection, String)]
   register_opt : String?
-
-  fn new(editor : Editor) -> ViEditor
 }
 
 ///|

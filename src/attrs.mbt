@@ -164,8 +164,6 @@ pub impl Show for Family with output(self, logger) {
 /// Font weight (1..=1000). This is a simplified stand-in for `fontdb::Weight`.
 pub struct Weight {
   value : Int
-
-  fn new(value : Int) -> Weight
 }
 
 ///|
@@ -286,8 +284,6 @@ pub impl Show for Weight with output(self, logger) {
 ///|
 pub struct FeatureTag {
   value : UInt
-
-  fn new(tag : String) -> FeatureTag
 }
 
 ///|
@@ -319,8 +315,6 @@ pub impl Hash for FeatureTag with hash_combine(self, hasher) {
 pub struct Feature {
   tag : FeatureTag
   value : UInt
-
-  fn new(tag : FeatureTag, value : UInt) -> Feature
 }
 
 ///|
@@ -352,8 +346,6 @@ pub impl Hash for Feature with hash_combine(self, hasher) {
 ///|
 pub struct FontFeatures {
   features : Array[Feature]
-
-  fn new() -> FontFeatures
 }
 
 ///|
@@ -417,8 +409,6 @@ pub impl Hash for FontFeatures with hash_combine(self, hasher) {
 ///|
 pub struct LetterSpacing {
   bits : UInt
-
-  fn new(value : Float) -> LetterSpacing
 }
 
 ///|
@@ -492,8 +482,6 @@ pub struct TextDecoration {
   strikethrough_color_opt : Color?
   overline : Bool
   overline_color_opt : Color?
-
-  fn new() -> TextDecoration
 }
 
 ///|
@@ -555,8 +543,6 @@ pub impl Hash for TextDecoration with hash_combine(self, hasher) {
 pub struct DecorationMetrics {
   offset : Float
   thickness : Float
-
-  fn new(offset : Float, thickness : Float) -> DecorationMetrics
 }
 
 ///|
@@ -615,8 +601,6 @@ pub struct Attrs {
   letter_spacing_opt : LetterSpacing?
   font_features : FontFeatures
   text_decoration : TextDecoration
-
-  fn new() -> Attrs
 }
 
 ///|
@@ -892,8 +876,6 @@ pub impl Hash for AttrsSpan with hash_combine(self, hasher) {
 pub struct AttrsList {
   defaults : Attrs
   spans : Array[AttrsSpan]
-
-  fn new(defaults : Attrs) -> AttrsList
 }
 
 ///|

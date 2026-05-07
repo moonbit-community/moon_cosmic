@@ -238,12 +238,6 @@ pub struct LegacyRenderer {
   font_system : FontSystem
   cache : SwashCache
   callback : (Int, Int, UInt, UInt, Color) -> Unit
-
-  fn new(
-    font_system : FontSystem,
-    cache : SwashCache,
-    callback : (Int, Int, UInt, UInt, Color) -> Unit,
-  ) -> LegacyRenderer
 }
 
 ///|

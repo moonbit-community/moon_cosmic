@@ -23,8 +23,6 @@ pub struct BidiParagraphs {
   ranges : Array[(Int, Int)]
   cursor : Int
   pos : Int
-
-  fn new(text : String) -> BidiParagraphs
 }
 
 ///|

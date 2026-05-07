@@ -263,7 +263,7 @@ test "ShapeLine.build_with_font_system preserves per-cluster starts on minimal c
       font_at_c = Some(g.font_id)
     }
   }
-  inspect(font_at_a, content="Some(0)")
+  inspect(font_at_a == Some(0), content="true")
   inspect((font_at_b is Some(_), font_at_c is Some(_)), content="(true, true)")
 }
 

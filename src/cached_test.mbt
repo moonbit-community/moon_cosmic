@@ -17,13 +17,13 @@ test "Cached: state machine semantics" {
   let c0 : Cached[Int] = Empty
   inspect(c0.is_unused(), content="true")
   inspect(c0.is_used(), content="false")
-  inspect(c0.get(), content="None")
+  inspect(c0.get() is None, content="true")
   let c1 = c0.set_used(123)
   inspect(c1.is_used(), content="true")
-  inspect(c1.get(), content="Some(123)")
+  inspect(c1.get() == Some(123), content="true")
   let c2 = c1.set_unused()
   inspect(c2.is_unused(), content="true")
-  inspect(c2.get(), content="None")
+  inspect(c2.get() is None, content="true")
   let (c3, v3) = c2.take_unused()
   inspect(
     match c3 {
@@ -32,5 +32,5 @@ test "Cached: state machine semantics" {
     },
     content="true",
   )
-  inspect(v3, content="Some(123)")
+  inspect(v3 == Some(123), content="true")
 }

@@ -189,7 +189,7 @@ test "ViEditor supports linewise P put-before" {
 ///|
 test "ViEditor stores D deletions into unnamed register" {
   let out = mk_vi("abc def\n").feed_string("lDp")
-  inspect(out.register_opt, content="Some(\"bc def\")")
+  inspect(out.register_opt == Some("bc def"), content="true")
   inspect(out.editor().buffer().lines()[0].text(), content="abc def")
 }
 
@@ -206,7 +206,7 @@ test "ViEditor supports numeric count for motions and G" {
 test "ViEditor supports numeric count for dd and p" {
   let vi1 = mk_vi("a\nb\nc\nd\n").feed_string("2dd")
   inspect(vi1.editor().buffer().lines()[0].text(), content="c")
-  inspect(vi1.register_opt, content="Some(\"a\\nb\\n\")")
+  inspect(vi1.register_opt == Some("a\nb\n"), content="true")
 
   let vi2 = mk_vi("abc\n").feed_string("yiw3p")
   inspect(vi2.editor().buffer().lines()[0].text(), content="abcabcabcabc")
@@ -244,7 +244,7 @@ test "ViEditor supports r R X s commands" {
 ///|
 test "ViEditor supports Y and shift operators" {
   let vi1 = mk_vi("a\nb\nc\n").feed_string("2Yp")
-  inspect(vi1.register_opt, content="Some(\"a\\nb\\n\")")
+  inspect(vi1.register_opt == Some("a\nb\n"), content="true")
   inspect(vi1.editor().buffer().lines()[0].text(), content="a")
   inspect(vi1.editor().buffer().lines()[1].text(), content="a")
   inspect(vi1.editor().buffer().lines()[2].text(), content="b")

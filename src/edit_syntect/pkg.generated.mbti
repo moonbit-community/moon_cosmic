@@ -74,7 +74,6 @@ pub fn SyntaxEditor::theme(Self) -> SyntaxTheme
 pub fn SyntaxEditor::update_theme(Self, String) -> (Self, Bool)
 
 pub struct SyntaxSystem {
-  fn new() -> SyntaxSystem
 }
 pub fn SyntaxSystem::new() -> Self
 pub fn SyntaxSystem::plain_text_syntax(Self) -> String

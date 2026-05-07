@@ -600,8 +600,6 @@ pub struct ViEditor {
   pending_find_opt : (Bool, Bool)?
   pending_text_object_opt : (ViOperator, Bool)?
   register_opt : String?
-
-  fn new(editor : @cosmic.Editor) -> ViEditor
 }
 
 ///|

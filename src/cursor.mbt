@@ -73,8 +73,6 @@ pub struct Cursor {
   /// First-byte-index of glyph at cursor (represented as UTF-16 code-unit index).
   index : Int
   affinity : Affinity
-
-  fn new(line : Int, index : Int) -> Cursor
 }
 
 ///|
@@ -104,8 +102,6 @@ pub struct LayoutCursor {
   line : Int
   layout : Int
   glyph : Int
-
-  fn new(line : Int, layout : Int, glyph : Int) -> LayoutCursor
 }
 
 ///|
@@ -182,8 +178,6 @@ pub struct Scroll {
   line : Int
   vertical : Float
   horizontal : Float
-
-  fn new(line : Int, vertical : Float, horizontal : Float) -> Scroll
 }
 
 ///|

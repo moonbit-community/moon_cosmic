@@ -51,8 +51,6 @@ pub struct BidiInfo {
   original_classes : Array[@moon_swash.BidiClass]
   levels : Array[Int]
   paragraphs : Array[ParagraphInfo]
-
-  fn new(text : String) -> BidiInfo
 }
 
 ///|

@@ -30,8 +30,6 @@ pub struct Buffer {
   dirty_tab_shape : Bool
   dirty_text_set : Bool
   dirty_scroll : Bool
-
-  fn new(metrics : Metrics) -> Buffer
 }
 
 ///|

@@ -208,31 +208,31 @@ test "FontSystem.resolve_for_codepoint prefers a font that supports the codepoin
   let b = mk_min_font_cmap4_single(b'\x00', b'\x42')
   let fs = FontSystem::new().load_font_data(a).load_font_data(b)
   let attrs = Attrs::new()
-  inspect(fs.resolve_for_codepoint(attrs, 0x41U), content="Some(0)")
-  inspect(fs.resolve_for_codepoint(attrs, 0x42U), content="Some(1)")
+  inspect(fs.resolve_for_codepoint(attrs, 0x41U) == Some(0), content="true")
+  inspect(fs.resolve_for_codepoint(attrs, 0x42U) == Some(1), content="true")
 
   // Missing in both fonts: fall back to the default resolution (first font).
-  inspect(fs.resolve_for_codepoint(attrs, 0x43U), content="Some(0)")
+  inspect(fs.resolve_for_codepoint(attrs, 0x43U) == Some(0), content="true")
 
   // Repeated resolution should be stable.
-  inspect(fs.resolve_for_codepoint(attrs, 0x41U), content="Some(0)")
-  inspect(fs.resolve_for_codepoint(attrs, 0x42U), content="Some(1)")
+  inspect(fs.resolve_for_codepoint(attrs, 0x41U) == Some(0), content="true")
+  inspect(fs.resolve_for_codepoint(attrs, 0x42U) == Some(1), content="true")
 }
 
 ///|
 test "FontSystem.select_family returns a generic-family fallback when fonts exist" {
   let a = mk_min_font_cmap4_single(b'\x00', b'\x41')
   let fs = FontSystem::new().load_font_data(a)
-  inspect(fs.select_family(SansSerif), content="Some(0)")
-  inspect(fs.select_family(Serif), content="Some(0)")
-  inspect(fs.select_family(SystemUi), content="Some(0)")
-  inspect(fs.select_family(UiSerif), content="Some(0)")
-  inspect(fs.select_family(UiSansSerif), content="Some(0)")
-  inspect(fs.select_family(UiRounded), content="Some(0)")
-  inspect(fs.select_family(Math), content="Some(0)")
-  inspect(fs.select_family(FangSong), content="Some(0)")
-  inspect(fs.select_family(Emoji), content="None")
-  inspect(fs.select_family(Name("missing")), content="None")
+  inspect(fs.select_family(SansSerif) == Some(0), content="true")
+  inspect(fs.select_family(Serif) == Some(0), content="true")
+  inspect(fs.select_family(SystemUi) == Some(0), content="true")
+  inspect(fs.select_family(UiSerif) == Some(0), content="true")
+  inspect(fs.select_family(UiSansSerif) == Some(0), content="true")
+  inspect(fs.select_family(UiRounded) == Some(0), content="true")
+  inspect(fs.select_family(Math) == Some(0), content="true")
+  inspect(fs.select_family(FangSong) == Some(0), content="true")
+  inspect(fs.select_family(Emoji) is None, content="true")
+  inspect(fs.select_family(Name("missing")) is None, content="true")
 }
 
 ///|
@@ -290,8 +290,8 @@ test "FontSystem.resolve_for_codepoint remains stable across cache boundary clea
   for i in 0..<9000 {
     fs.resolve_for_codepoint(attrs, i.reinterpret_as_uint()) |> ignore
   }
-  inspect(fs.resolve_for_codepoint(attrs, 0x41U), content="Some(0)")
-  inspect(fs.resolve_for_codepoint(attrs, 0x42U), content="Some(1)")
+  inspect(fs.resolve_for_codepoint(attrs, 0x41U) == Some(0), content="true")
+  inspect(fs.resolve_for_codepoint(attrs, 0x42U) == Some(1), content="true")
 }
 
 ///|
@@ -313,11 +313,14 @@ test "FontSystem.select_family Name matches family aliases from name table" {
       match find_alt_family_name(entry) {
         None =>
           inspect(
-            fs.select_family(Name(entry.family_name())),
-            content="Some(0)",
+            fs.select_family(Name(entry.family_name())) == Some(0),
+            content="true",
           )
         Some(family_alias) =>
-          inspect(fs.select_family(Name(family_alias)), content="Some(0)")
+          inspect(
+            fs.select_family(Name(family_alias)) == Some(0),
+            content="true",
+          )
       }
   }
 }

@@ -33,29 +33,62 @@ test "SyntaxSystem resolves themes and file extensions" {
   inspect(syntax_system.theme("base16-ocean.dark") is Some(_), content="true")
   inspect(syntax_system.theme("inspiredGitHub") is Some(_), content="true")
   inspect(syntax_system.theme("missing-theme") is None, content="true")
-  inspect(syntax_system.syntax_for_extension(".RS"), content="Some(\"rust\")")
-  inspect(syntax_system.syntax_for_extension("py"), content="Some(\"python\")")
-  inspect(syntax_system.syntax_for_extension("PYI"), content="Some(\"python\")")
   inspect(
-    syntax_system.syntax_for_extension("jsonc"),
-    content="Some(\"jsonc\")",
+    syntax_system.syntax_for_extension(".RS") == Some("rust"),
+    content="true",
   )
-  inspect(syntax_system.syntax_for_extension("sql"), content="Some(\"sql\")")
-  inspect(syntax_system.syntax_for_extension("bash"), content="Some(\"shell\")")
-  inspect(syntax_system.syntax_for_extension("rb"), content="Some(\"ruby\")")
-  inspect(syntax_system.syntax_for_extension("lua"), content="Some(\"lua\")")
-  inspect(syntax_system.syntax_for_extension("toml"), content="Some(\"toml\")")
-  inspect(syntax_system.syntax_for_extension("yml"), content="Some(\"yaml\")")
   inspect(
-    syntax_system.syntax_for_extension("html"),
-    content="Some(\"markup\")",
+    syntax_system.syntax_for_extension("py") == Some("python"),
+    content="true",
   )
-  inspect(syntax_system.syntax_for_extension("xml"), content="Some(\"markup\")")
   inspect(
-    syntax_system.syntax_for_extension("mdown"),
-    content="Some(\"markdown\")",
+    syntax_system.syntax_for_extension("PYI") == Some("python"),
+    content="true",
   )
-  inspect(syntax_system.syntax_for_extension("kt"), content="Some(\"clike\")")
+  inspect(
+    syntax_system.syntax_for_extension("jsonc") == Some("jsonc"),
+    content="true",
+  )
+  inspect(
+    syntax_system.syntax_for_extension("sql") == Some("sql"),
+    content="true",
+  )
+  inspect(
+    syntax_system.syntax_for_extension("bash") == Some("shell"),
+    content="true",
+  )
+  inspect(
+    syntax_system.syntax_for_extension("rb") == Some("ruby"),
+    content="true",
+  )
+  inspect(
+    syntax_system.syntax_for_extension("lua") == Some("lua"),
+    content="true",
+  )
+  inspect(
+    syntax_system.syntax_for_extension("toml") == Some("toml"),
+    content="true",
+  )
+  inspect(
+    syntax_system.syntax_for_extension("yml") == Some("yaml"),
+    content="true",
+  )
+  inspect(
+    syntax_system.syntax_for_extension("html") == Some("markup"),
+    content="true",
+  )
+  inspect(
+    syntax_system.syntax_for_extension("xml") == Some("markup"),
+    content="true",
+  )
+  inspect(
+    syntax_system.syntax_for_extension("mdown") == Some("markdown"),
+    content="true",
+  )
+  inspect(
+    syntax_system.syntax_for_extension("kt") == Some("clike"),
+    content="true",
+  )
 }
 
 ///|

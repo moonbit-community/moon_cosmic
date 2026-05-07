@@ -371,7 +371,7 @@ test "BufferLine.metadata and into_text helpers" {
   let attrs = AttrsList::new(Attrs::new())
   let line0 = BufferLine::new("hello", None, attrs, Basic)
   let line1 = line0.set_metadata(7)
-  inspect(line1.metadata(), content="Some(7)")
+  inspect(line1.metadata() == Some(7), content="true")
   inspect(line1.into_text(), content="hello")
 }
 

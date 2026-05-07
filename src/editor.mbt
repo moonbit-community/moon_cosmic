@@ -230,8 +230,6 @@ pub struct Editor {
   cursor_moved : Bool
   auto_indent : Bool
   change_opt : Change?
-
-  fn new(buffer : Buffer) -> Editor
 }
 
 ///|

@@ -36,14 +36,14 @@ test "per-span metrics override affects glyph font_size, widths, and line_height
   )
   let layout = if line1.layout_opt() is Some(v) { v } else { [] }
   inspect(layout.length(), content="1")
-  inspect(layout[0].line_height_opt, content="Some(30)")
+  inspect(layout[0].line_height_opt == Some(30.0F), content="true")
   let gs = layout[0].glyphs
   inspect(gs.length(), content="2")
   // First glyph uses default metrics, second uses override.
   inspect((gs[0].font_size, gs[1].font_size), content="(10, 20)")
   inspect((gs[0].w, gs[1].w), content="(10, 20)")
   inspect(
-    (gs[0].line_height_opt, gs[1].line_height_opt),
-    content="(None, Some(30))",
+    gs[0].line_height_opt is None && gs[1].line_height_opt == Some(30.0F),
+    content="true",
   )
 }

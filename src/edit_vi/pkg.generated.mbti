@@ -33,8 +33,6 @@ pub struct ViEditor {
   active_register_opt : Char?
   registers : Array[(Char, @moon_cosmic.Selection, String)]
   register_opt : String?
-
-  fn new(@moon_cosmic.Editor) -> ViEditor
 }
 pub fn ViEditor::changed(Self) -> Bool
 pub fn ViEditor::editor(Self) -> @moon_cosmic.Editor
