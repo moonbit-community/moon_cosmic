@@ -8,7 +8,7 @@ The project keeps behavior aligned with upstream `cosmic-text` through automated
 
 - **Font system (in-memory)**: load TTF/OTF/TTC bytes; resolve fonts by family + weight; per-codepoint fallback.
 - **Shaping**: `Shaping::Advanced` uses `moon_swash/shape` to produce clustered glyphs and advances; tabs snap to stops.
-- **Wrapping & layout**: `Wrap::{None,Glyph,Word,WordOrGlyph}`, `Align::{Left,Right,Center,Justified,End}`, hinting.
+- **Wrapping & layout**: `Wrap::{None,Glyph,Word,WordOrGlyph}`, `Align::{Left,Right,Center,Justified,Start,End}`, hinting.
 - **BiDi**: paragraph iteration + embedding levels and **visual reordering** of glyph runs.
 - **Raster cache**: `CacheKey` + `SwashCache` backed by `moon_swash/scale` (variable `wght` axis support; fake-italic transform).
 - **Editor primitives**: `Buffer`, `Editor`, cursor/selection, hit-testing, and motion actions.

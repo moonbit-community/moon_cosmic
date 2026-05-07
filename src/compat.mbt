@@ -29,6 +29,8 @@ pub(all) enum Justify {
   Right
   Center
   Justified
+  Start
+  End
 }
 
 ///|
@@ -47,5 +49,7 @@ pub fn justify_to_align(j : Justify) -> Align {
     Right => Align::Right
     Center => Align::Center
     Justified => Align::Justified
+    Start => Align::Start
+    End => Align::End
   }
 }

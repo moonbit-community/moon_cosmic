@@ -523,6 +523,7 @@ fn align_eq(a : Align, b : Align) -> Bool {
     (Right, Right) => true
     (Center, Center) => true
     (Justified, Justified) => true
+    (Start, Start) => true
     (End, End) => true
     _ => false
   }

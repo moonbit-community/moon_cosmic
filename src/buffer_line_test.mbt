@@ -201,10 +201,10 @@ test "BufferLine.layout: Hinting::Enabled rounds advances" {
 }
 
 ///|
-test "BufferLine.layout: Align::End follows paragraph direction in RTL lines" {
+test "BufferLine.layout: Align::Start follows paragraph direction in RTL lines" {
   let attrs = AttrsList::new(Attrs::new())
   let line0 = BufferLine::new("\u{05D0}\u{05D1}", Lf, attrs, Advanced)
-  let (line1, _) = line0.set_align(Some(Align::End))
+  let (line1, _) = line0.set_align(Some(Align::Start))
   let line2 = line1.layout(
     10.0F,
     Some(40.0F),
@@ -222,8 +222,31 @@ test "BufferLine.layout: Align::End follows paragraph direction in RTL lines" {
   if line2.layout_opt() is Some(layout) {
     inspect(layout.length(), content="1")
     inspect(layout[0].w, content="20")
-    // In RTL paragraphs, End means logical end (left edge).
+    // In RTL paragraphs, Start means the physical right edge.
     inspect(layout[0].glyphs[0].x, content="30")
+  } else {
+    fail("expected Some(layout)")
+  }
+}
+
+///|
+test "BufferLine.layout: Align::End is opposite Start in RTL lines" {
+  let attrs = AttrsList::new(Attrs::new())
+  let line0 = BufferLine::new("\u{05D0}\u{05D1}", Lf, attrs, Advanced)
+  let (line1, _) = line0.set_align(Some(Align::End))
+  let line2 = line1.layout(
+    10.0F,
+    Some(40.0F),
+    Wrap::None,
+    Ellipsize::None,
+    None,
+    4,
+    Hinting::Disabled,
+  )
+  if line2.layout_opt() is Some(layout) {
+    inspect(layout.length(), content="1")
+    inspect(layout[0].w, content="20")
+    inspect(layout[0].glyphs[0].x, content="10")
   } else {
     fail("expected Some(layout)")
   }

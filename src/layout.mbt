@@ -38,6 +38,7 @@ pub(all) enum Align {
   Right
   Center
   Justified
+  Start
   End
 }
 
@@ -1480,35 +1481,28 @@ fn apply_align_to_line(
   if extra <= 0.0F {
     return line
   }
+  fn shift_line(line : LayoutLine, dx : Float) -> LayoutLine {
+    if dx == 0.0F {
+      return line
+    }
+    let glyphs : Array[LayoutGlyph] = []
+    for g in line.glyphs {
+      glyphs.push(LayoutGlyph::{ ..g, x: g.x + dx })
+    }
+    LayoutLine::{ ..line, glyphs, }
+  }
+
   match align {
-    Left => line
-    Center => {
-      let dx = extra / 2.0F
-      let glyphs : Array[LayoutGlyph] = []
-      for g in line.glyphs {
-        glyphs.push(LayoutGlyph::{ ..g, x: g.x + dx })
-      }
-      LayoutLine::{ ..line, glyphs, }
-    }
-    Right => {
-      let dx = extra
-      let glyphs : Array[LayoutGlyph] = []
-      for g in line.glyphs {
-        glyphs.push(LayoutGlyph::{ ..g, x: g.x + dx })
-      }
-      LayoutLine::{ ..line, glyphs, }
-    }
-    End =>
+    Left => shift_line(line, if rtl { 0.0F - extra } else { 0.0F })
+    Center =>
       if rtl {
-        line
+        shift_line(line, 0.0F - extra / 2.0F)
       } else {
-        let dx = extra
-        let glyphs : Array[LayoutGlyph] = []
-        for g in line.glyphs {
-          glyphs.push(LayoutGlyph::{ ..g, x: g.x + dx })
-        }
-        LayoutLine::{ ..line, glyphs, }
+        shift_line(line, extra / 2.0F)
       }
+    Right => shift_line(line, if rtl { 0.0F } else { extra })
+    Start => shift_line(line, 0.0F)
+    End => shift_line(line, if rtl { 0.0F - extra } else { extra })
     Justified => {
       // Distribute extra width across ASCII spaces in this line.
       let mut space_count = 0

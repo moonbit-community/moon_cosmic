@@ -339,6 +339,7 @@ test "layout_from_shape: stable wrap when feeding measured width back as limit" 
           Some(Align::Left),
           Some(Align::Right),
           Some(Align::Center),
+          Some(Align::Start),
           Some(Align::End),
         ] {
         for
@@ -368,6 +369,7 @@ test "layout_from_shape: stable wrap when feeding measured width back as limit" 
                   Right => "Right"
                   Center => "Center"
                   Justified => "Justified"
+                  Start => "Start"
                   End => "End"
                 }
             }

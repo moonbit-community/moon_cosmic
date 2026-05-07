@@ -81,6 +81,7 @@ pub(all) enum Align {
   Right
   Center
   Justified
+  Start
   End
 }
 
@@ -559,6 +560,8 @@ pub(all) enum Justify {
   Right
   Center
   Justified
+  Start
+  End
 }
 
 pub struct LayoutCursor {

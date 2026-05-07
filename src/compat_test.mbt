@@ -63,6 +63,20 @@ test "LineBreak/Justify mapping" {
     },
     content="true",
   )
+  inspect(
+    match justify_to_align(Justify::Start) {
+      Start => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match justify_to_align(Justify::End) {
+      End => true
+      _ => false
+    },
+    content="true",
+  )
 }
 
 ///|
