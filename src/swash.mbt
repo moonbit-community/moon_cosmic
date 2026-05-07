@@ -49,7 +49,7 @@ fn build_scaler(
         variation.max_value(),
       )
       let settings : Array[@moon_swash.Setting[Double]] = [
-        @moon_swash.Setting::new(wght_tag, weight),
+        @moon_swash.Setting::Setting(wght_tag, weight),
       ]
       builder = builder.variations(settings[:])
     }
@@ -73,18 +73,18 @@ fn swash_image(
   let scaler = build_scaler(context, font, cache_key)
   let offset = if cache_key.has_pixel_font() {
     // Quantize to pixel grid (x + 1 matches upstream).
-    @scale.Vector::new(
+    @scale.Vector::Vector(
       cache_key.x_bin.as_float().to_double().round() + 1.0,
       cache_key.y_bin.as_float().to_double().round(),
     )
   } else {
-    @scale.Vector::new(
+    @scale.Vector::Vector(
       cache_key.x_bin.as_float().to_double(),
       cache_key.y_bin.as_float().to_double(),
     )
   }
 
-  @scale.Render::new([
+  @scale.Render::Render([
     @scale.Source::ColorOutline(0),
     @scale.Source::ColorBitmap(@scale.StrikeWith::BestFit),
     @scale.Source::Outline,
@@ -150,7 +150,7 @@ pub struct SwashCache {
 ///|
 pub fn SwashCache::new() -> SwashCache {
   SwashCache::{
-    context: @scale.ScaleContext::new(),
+    context: @scale.ScaleContext::ScaleContext(),
     image_cache: @hashmap.HashMap::default(),
     outline_path_cache: @hashmap.HashMap::default(),
   }

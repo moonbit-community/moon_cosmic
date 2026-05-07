@@ -287,7 +287,7 @@ pub fn FontSystem::load_font_data(
   self : FontSystem,
   data : Bytes,
 ) -> FontSystem {
-  match @moon_swash.FontDataRef::new(data) {
+  match @moon_swash.FontDataRef::from_data(data) {
     None => self
     Some(data_ref) => {
       let locale = self.locale

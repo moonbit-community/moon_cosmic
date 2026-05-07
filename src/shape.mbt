@@ -533,7 +533,7 @@ fn shape_variation_settings_for_font(
     Some(axis) => {
       let w = attrs.weight_value().value().to_double()
       let value = shape_clamp_double(w, axis.min_value(), axis.max_value())
-      settings.push(@moon_swash.Setting::new(SHAPE_WEIGHT_AXIS_TAG, value))
+      settings.push(@moon_swash.Setting::Setting(SHAPE_WEIGHT_AXIS_TAG, value))
       settings
     }
   }
@@ -958,7 +958,7 @@ pub fn ShapeLine::build_with_font_system(
     // Tabs are shaped as spaces (upstream behavior).
     let ch = if ch0 == '\t' { ' ' } else { ch0 }
     let info = @moon_swash.CharInfo::from_char(ch)
-    let tok = @moon_swash.Token::new(ch, off, len_u, info, off)
+    let tok = @moon_swash.Token::Token(ch, off, len_u, info, off)
     let primary = shape_primary_script_seed(script0)
     if cur_tokens.length() == 0 {
       cur_primary_script = primary.0

@@ -39,7 +39,7 @@ fn sort_monospace_infos_for_test(
 
 ///|
 fn token_for_test(ch : Char, offset : Int) -> @moon_swash.Token {
-  @moon_swash.Token::new(
+  @moon_swash.Token::Token(
     ch,
     offset.reinterpret_as_uint(),
     utf16_len_of_char(ch).reinterpret_as_uint(),
