@@ -159,9 +159,9 @@ test "layout_from_shape: Wrap::WordOrGlyph falls back to glyph wrap inside a lon
     Wrap::WordOrGlyph,
   )
   inspect(lines.length(), content="3")
-  inspect((lines[0].start, lines[0].end), content="(0, 2)")
-  inspect((lines[1].start, lines[1].end), content="(2, 4)")
-  inspect((lines[2].start, lines[2].end), content="(4, 6)")
+  debug_inspect((lines[0].start, lines[0].end), content="(0, 2)")
+  debug_inspect((lines[1].start, lines[1].end), content="(2, 4)")
+  debug_inspect((lines[2].start, lines[2].end), content="(4, 6)")
 }
 
 ///|
@@ -198,7 +198,7 @@ test "layout_from_shape: Wrap::Word keeps blanks when width is unbounded" {
   )
   let lines = layout_from_shape(text, shape, 10.0F, 10.0F, None, Wrap::Word)
   inspect(lines.length(), content="1")
-  inspect((lines[0].start, lines[0].end), content="(0, 5)")
+  debug_inspect((lines[0].start, lines[0].end), content="(0, 5)")
   inspect(lines[0].w, content="50")
 }
 
@@ -221,7 +221,7 @@ test "layout_from_shape: Wrap::Word keeps trailing blanks on final line" {
     Wrap::Word,
   )
   inspect(lines.length(), content="1")
-  inspect((lines[0].start, lines[0].end), content="(0, 3)")
+  debug_inspect((lines[0].start, lines[0].end), content="(0, 3)")
   inspect(lines[0].w, content="30")
 }
 
@@ -462,7 +462,7 @@ test "layout_from_shape: bidi visual order reorders RTL runs inside LTR lines" {
   let gs = lines[0].glyphs
   inspect(gs.length(), content="6")
   // "abc " => 0,1,2,3; Hebrew glyphs (levels=1) should be reversed: 5 then 4.
-  inspect(
+  debug_inspect(
     (
       gs[0].start,
       gs[1].start,
@@ -491,7 +491,7 @@ test "layout_from_shape: bidi visual order keeps embedded LTR runs LTR in RTL li
   let gs = lines[0].glyphs
   inspect(gs.length(), content="6")
   // Visual left-to-right order: embedded "abc" stays LTR, Hebrew stays RTL.
-  inspect(
+  debug_inspect(
     (
       gs[0].start,
       gs[1].start,

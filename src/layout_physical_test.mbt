@@ -16,9 +16,12 @@
 test "LayoutGlyph::physical computes CacheKey subpixel bins" {
   let g = LayoutGlyph::new(0, 1, 10.0F, 7, 400, 42, 1.125F, 2.75F, 0.0F, 0)
   let p = g.physical((0.0F, 0.0F), 1.0F)
-  inspect((p.x, p.y), content="(1, 2)")
+  debug_inspect((p.x, p.y), content="(1, 2)")
   // 1.125 -> (1, One); 2.0 (truncated from 2.75) -> (2, Zero)
-  inspect((p.cache_key.x_bin(), p.cache_key.y_bin()), content="(One, Zero)")
+  debug_inspect(
+    (p.cache_key.x_bin(), p.cache_key.y_bin()),
+    content="(One, Zero)",
+  )
 }
 
 ///|

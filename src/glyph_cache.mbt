@@ -77,6 +77,18 @@ pub impl Show for SubpixelBin with output(self, logger) {
 }
 
 ///|
+pub impl @debug.Debug for SubpixelBin with to_repr(self) {
+  @debug.Repr::literal(
+    match self {
+      Zero => "Zero"
+      One => "One"
+      Two => "Two"
+      Three => "Three"
+    },
+  )
+}
+
+///|
 pub fn SubpixelBin::as_float(self : SubpixelBin) -> Float {
   match self {
     Zero => 0.0F

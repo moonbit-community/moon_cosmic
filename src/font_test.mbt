@@ -241,8 +241,8 @@ test "FontSystem.font_matches is stable across cache hits" {
   let b = mk_min_font_cmap4_single(b'\x00', b'\x42')
   let fs = FontSystem::new().load_font_data(a).load_font_data(b)
   let attrs = Attrs::new()
-  inspect(fs.font_matches(attrs), content="[0, 1]")
-  inspect(fs.font_matches(attrs), content="[0, 1]")
+  debug_inspect(fs.font_matches(attrs), content="[0, 1]")
+  debug_inspect(fs.font_matches(attrs), content="[0, 1]")
 }
 
 ///|
@@ -253,7 +253,7 @@ test "FontSystem.font_matches cache is not externally mutable" {
   let attrs = Attrs::new()
   let first = fs.font_matches(attrs)
   first.set(0, 99)
-  inspect(fs.font_matches(attrs), content="[0, 1]")
+  debug_inspect(fs.font_matches(attrs), content="[0, 1]")
 }
 
 ///|
@@ -270,15 +270,15 @@ test "FontSystem.font_matches generic-family ordering does not enforce explicit-
   let math = Attrs::new().family(Math)
   let fangsong = Attrs::new().family(FangSong)
   let mono = Attrs::new().family(Monospace)
-  inspect(fs.font_matches(sans), content="[0, 1]")
-  inspect(fs.font_matches(serif), content="[0, 1]")
-  inspect(fs.font_matches(system), content="[0, 1]")
-  inspect(fs.font_matches(ui_serif), content="[0, 1]")
-  inspect(fs.font_matches(ui_sans), content="[0, 1]")
-  inspect(fs.font_matches(ui_rounded), content="[0, 1]")
-  inspect(fs.font_matches(math), content="[0, 1]")
-  inspect(fs.font_matches(fangsong), content="[0, 1]")
-  inspect(fs.font_matches(mono), content="[0, 1]")
+  debug_inspect(fs.font_matches(sans), content="[0, 1]")
+  debug_inspect(fs.font_matches(serif), content="[0, 1]")
+  debug_inspect(fs.font_matches(system), content="[0, 1]")
+  debug_inspect(fs.font_matches(ui_serif), content="[0, 1]")
+  debug_inspect(fs.font_matches(ui_sans), content="[0, 1]")
+  debug_inspect(fs.font_matches(ui_rounded), content="[0, 1]")
+  debug_inspect(fs.font_matches(math), content="[0, 1]")
+  debug_inspect(fs.font_matches(fangsong), content="[0, 1]")
+  debug_inspect(fs.font_matches(mono), content="[0, 1]")
 }
 
 ///|
@@ -390,7 +390,7 @@ test "FontSystem.font_matches_for_script remains stable across repeated cache hi
   for i in 0..<2000 {
     fs.font_matches_for_script(attrs, scripts[i % scripts.length()]) |> ignore
   }
-  inspect(fs.font_matches(attrs), content="[0, 1]")
+  debug_inspect(fs.font_matches(attrs), content="[0, 1]")
 }
 
 ///|
