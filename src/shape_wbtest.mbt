@@ -55,7 +55,7 @@ test "monospace fallback primary-default rank has top priority" {
     (11, true, 10, 999, 900),
     (12, false, 0, 0, 300),
   ]
-  inspect(sort_monospace_infos_for_test(infos), content="[11, 12, 10]")
+  debug_inspect(sort_monospace_infos_for_test(infos), content="[11, 12, 10]")
 }
 
 ///|
@@ -66,7 +66,7 @@ test "monospace fallback ranks weight diff before codepoint coverage" {
     // worse coverage but exact weight
     (11, false, 0, 3, 400),
   ]
-  inspect(sort_monospace_infos_for_test(infos), content="[11, 10]")
+  debug_inspect(sort_monospace_infos_for_test(infos), content="[11, 10]")
 }
 
 ///|
@@ -76,7 +76,7 @@ test "monospace fallback ranks lower non-matches when weight diff ties" {
     (11, false, 1, 1, 400),
     (12, false, 1, 2, 400),
   ]
-  inspect(sort_monospace_infos_for_test(infos), content="[11, 12, 10]")
+  debug_inspect(sort_monospace_infos_for_test(infos), content="[11, 12, 10]")
 }
 
 ///|
@@ -144,11 +144,11 @@ fn repeated_ascii_digit(n : Int) -> String {
 
 ///|
 test "BidiInfo keeps explicit paragraph base level when no strong chars" {
-  inspect(
+  debug_inspect(
     BidiInfo::new_with_para_level("12345", Some(0)).adjusted_levels(),
     content="[0, 0, 0, 0, 0]",
   )
-  inspect(
+  debug_inspect(
     BidiInfo::new_with_para_level("12345", Some(1)).adjusted_levels(),
     content="[2, 2, 2, 2, 2]",
   )
@@ -173,7 +173,7 @@ test "BidiInfo auto paragraph direction follows first strong character" {
 ///|
 test "BidiInfo resolves neutrals between opposite strong levels to paragraph base" {
   let levels = BidiInfo::new("א 1 A").adjusted_levels()
-  inspect(levels, content="[1, 1, 2, 1, 2]")
+  debug_inspect(levels, content="[1, 1, 2, 1, 2]")
 }
 
 ///|
@@ -189,11 +189,11 @@ test "BidiInfo uses single-sided strong level for trailing neutrals" {
 
 ///|
 test "BidiInfo retains explicit formatting controls during adjusted level pass" {
-  inspect(
+  debug_inspect(
     BidiInfo::new("\u{202B}12\u{202C}").adjusted_levels(),
     content="[0, 2, 2, 0]",
   )
-  inspect(
+  debug_inspect(
     BidiInfo::new_with_para_level("\u{202B}12\u{202C}", Some(1)).adjusted_levels(),
     content="[1, 4, 4, 1]",
   )
@@ -201,11 +201,11 @@ test "BidiInfo retains explicit formatting controls during adjusted level pass" 
 
 ///|
 test "BidiInfo resolves FSI to direction of first strong in isolate scope" {
-  inspect(
+  debug_inspect(
     BidiInfo::new("a\u{2068}א\u{2069}1").adjusted_levels(),
     content="[0, 0, 1, 0, 0]",
   )
-  inspect(
+  debug_inspect(
     BidiInfo::new("a\u{2068}A\u{2069}1").adjusted_levels(),
     content="[0, 0, 2, 0, 0]",
   )
@@ -213,7 +213,10 @@ test "BidiInfo resolves FSI to direction of first strong in isolate scope" {
 
 ///|
 test "BidiInfo applies bracket-pair neutral resolution in RTL context" {
-  inspect(BidiInfo::new("(א A)").adjusted_levels(), content="[1, 1, 1, 2, 1]")
+  debug_inspect(
+    BidiInfo::new("(א A)").adjusted_levels(),
+    content="[1, 1, 1, 2, 1]",
+  )
 }
 
 ///|

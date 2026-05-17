@@ -93,9 +93,9 @@ test "Family/Weight constructors are usable" {
   let attrs = Attrs::new()
     .stretch(@moon_swash.Stretch::condensed())
     .style(@moon_swash.Style::Italic)
-  inspect(
-    (attrs.stretch_value().is_condensed(), attrs.style_value()),
-    content="(true, italic)",
+  debug_inspect(
+    (attrs.stretch_value().is_condensed(), attrs.style_value().to_string()),
+    content="(true, \"italic\")",
   )
 }
 

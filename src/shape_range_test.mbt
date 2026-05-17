@@ -234,7 +234,7 @@ test "ShapeLine.build_with_font_system assigns metadata by glyph start attrs" {
       }
     }
   }
-  inspect((saw_mid, ok), content="(true, true)")
+  debug_inspect((saw_mid, ok), content="(true, true)")
 }
 
 ///|
@@ -264,7 +264,10 @@ test "ShapeLine.build_with_font_system preserves per-cluster starts on minimal c
     }
   }
   inspect(font_at_a == Some(0), content="true")
-  inspect((font_at_b is Some(_), font_at_c is Some(_)), content="(true, true)")
+  debug_inspect(
+    (font_at_b is Some(_), font_at_c is Some(_)),
+    content="(true, true)",
+  )
 }
 
 ///|

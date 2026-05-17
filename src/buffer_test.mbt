@@ -219,14 +219,14 @@ test "Buffer.layout_runs follows scroll line and viewport height" {
   for run in buf.layout_runs() {
     vis0.push(run.line_i)
   }
-  inspect(vis0, content="[0]")
+  debug_inspect(vis0, content="[0]")
 
   let buf1 = buf.set_scroll(Scroll::new(1, 0.0F, 0.0F)).layout_all()
   let vis1 : Array[Int] = []
   for run in buf1.layout_runs() {
     vis1.push(run.line_i)
   }
-  inspect(vis1, content="[1]")
+  debug_inspect(vis1, content="[1]")
 }
 
 ///|
