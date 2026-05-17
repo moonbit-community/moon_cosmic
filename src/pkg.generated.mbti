@@ -7,6 +7,7 @@ import {
   "Milky2018/moon_zeno",
   "moonbit-community/harfbuzz/buffer",
   "moonbit-community/harfbuzz/font",
+  "moonbitlang/core/debug",
   "moonbitlang/core/hashmap",
 }
 
@@ -816,6 +817,7 @@ pub fn SubpixelBin::new(Float) -> (Int, Self)
 pub impl Eq for SubpixelBin
 pub impl Hash for SubpixelBin
 pub impl Show for SubpixelBin
+pub impl @debug.Debug for SubpixelBin
 
 pub struct SwashCache {
   context : @scale.ScaleContext

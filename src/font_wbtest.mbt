@@ -234,68 +234,83 @@ fn mk_min_variable_font_cmap4_single(
 
 ///|
 test "platform fallback family tables match reference profiles" {
-  inspect(
+  debug_inspect(
     common_fallback_family_names(Unix),
-    content="[\"Noto Sans\", \"DejaVu Sans\", \"FreeSans\", \"Noto Sans Mono\", \"DejaVu Sans Mono\", \"FreeMono\", \"Noto Sans Symbols\", \"Noto Sans Symbols2\", \"Noto Color Emoji\"]",
+    content=(
+      #|[
+      #|  "Noto Sans",
+      #|  "DejaVu Sans",
+      #|  "FreeSans",
+      #|  "Noto Sans Mono",
+      #|  "DejaVu Sans Mono",
+      #|  "FreeMono",
+      #|  "Noto Sans Symbols",
+      #|  "Noto Sans Symbols2",
+      #|  "Noto Color Emoji",
+      #|]
+    ),
   )
-  inspect(
+  debug_inspect(
     common_fallback_family_names(MacOS),
     content="[\".SF NS\", \"Menlo\", \"Apple Color Emoji\", \"Geneva\", \"Arial Unicode MS\"]",
   )
-  inspect(
+  debug_inspect(
     common_fallback_family_names(Windows),
     content="[\"Segoe UI\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Segoe UI Historic\"]",
   )
-  inspect(common_fallback_family_names(Other), content="[]")
-  inspect(forbidden_fallback_family_names(Unix), content="[]")
-  inspect(forbidden_fallback_family_names(MacOS), content="[\".LastResort\"]")
-  inspect(forbidden_fallback_family_names(Windows), content="[]")
-  inspect(forbidden_fallback_family_names(Other), content="[]")
+  debug_inspect(common_fallback_family_names(Other), content="[]")
+  debug_inspect(forbidden_fallback_family_names(Unix), content="[]")
+  debug_inspect(
+    forbidden_fallback_family_names(MacOS),
+    content="[\".LastResort\"]",
+  )
+  debug_inspect(forbidden_fallback_family_names(Windows), content="[]")
+  debug_inspect(forbidden_fallback_family_names(Other), content="[]")
 }
 
 ///|
 test "script fallback family tables are profile-specific" {
-  inspect(
+  debug_inspect(
     script_fallback_family_names(@moon_swash.Script::Arabic, "en-US", Unix),
     content="[\"Noto Sans Arabic\"]",
   )
-  inspect(
+  debug_inspect(
     script_fallback_family_names(@moon_swash.Script::Arabic, "en-US", MacOS),
     content="[\"Geeza Pro\"]",
   )
-  inspect(
+  debug_inspect(
     script_fallback_family_names(@moon_swash.Script::Arabic, "en-US", Windows),
     content="[]",
   )
-  inspect(
+  debug_inspect(
     script_fallback_family_names(@moon_swash.Script::Han, "zh-TW", Unix),
     content="[\"Noto Sans CJK TC\"]",
   )
-  inspect(
+  debug_inspect(
     script_fallback_family_names(@moon_swash.Script::Han, "zh-TW", MacOS),
     content="[\"PingFang TC\"]",
   )
-  inspect(
+  debug_inspect(
     script_fallback_family_names(@moon_swash.Script::Han, "zh-TW", Windows),
     content="[\"Microsoft JhengHei UI\"]",
   )
-  inspect(
+  debug_inspect(
     script_fallback_family_names(@moon_swash.Script::Han, "zh-TW", Other),
     content="[]",
   )
-  inspect(
+  debug_inspect(
     script_fallback_family_names(@moon_swash.Script::TaiLe, "en-US", Unix),
     content="[\"Noto Sans Tai Le\"]",
   )
-  inspect(
+  debug_inspect(
     script_fallback_family_names(@moon_swash.Script::TaiTham, "en-US", Unix),
     content="[\"Noto Sans Tai Tham\"]",
   )
-  inspect(
+  debug_inspect(
     script_fallback_family_names(@moon_swash.Script::TaiViet, "en-US", Unix),
     content="[\"Noto Sans Tai Viet\"]",
   )
-  inspect(
+  debug_inspect(
     script_fallback_family_names(
       @moon_swash.Script::CanadianAboriginal,
       "en-US",
@@ -303,7 +318,7 @@ test "script fallback family tables are profile-specific" {
     ),
     content="[\"Euphemia UCAS\"]",
   )
-  inspect(
+  debug_inspect(
     script_fallback_family_names(
       @moon_swash.Script::CanadianAboriginal,
       "en-US",
@@ -324,7 +339,7 @@ test "default stage keeps only the primary zero-weight explicit-family candidate
   let defaults = split_default_stage_candidates(fs, family, Weight::normal(), [
     0, 1,
   ])
-  inspect(defaults, content="[0]")
+  debug_inspect(defaults, content="[0]")
 }
 
 ///|
@@ -336,7 +351,7 @@ test "default stage allows explicit-family variable-weight candidate" {
     None => Name("")
   }
   let defaults = split_default_stage_candidates(fs, family, Weight::bold(), [0])
-  inspect(defaults, content="[0]")
+  debug_inspect(defaults, content="[0]")
 }
 
 ///|
@@ -392,7 +407,7 @@ test "font_matches_for_scripts keeps full other-stage stream after default stage
     None => Name("")
   }
   let attrs = Attrs::new().family(family)
-  inspect(fs.font_matches_for_scripts(attrs, []), content="[0, 0, 1]")
+  debug_inspect(fs.font_matches_for_scripts(attrs, []), content="[0, 0, 1]")
 }
 
 ///|
@@ -419,7 +434,7 @@ test "named fallback stage promotes only first match for each family" {
       Some(id) => promoted.push(id)
     }
   }
-  inspect(promoted, content="[2, 2]")
+  debug_inspect(promoted, content="[2, 2]")
 }
 
 ///|
@@ -450,7 +465,7 @@ test "font match ordering keeps id tie-break ahead of variable-weight flag" {
     .load_font_data(var_data)
     .load_font_data(static_data)
   let attrs = Attrs::new().weight(Weight::bold())
-  inspect(fs.font_matches(attrs), content="[0, 1]")
+  debug_inspect(fs.font_matches(attrs), content="[0, 1]")
 }
 
 ///|
@@ -471,7 +486,7 @@ test "forbidden filtering applies to other-stage candidates only" {
         }
     }
   }
-  inspect(filtered, content="[99]")
+  debug_inspect(filtered, content="[99]")
 }
 
 ///|

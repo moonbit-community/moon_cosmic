@@ -251,8 +251,8 @@ test "unicode_linebreak parity on upstream LineBreakTest vectors" {
       mismatches = mismatches + 1
       println("unicode_linebreak mismatch line=\{line_no}")
       println("comment: \{comment}")
-      println("actual: \{actual}")
-      println("expected: \{expected}")
+      println("actual: \{@debug.to_string(actual)}")
+      println("expected: \{@debug.to_string(expected)}")
     }
     checked = checked + 1
   }
