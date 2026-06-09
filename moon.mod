@@ -1,0 +1,25 @@
+name = "Milky2018/moon_cosmic"
+
+version = "0.3.1"
+
+import {
+  "Milky2018/moon_swash@0.1.8",
+  "Milky2018/moon_zeno@0.1.2",
+  "Milky2018/moon_skrifa@0.1.7",
+  "moonbitlang/x@0.4.43",
+  "moonbit-community/harfbuzz@0.1.0",
+}
+
+readme = "README.mbt.md"
+
+repository = "https://github.com/moonbit-community/moon_cosmic"
+
+license = "Apache-2.0"
+
+keywords = [ "text", "layout", "bidi", "shaping", "swash", "cosmic-text" ]
+
+description = "MoonBit port of cosmic-text (text shaping, layout, and editor primitives) built on moon_swash."
+
+options(
+  source: "src",
+)

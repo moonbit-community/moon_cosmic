@@ -55,17 +55,17 @@ fn SubpixelBin::to_int(self : SubpixelBin) -> Int {
 }
 
 ///|
-pub impl Eq for SubpixelBin with equal(self, other) {
+pub impl Eq for SubpixelBin with fn equal(self, other) {
   self.to_int() == other.to_int()
 }
 
 ///|
-pub impl Hash for SubpixelBin with hash_combine(self, hasher) {
+pub impl Hash for SubpixelBin with fn hash_combine(self, hasher) {
   hasher.combine_int(self.to_int())
 }
 
 ///|
-pub impl Show for SubpixelBin with output(self, logger) {
+pub impl Show for SubpixelBin with fn output(self, logger) {
   logger.write_string(
     match self {
       Zero => "Zero"
@@ -77,7 +77,7 @@ pub impl Show for SubpixelBin with output(self, logger) {
 }
 
 ///|
-pub impl @debug.Debug for SubpixelBin with to_repr(self) {
+pub impl @debug.Debug for SubpixelBin with fn to_repr(self) {
   @debug.Repr::literal(
     match self {
       Zero => "Zero"
@@ -156,7 +156,7 @@ pub struct CacheKey {
 }
 
 ///|
-pub impl Eq for CacheKey with equal(self, other) {
+pub impl Eq for CacheKey with fn equal(self, other) {
   self.font_id == other.font_id &&
   self.glyph_id == other.glyph_id &&
   self.font_size_bits == other.font_size_bits &&
@@ -167,7 +167,7 @@ pub impl Eq for CacheKey with equal(self, other) {
 }
 
 ///|
-pub impl Hash for CacheKey with hash_combine(self, hasher) {
+pub impl Hash for CacheKey with fn hash_combine(self, hasher) {
   hasher.combine_int(self.font_id)
   hasher.combine_int(self.glyph_id)
   hasher.combine_uint(self.font_size_bits)
@@ -178,7 +178,7 @@ pub impl Hash for CacheKey with hash_combine(self, hasher) {
 }
 
 ///|
-pub impl Show for CacheKey with output(self, logger) {
+pub impl Show for CacheKey with fn output(self, logger) {
   logger.write_string("CacheKey{")
   logger.write_string("font_id=")
   logger.write_string(self.font_id.to_string())

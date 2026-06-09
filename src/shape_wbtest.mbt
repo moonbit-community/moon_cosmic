@@ -166,8 +166,8 @@ test "BidiInfo stays responsive on long neutral-heavy numeric input" {
 
 ///|
 test "BidiInfo auto paragraph direction follows first strong character" {
-  inspect(BidiInfo::new("א 1 A").rtl(), content="true")
-  inspect(BidiInfo::new("A 1 א").rtl(), content="false")
+  debug_inspect(BidiInfo::new("א 1 A").rtl(), content="true")
+  debug_inspect(BidiInfo::new("A 1 א").rtl(), content="false")
 }
 
 ///|
