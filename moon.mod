@@ -3,10 +3,10 @@ name = "Milky2018/moon_cosmic"
 version = "0.3.1"
 
 import {
-  "Milky2018/moon_swash@0.1.8",
-  "Milky2018/moon_zeno@0.1.2",
-  "Milky2018/moon_skrifa@0.1.7",
-  "moonbitlang/x@0.4.43",
+  "Milky2018/moon_swash@0.1.9",
+  "Milky2018/moon_zeno@0.1.3",
+  "Milky2018/moon_skrifa@0.1.8",
+  "moonbitlang/x@0.4.45",
   "moonbit-community/harfbuzz@0.1.0",
 }
 
