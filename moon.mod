@@ -3,7 +3,7 @@ name = "Milky2018/moon_cosmic"
 version = "0.3.2"
 
 import {
-  "Milky2018/moon_swash@0.1.9",
+  "Milky2018/moon_swash@0.1.10",
   "Milky2018/moon_zeno@0.1.3",
   "Milky2018/moon_skrifa@0.1.8",
   "moonbitlang/x@0.4.45",
