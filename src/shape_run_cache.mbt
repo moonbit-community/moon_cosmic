@@ -36,7 +36,7 @@ pub fn ShapeRunKey::new(text : String, attrs_list : AttrsList) -> ShapeRunKey {
 }
 
 ///|
-pub impl Eq for ShapeRunKey with equal(self, other) {
+pub impl Eq for ShapeRunKey with fn equal(self, other) {
   if self.text != other.text ||
     self.default_attrs != other.default_attrs ||
     self.attrs_spans.length() != other.attrs_spans.length() {
@@ -53,7 +53,7 @@ pub impl Eq for ShapeRunKey with equal(self, other) {
 }
 
 ///|
-pub impl Hash for ShapeRunKey with hash_combine(self, hasher) {
+pub impl Hash for ShapeRunKey with fn hash_combine(self, hasher) {
   hasher.combine_string(self.text)
   self.default_attrs.hash_combine(hasher)
   hasher.combine_int(self.attrs_spans.length())
@@ -134,6 +134,6 @@ pub fn ShapeRunCache::trim(self : ShapeRunCache, keep_ages : UInt64) -> Unit {
 }
 
 ///|
-pub impl Show for ShapeRunCache with output(_self, logger) {
+pub impl Show for ShapeRunCache with fn output(_self, logger) {
   logger.write_string("ShapeRunCache { .. }")
 }

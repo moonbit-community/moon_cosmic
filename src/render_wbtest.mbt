@@ -19,7 +19,7 @@ pub struct DecorationTestRenderer {
 }
 
 ///|
-pub impl Renderer for DecorationTestRenderer with rectangle(
+pub impl Renderer for DecorationTestRenderer with fn rectangle(
   self,
   x,
   y,
@@ -31,7 +31,7 @@ pub impl Renderer for DecorationTestRenderer with rectangle(
 }
 
 ///|
-pub impl Renderer for DecorationTestRenderer with glyph(
+pub impl Renderer for DecorationTestRenderer with fn glyph(
   self,
   physical_glyph,
   color,

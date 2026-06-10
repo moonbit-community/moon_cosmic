@@ -22,12 +22,12 @@ pub struct Color {
 }
 
 ///|
-pub impl Eq for Color with equal(self, other) {
+pub impl Eq for Color with fn equal(self, other) {
   self.value == other.value
 }
 
 ///|
-pub impl Hash for Color with hash_combine(self, hasher) {
+pub impl Hash for Color with fn hash_combine(self, hasher) {
   hasher.combine_uint(self.value)
 }
 
@@ -93,7 +93,7 @@ pub(all) enum Family {
 }
 
 ///|
-pub impl Eq for Family with equal(self, other) {
+pub impl Eq for Family with fn equal(self, other) {
   match (self, other) {
     (Name(a), Name(b)) => a == b
     (Serif, Serif) => true
@@ -114,7 +114,7 @@ pub impl Eq for Family with equal(self, other) {
 }
 
 ///|
-pub impl Hash for Family with hash_combine(self, hasher) {
+pub impl Hash for Family with fn hash_combine(self, hasher) {
   match self {
     Name(name) => {
       hasher.combine_int(0)
@@ -137,7 +137,7 @@ pub impl Hash for Family with hash_combine(self, hasher) {
 }
 
 ///|
-pub impl Show for Family with output(self, logger) {
+pub impl Show for Family with fn output(self, logger) {
   match self {
     Name(name) => {
       logger.write_string("Name(\"")
@@ -226,19 +226,19 @@ pub fn CacheMetrics::line_height(self : CacheMetrics) -> Float {
 }
 
 ///|
-pub impl Eq for CacheMetrics with equal(self, other) {
+pub impl Eq for CacheMetrics with fn equal(self, other) {
   self.font_size_bits == other.font_size_bits &&
   self.line_height_bits == other.line_height_bits
 }
 
 ///|
-pub impl Hash for CacheMetrics with hash_combine(self, hasher) {
+pub impl Hash for CacheMetrics with fn hash_combine(self, hasher) {
   hasher.combine_uint(self.font_size_bits)
   hasher.combine_uint(self.line_height_bits)
 }
 
 ///|
-pub impl Show for CacheMetrics with output(self, logger) {
+pub impl Show for CacheMetrics with fn output(self, logger) {
   logger.write_string("CacheMetrics{font_size_bits=")
   logger.write_string(self.font_size_bits.to_string())
   logger.write_string(", line_height_bits=")
@@ -267,17 +267,17 @@ pub fn Weight::value(self : Weight) -> Int {
 }
 
 ///|
-pub impl Eq for Weight with equal(self, other) {
+pub impl Eq for Weight with fn equal(self, other) {
   self.value == other.value
 }
 
 ///|
-pub impl Hash for Weight with hash_combine(self, hasher) {
+pub impl Hash for Weight with fn hash_combine(self, hasher) {
   hasher.combine_int(self.value)
 }
 
 ///|
-pub impl Show for Weight with output(self, logger) {
+pub impl Show for Weight with fn output(self, logger) {
   logger.write_string(self.value.to_string())
 }
 
@@ -302,12 +302,12 @@ pub fn FeatureTag::as_tag(self : FeatureTag) -> UInt {
 }
 
 ///|
-pub impl Eq for FeatureTag with equal(self, other) {
+pub impl Eq for FeatureTag with fn equal(self, other) {
   self.value == other.value
 }
 
 ///|
-pub impl Hash for FeatureTag with hash_combine(self, hasher) {
+pub impl Hash for FeatureTag with fn hash_combine(self, hasher) {
   hasher.combine_uint(self.value)
 }
 
@@ -333,12 +333,12 @@ pub fn Feature::value(self : Feature) -> UInt {
 }
 
 ///|
-pub impl Eq for Feature with equal(self, other) {
+pub impl Eq for Feature with fn equal(self, other) {
   self.tag == other.tag && self.value == other.value
 }
 
 ///|
-pub impl Hash for Feature with hash_combine(self, hasher) {
+pub impl Hash for Feature with fn hash_combine(self, hasher) {
   self.tag.hash_combine(hasher)
   hasher.combine_uint(self.value)
 }
@@ -386,7 +386,7 @@ pub fn FontFeatures::disable(
 }
 
 ///|
-pub impl Eq for FontFeatures with equal(self, other) {
+pub impl Eq for FontFeatures with fn equal(self, other) {
   if self.features.length() != other.features.length() {
     return false
   }
@@ -399,7 +399,7 @@ pub impl Eq for FontFeatures with equal(self, other) {
 }
 
 ///|
-pub impl Hash for FontFeatures with hash_combine(self, hasher) {
+pub impl Hash for FontFeatures with fn hash_combine(self, hasher) {
   hasher.combine_int(self.features.length())
   for feature in self.features {
     feature.hash_combine(hasher)
@@ -439,12 +439,12 @@ pub fn LetterSpacing::value(self : LetterSpacing) -> Float {
 }
 
 ///|
-pub impl Eq for LetterSpacing with equal(self, other) {
+pub impl Eq for LetterSpacing with fn equal(self, other) {
   self.bits == other.bits
 }
 
 ///|
-pub impl Hash for LetterSpacing with hash_combine(self, hasher) {
+pub impl Hash for LetterSpacing with fn hash_combine(self, hasher) {
   hasher.combine_uint(self.bits)
 }
 
@@ -456,7 +456,7 @@ pub(all) enum UnderlineStyle {
 }
 
 ///|
-pub impl Eq for UnderlineStyle with equal(self, other) {
+pub impl Eq for UnderlineStyle with fn equal(self, other) {
   match (self, other) {
     (None, None) => true
     (Single, Single) => true
@@ -466,7 +466,7 @@ pub impl Eq for UnderlineStyle with equal(self, other) {
 }
 
 ///|
-pub impl Hash for UnderlineStyle with hash_combine(self, hasher) {
+pub impl Hash for UnderlineStyle with fn hash_combine(self, hasher) {
   match self {
     None => hasher.combine_int(0)
     Single => hasher.combine_int(1)
@@ -502,7 +502,7 @@ pub fn TextDecoration::has_decoration(self : TextDecoration) -> Bool {
 }
 
 ///|
-pub impl Eq for TextDecoration with equal(self, other) {
+pub impl Eq for TextDecoration with fn equal(self, other) {
   self.underline == other.underline &&
   self.underline_color_opt == other.underline_color_opt &&
   self.strikethrough == other.strikethrough &&
@@ -512,7 +512,7 @@ pub impl Eq for TextDecoration with equal(self, other) {
 }
 
 ///|
-pub impl Hash for TextDecoration with hash_combine(self, hasher) {
+pub impl Hash for TextDecoration with fn hash_combine(self, hasher) {
   self.underline.hash_combine(hasher)
   match self.underline_color_opt {
     None => hasher.combine_int(0)
@@ -554,12 +554,12 @@ pub fn DecorationMetrics::new(
 }
 
 ///|
-pub impl Eq for DecorationMetrics with equal(self, other) {
+pub impl Eq for DecorationMetrics with fn equal(self, other) {
   self.offset == other.offset && self.thickness == other.thickness
 }
 
 ///|
-pub impl Hash for DecorationMetrics with hash_combine(self, hasher) {
+pub impl Hash for DecorationMetrics with fn hash_combine(self, hasher) {
   hasher.combine_uint(float_to_bits(self.offset))
   hasher.combine_uint(float_to_bits(self.thickness))
 }
@@ -573,7 +573,7 @@ pub struct GlyphDecorationData {
 }
 
 ///|
-pub impl Eq for GlyphDecorationData with equal(self, other) {
+pub impl Eq for GlyphDecorationData with fn equal(self, other) {
   self.text_decoration == other.text_decoration &&
   self.underline_metrics == other.underline_metrics &&
   self.strikethrough_metrics == other.strikethrough_metrics &&
@@ -581,7 +581,7 @@ pub impl Eq for GlyphDecorationData with equal(self, other) {
 }
 
 ///|
-pub impl Hash for GlyphDecorationData with hash_combine(self, hasher) {
+pub impl Hash for GlyphDecorationData with fn hash_combine(self, hasher) {
   self.text_decoration.hash_combine(hasher)
   self.underline_metrics.hash_combine(hasher)
   self.strikethrough_metrics.hash_combine(hasher)
@@ -804,7 +804,7 @@ pub fn Attrs::compatible(self : Attrs, other : Attrs) -> Bool {
 }
 
 ///|
-pub impl Eq for Attrs with equal(self, other) {
+pub impl Eq for Attrs with fn equal(self, other) {
   self.color_opt == other.color_opt &&
   self.metadata == other.metadata &&
   self.family == other.family &&
@@ -819,7 +819,7 @@ pub impl Eq for Attrs with equal(self, other) {
 }
 
 ///|
-pub impl Hash for Attrs with hash_combine(self, hasher) {
+pub impl Hash for Attrs with fn hash_combine(self, hasher) {
   match self.color_opt {
     None => hasher.combine_int(0)
     Some(color) => {
@@ -859,14 +859,14 @@ pub struct AttrsSpan {
 }
 
 ///|
-pub impl Eq for AttrsSpan with equal(self, other) {
+pub impl Eq for AttrsSpan with fn equal(self, other) {
   self.start == other.start &&
   self.end == other.end &&
   self.attrs == other.attrs
 }
 
 ///|
-pub impl Hash for AttrsSpan with hash_combine(self, hasher) {
+pub impl Hash for AttrsSpan with fn hash_combine(self, hasher) {
   hasher.combine_int(self.start)
   hasher.combine_int(self.end)
   self.attrs.hash_combine(hasher)
@@ -894,7 +894,7 @@ pub fn AttrsList::spans_iter(self : AttrsList) -> Array[AttrsSpan] {
 }
 
 ///|
-pub impl Eq for AttrsList with equal(self, other) {
+pub impl Eq for AttrsList with fn equal(self, other) {
   if self.defaults != other.defaults ||
     self.spans.length() != other.spans.length() {
     return false
@@ -908,7 +908,7 @@ pub impl Eq for AttrsList with equal(self, other) {
 }
 
 ///|
-pub impl Hash for AttrsList with hash_combine(self, hasher) {
+pub impl Hash for AttrsList with fn hash_combine(self, hasher) {
   self.defaults.hash_combine(hasher)
   hasher.combine_int(self.spans.length())
   for s in self.spans {

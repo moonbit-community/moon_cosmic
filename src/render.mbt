@@ -21,12 +21,12 @@
 /// Custom renderer for buffers and editors.
 pub(open) trait Renderer {
   /// Render a rectangle at x, y with size w, h and the provided `Color`.
-  rectangle(Self, x : Int, y : Int, w : UInt, h : UInt, color : Color) -> Unit
+  fn rectangle(Self, x : Int, y : Int, w : UInt, h : UInt, color : Color) -> Unit
 
   /// Render a `PhysicalGlyph` with the provided `Color`.
   ///
   /// For performance, consider using `SwashCache` directly.
-  glyph(Self, physical_glyph : PhysicalGlyph, color : Color) -> Unit
+  fn glyph(Self, physical_glyph : PhysicalGlyph, color : Color) -> Unit
 }
 
 ///|
@@ -250,12 +250,12 @@ pub fn LegacyRenderer::new(
 }
 
 ///|
-pub impl Renderer for LegacyRenderer with rectangle(self, x, y, w, h, color) {
+pub impl Renderer for LegacyRenderer with fn rectangle(self, x, y, w, h, color) {
   (self.callback)(x, y, w, h, color)
 }
 
 ///|
-pub impl Renderer for LegacyRenderer with glyph(self, physical_glyph, color) {
+pub impl Renderer for LegacyRenderer with fn glyph(self, physical_glyph, color) {
   self.cache.with_pixels(self.font_system, physical_glyph.cache_key, color, fn(
     px,
     py,

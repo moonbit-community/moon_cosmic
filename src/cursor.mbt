@@ -23,7 +23,7 @@ pub(all) enum Affinity {
 }
 
 ///|
-pub impl Eq for Affinity with equal(self, other) {
+pub impl Eq for Affinity with fn equal(self, other) {
   match (self, other) {
     (Before, Before) => true
     (After, After) => true
@@ -76,7 +76,7 @@ pub struct Cursor {
 }
 
 ///|
-pub impl Eq for Cursor with equal(self, other) {
+pub impl Eq for Cursor with fn equal(self, other) {
   self.line == other.line &&
   self.index == other.index &&
   self.affinity == other.affinity
@@ -105,7 +105,7 @@ pub struct LayoutCursor {
 }
 
 ///|
-pub impl Eq for LayoutCursor with equal(self, other) {
+pub impl Eq for LayoutCursor with fn equal(self, other) {
   self.line == other.line &&
   self.layout == other.layout &&
   self.glyph == other.glyph
@@ -144,7 +144,7 @@ pub(all) enum Motion {
 }
 
 ///|
-pub impl Eq for Motion with equal(self, other) {
+pub impl Eq for Motion with fn equal(self, other) {
   match (self, other) {
     (LayoutCursor(a), LayoutCursor(b)) => a == b
     (Previous, Previous) => true

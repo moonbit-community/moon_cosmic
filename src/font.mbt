@@ -105,7 +105,7 @@ pub(all) enum FallbackProfile {
 }
 
 ///|
-pub impl Eq for FallbackProfile with equal(self, other) {
+pub impl Eq for FallbackProfile with fn equal(self, other) {
   match (self, other) {
     (Unix, Unix) => true
     (MacOS, MacOS) => true
@@ -362,7 +362,7 @@ pub struct FontMatchAttrs {
 }
 
 ///|
-pub impl Eq for FontMatchAttrs with equal(self, other) {
+pub impl Eq for FontMatchAttrs with fn equal(self, other) {
   self.family == other.family &&
   self.weight == other.weight &&
   self.stretch == other.stretch &&
@@ -370,7 +370,7 @@ pub impl Eq for FontMatchAttrs with equal(self, other) {
 }
 
 ///|
-pub impl Hash for FontMatchAttrs with hash_combine(self, hasher) {
+pub impl Hash for FontMatchAttrs with fn hash_combine(self, hasher) {
   self.family.hash_combine(hasher)
   self.weight.hash_combine(hasher)
   hasher.combine_int(self.stretch.raw().to_int())

@@ -19,12 +19,12 @@ pub struct TestRenderer {
 }
 
 ///|
-pub impl Renderer for TestRenderer with rectangle(self, x, y, w, h, color) {
+pub impl Renderer for TestRenderer with fn rectangle(self, x, y, w, h, color) {
   self.rects.push((x, y, w, h, color.value))
 }
 
 ///|
-pub impl Renderer for TestRenderer with glyph(self, physical_glyph, _color) {
+pub impl Renderer for TestRenderer with fn glyph(self, physical_glyph, _color) {
   self.glyph_pos.push((physical_glyph.x, physical_glyph.y))
 }
 

@@ -275,7 +275,7 @@ pub fn LineState::new() -> LineState {
 }
 
 ///|
-pub impl Eq for LineState with equal(self, other) {
+pub impl Eq for LineState with fn equal(self, other) {
   self.block_comment_depth == other.block_comment_depth &&
   self.markup_comment_open == other.markup_comment_open &&
   self.markup_tag_open == other.markup_tag_open &&

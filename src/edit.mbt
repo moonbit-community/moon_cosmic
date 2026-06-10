@@ -43,7 +43,7 @@ pub(all) enum Selection {
 }
 
 ///|
-pub impl Eq for Selection with equal(self, other) {
+pub impl Eq for Selection with fn equal(self, other) {
   match (self, other) {
     (None, None) => true
     (Normal(a), Normal(b)) => a == b
