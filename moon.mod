@@ -20,6 +20,4 @@ keywords = [ "text", "layout", "bidi", "shaping", "swash", "cosmic-text" ]
 
 description = "MoonBit port of cosmic-text (text shaping, layout, and editor primitives) built on moon_swash."
 
-options(
-  source: "src",
-)
+source = "src"

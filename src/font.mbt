@@ -155,9 +155,9 @@ pub fn FontSystem::new_with_locale(locale : String) -> FontSystem {
     fonts: [],
     fallback_profile_opt: None,
     fallback_warning_handler_opt: None,
-    font_matches_cache: @hashmap.HashMap::default(),
-    codepoint_support_cache: @hashmap.HashMap::default(),
-    hb_font_cache: @hashmap.HashMap::default(),
+    font_matches_cache: Default::default(),
+    codepoint_support_cache: Default::default(),
+    hb_font_cache: Default::default(),
     hb_shape_buffer: @buffer.Buffer::new(),
     shape_run_cache: ShapeRunCache::new(),
   }

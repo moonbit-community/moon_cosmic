@@ -73,8 +73,10 @@ pub(all) enum Affinity {
 }
 pub fn Affinity::after(Self) -> Bool
 pub fn Affinity::before(Self) -> Bool
+pub fn Affinity::equal(Self, Self) -> Bool
 pub fn Affinity::from_after(Bool) -> Self
 pub fn Affinity::from_before(Bool) -> Self
+pub fn Affinity::not_equal(Self, Self) -> Bool
 pub impl Eq for Affinity
 
 pub(all) enum Align {
@@ -104,16 +106,20 @@ pub fn Attrs::cache_key_flags_value(Self) -> UInt
 pub fn Attrs::color(Self, Color) -> Self
 pub fn Attrs::color_opt_value(Self) -> Color?
 pub fn Attrs::compatible(Self, Self) -> Bool
+pub fn Attrs::equal(Self, Self) -> Bool
 pub fn Attrs::family(Self, Family) -> Self
 pub fn Attrs::family_value(Self) -> Family
 pub fn Attrs::font_features(Self, FontFeatures) -> Self
 pub fn Attrs::font_features_value(Self) -> FontFeatures
+pub fn Attrs::hash(Self) -> Int
+pub fn Attrs::hash_combine(Self, Hasher) -> Unit
 pub fn Attrs::letter_spacing(Self, Float) -> Self
 pub fn Attrs::letter_spacing_opt(Self) -> Float?
 pub fn Attrs::metadata(Self) -> Int
 pub fn Attrs::metrics(Self, Metrics) -> Self
 pub fn Attrs::metrics_opt(Self) -> Metrics?
 pub fn Attrs::new() -> Self
+pub fn Attrs::not_equal(Self, Self) -> Bool
 pub fn Attrs::overline(Self) -> Self
 pub fn Attrs::overline_color(Self, Color) -> Self
 pub fn Attrs::stretch(Self, @moon_swash.Stretch) -> Self
@@ -139,8 +145,12 @@ pub struct AttrsList {
 pub fn AttrsList::add_span(Self, Int, Int, Attrs) -> Self
 pub fn AttrsList::defaults(Self) -> Attrs
 pub fn AttrsList::eq(Self, Self) -> Bool
+pub fn AttrsList::equal(Self, Self) -> Bool
 pub fn AttrsList::get_span(Self, Int) -> Attrs
+pub fn AttrsList::hash(Self) -> Int
+pub fn AttrsList::hash_combine(Self, Hasher) -> Unit
 pub fn AttrsList::new(Attrs) -> Self
+pub fn AttrsList::not_equal(Self, Self) -> Bool
 pub fn AttrsList::spans_iter(Self) -> Array[AttrsSpan]
 pub fn AttrsList::split_off(Self, Int) -> (Self, Self)
 pub impl Eq for AttrsList
@@ -151,6 +161,10 @@ pub struct AttrsSpan {
   end : Int
   attrs : Attrs
 }
+pub fn AttrsSpan::equal(Self, Self) -> Bool
+pub fn AttrsSpan::hash(Self) -> Int
+pub fn AttrsSpan::hash_combine(Self, Hasher) -> Unit
+pub fn AttrsSpan::not_equal(Self, Self) -> Bool
 pub impl Eq for AttrsSpan
 pub impl Hash for AttrsSpan
 
@@ -275,10 +289,16 @@ pub struct CacheKey {
   font_weight : Int
   flags : UInt
 }
+pub fn CacheKey::equal(Self, Self) -> Bool
 pub fn CacheKey::has_disable_hinting(Self) -> Bool
 pub fn CacheKey::has_fake_italic(Self) -> Bool
 pub fn CacheKey::has_pixel_font(Self) -> Bool
+pub fn CacheKey::hash(Self) -> Int
+pub fn CacheKey::hash_combine(Self, Hasher) -> Unit
 pub fn CacheKey::new(Int, Int, Float, (Float, Float), Int, UInt) -> (Self, Int, Int)
+pub fn CacheKey::not_equal(Self, Self) -> Bool
+pub fn CacheKey::output(Self, &Logger) -> Unit
+pub fn CacheKey::to_string(Self) -> String
 pub fn CacheKey::x_bin(Self) -> SubpixelBin
 pub fn CacheKey::y_bin(Self) -> SubpixelBin
 pub impl Eq for CacheKey
@@ -289,10 +309,16 @@ pub struct CacheMetrics {
   font_size_bits : UInt
   line_height_bits : UInt
 }
+pub fn CacheMetrics::equal(Self, Self) -> Bool
 pub fn CacheMetrics::font_size(Self) -> Float
 pub fn CacheMetrics::from_metrics(Metrics) -> Self
+pub fn CacheMetrics::hash(Self) -> Int
+pub fn CacheMetrics::hash_combine(Self, Hasher) -> Unit
 pub fn CacheMetrics::line_height(Self) -> Float
+pub fn CacheMetrics::not_equal(Self, Self) -> Bool
+pub fn CacheMetrics::output(Self, &Logger) -> Unit
 pub fn CacheMetrics::to_metrics(Self) -> Metrics
+pub fn CacheMetrics::to_string(Self) -> String
 pub impl Eq for CacheMetrics
 pub impl Hash for CacheMetrics
 pub impl Show for CacheMetrics
@@ -337,7 +363,11 @@ pub struct Color {
 pub fn Color::a(Self) -> Byte
 pub fn Color::as_rgba(Self) -> (Byte, Byte, Byte, Byte)
 pub fn Color::b(Self) -> Byte
+pub fn Color::equal(Self, Self) -> Bool
 pub fn Color::g(Self) -> Byte
+pub fn Color::hash(Self) -> Int
+pub fn Color::hash_combine(Self, Hasher) -> Unit
+pub fn Color::not_equal(Self, Self) -> Bool
 pub fn Color::r(Self) -> Byte
 pub fn Color::rgb(Byte, Byte, Byte) -> Self
 pub fn Color::rgba(Byte, Byte, Byte, Byte) -> Self
@@ -349,15 +379,21 @@ pub struct Cursor {
   index : Int
   affinity : Affinity
 }
+pub fn Cursor::equal(Self, Self) -> Bool
 pub fn Cursor::new(Int, Int) -> Self
 pub fn Cursor::new_with_affinity(Int, Int, Affinity) -> Self
+pub fn Cursor::not_equal(Self, Self) -> Bool
 pub impl Eq for Cursor
 
 pub struct DecorationMetrics {
   offset : Float
   thickness : Float
 }
+pub fn DecorationMetrics::equal(Self, Self) -> Bool
+pub fn DecorationMetrics::hash(Self) -> Int
+pub fn DecorationMetrics::hash_combine(Self, Hasher) -> Unit
 pub fn DecorationMetrics::new(Float, Float) -> Self
+pub fn DecorationMetrics::not_equal(Self, Self) -> Bool
 pub impl Eq for DecorationMetrics
 pub impl Hash for DecorationMetrics
 
@@ -387,6 +423,7 @@ pub fn Editor::cursor(Self) -> Cursor
 pub fn Editor::cursor_position(Self) -> (Int, Int)?
 pub fn Editor::delete_range(Self, Cursor, Cursor) -> Self
 pub fn Editor::delete_selection(Self) -> (Self, Bool)
+pub fn Editor::editor(Self) -> Self
 pub fn Editor::finish_change(Self) -> (Self, Change?)
 pub fn Editor::insert_at(Self, Cursor, String, AttrsList?) -> (Self, Cursor)
 pub fn Editor::insert_string(Self, String, AttrsList?) -> Self
@@ -396,6 +433,7 @@ pub fn Editor::selection(Self) -> Selection
 pub fn Editor::selection_bounds(Self) -> (Cursor, Cursor)?
 pub fn Editor::set_auto_indent(Self, Bool) -> Self
 pub fn Editor::set_cursor(Self, Cursor) -> Self
+pub fn Editor::set_editor(Self, Self) -> Self
 pub fn Editor::set_selection(Self, Selection) -> Self
 pub fn Editor::set_tab_width(Self, Int) -> Self
 pub fn Editor::start_change(Self) -> Self
@@ -426,6 +464,8 @@ pub(all) enum FallbackProfile {
   Windows
   Other
 }
+pub fn FallbackProfile::equal(Self, Self) -> Bool
+pub fn FallbackProfile::not_equal(Self, Self) -> Bool
 pub impl Eq for FallbackProfile
 
 pub(all) enum Family {
@@ -444,6 +484,12 @@ pub(all) enum Family {
   Math
   FangSong
 }
+pub fn Family::equal(Self, Self) -> Bool
+pub fn Family::hash(Self) -> Int
+pub fn Family::hash_combine(Self, Hasher) -> Unit
+pub fn Family::not_equal(Self, Self) -> Bool
+pub fn Family::output(Self, &Logger) -> Unit
+pub fn Family::to_string(Self) -> String
 pub impl Eq for Family
 pub impl Hash for Family
 pub impl Show for Family
@@ -452,7 +498,11 @@ pub struct Feature {
   tag : FeatureTag
   value : UInt
 }
+pub fn Feature::equal(Self, Self) -> Bool
+pub fn Feature::hash(Self) -> Int
+pub fn Feature::hash_combine(Self, Hasher) -> Unit
 pub fn Feature::new(FeatureTag, UInt) -> Self
+pub fn Feature::not_equal(Self, Self) -> Bool
 pub fn Feature::tag(Self) -> FeatureTag
 pub fn Feature::value(Self) -> UInt
 pub impl Eq for Feature
@@ -462,8 +512,12 @@ pub struct FeatureTag {
   value : UInt
 }
 pub fn FeatureTag::as_tag(Self) -> UInt
+pub fn FeatureTag::equal(Self, Self) -> Bool
 pub fn FeatureTag::from_tag(UInt) -> Self
+pub fn FeatureTag::hash(Self) -> Int
+pub fn FeatureTag::hash_combine(Self, Hasher) -> Unit
 pub fn FeatureTag::new(String) -> Self
+pub fn FeatureTag::not_equal(Self, Self) -> Bool
 pub impl Eq for FeatureTag
 pub impl Hash for FeatureTag
 
@@ -497,8 +551,12 @@ pub struct FontFeatures {
 }
 pub fn FontFeatures::disable(Self, FeatureTag) -> Self
 pub fn FontFeatures::enable(Self, FeatureTag) -> Self
+pub fn FontFeatures::equal(Self, Self) -> Bool
 pub fn FontFeatures::features(Self) -> Array[Feature]
+pub fn FontFeatures::hash(Self) -> Int
+pub fn FontFeatures::hash_combine(Self, Hasher) -> Unit
 pub fn FontFeatures::new() -> Self
+pub fn FontFeatures::not_equal(Self, Self) -> Bool
 pub fn FontFeatures::set(Self, FeatureTag, UInt) -> Self
 pub impl Eq for FontFeatures
 pub impl Hash for FontFeatures
@@ -509,6 +567,10 @@ pub struct FontMatchAttrs {
   stretch : @moon_swash.Stretch
   style : @moon_swash.Style
 }
+pub fn FontMatchAttrs::equal(Self, Self) -> Bool
+pub fn FontMatchAttrs::hash(Self) -> Int
+pub fn FontMatchAttrs::hash_combine(Self, Hasher) -> Unit
+pub fn FontMatchAttrs::not_equal(Self, Self) -> Bool
 pub impl Eq for FontMatchAttrs
 pub impl Hash for FontMatchAttrs
 
@@ -548,6 +610,10 @@ pub struct GlyphDecorationData {
   strikethrough_metrics : DecorationMetrics
   ascent : Float
 }
+pub fn GlyphDecorationData::equal(Self, Self) -> Bool
+pub fn GlyphDecorationData::hash(Self) -> Int
+pub fn GlyphDecorationData::hash_combine(Self, Hasher) -> Unit
+pub fn GlyphDecorationData::not_equal(Self, Self) -> Bool
 pub impl Eq for GlyphDecorationData
 pub impl Hash for GlyphDecorationData
 
@@ -570,7 +636,9 @@ pub struct LayoutCursor {
   layout : Int
   glyph : Int
 }
+pub fn LayoutCursor::equal(Self, Self) -> Bool
 pub fn LayoutCursor::new(Int, Int, Int) -> Self
+pub fn LayoutCursor::not_equal(Self, Self) -> Bool
 pub impl Eq for LayoutCursor
 
 pub struct LayoutGlyph {
@@ -623,13 +691,19 @@ pub struct LegacyRenderer {
   cache : SwashCache
   callback : (Int, Int, UInt, UInt, Color) -> Unit
 }
+pub fn LegacyRenderer::glyph(Self, PhysicalGlyph, Color) -> Unit
 pub fn LegacyRenderer::new(FontSystem, SwashCache, (Int, Int, UInt, UInt, Color) -> Unit) -> Self
+pub fn LegacyRenderer::rectangle(Self, Int, Int, UInt, UInt, Color) -> Unit
 pub impl Renderer for LegacyRenderer
 
 pub struct LetterSpacing {
   bits : UInt
 }
+pub fn LetterSpacing::equal(Self, Self) -> Bool
+pub fn LetterSpacing::hash(Self) -> Int
+pub fn LetterSpacing::hash_combine(Self, Hasher) -> Unit
 pub fn LetterSpacing::new(Float) -> Self
+pub fn LetterSpacing::not_equal(Self, Self) -> Bool
 pub fn LetterSpacing::value(Self) -> Float
 pub impl Eq for LetterSpacing
 pub impl Hash for LetterSpacing
@@ -673,7 +747,9 @@ pub struct LineState {
   markdown_fence_char_opt : Char?
   clike_preproc_continuation : Bool
 }
+pub fn LineState::equal(Self, Self) -> Bool
 pub fn LineState::new() -> Self
+pub fn LineState::not_equal(Self, Self) -> Bool
 pub impl Eq for LineState
 
 pub struct Metrics {
@@ -708,6 +784,8 @@ pub(all) enum Motion {
   BufferEnd
   GotoLine(Int)
 }
+pub fn Motion::equal(Self, Self) -> Bool
+pub fn Motion::not_equal(Self, Self) -> Bool
 pub impl Eq for Motion
 
 pub struct ParagraphInfo {
@@ -740,6 +818,8 @@ pub(all) enum Selection {
   Line(Cursor)
   Word(Cursor)
 }
+pub fn Selection::equal(Self, Self) -> Bool
+pub fn Selection::not_equal(Self, Self) -> Bool
 pub impl Eq for Selection
 
 pub struct ShapeGlyph {
@@ -788,7 +868,9 @@ pub fn ShapeRunCache::clear(Self) -> Unit
 pub fn ShapeRunCache::get(Self, ShapeRunKey) -> Array[ShapeGlyph]?
 pub fn ShapeRunCache::insert(Self, ShapeRunKey, Array[ShapeGlyph]) -> Unit
 pub fn ShapeRunCache::new() -> Self
+pub fn ShapeRunCache::output(Self, &Logger) -> Unit
 pub fn ShapeRunCache::peek(Self, ShapeRunKey) -> Array[ShapeGlyph]?
+pub fn ShapeRunCache::to_string(Self) -> String
 pub fn ShapeRunCache::trim(Self, UInt64) -> Unit
 pub impl Show for ShapeRunCache
 
@@ -797,7 +879,11 @@ pub struct ShapeRunKey {
   default_attrs : Attrs
   attrs_spans : Array[(Int, Int, Attrs)]
 }
+pub fn ShapeRunKey::equal(Self, Self) -> Bool
+pub fn ShapeRunKey::hash(Self) -> Int
+pub fn ShapeRunKey::hash_combine(Self, Hasher) -> Unit
 pub fn ShapeRunKey::new(String, AttrsList) -> Self
+pub fn ShapeRunKey::not_equal(Self, Self) -> Bool
 pub impl Eq for ShapeRunKey
 pub impl Hash for ShapeRunKey
 
@@ -813,7 +899,14 @@ pub enum SubpixelBin {
   Three
 }
 pub fn SubpixelBin::as_float(Self) -> Float
+pub fn SubpixelBin::equal(Self, Self) -> Bool
+pub fn SubpixelBin::hash(Self) -> Int
+pub fn SubpixelBin::hash_combine(Self, Hasher) -> Unit
 pub fn SubpixelBin::new(Float) -> (Int, Self)
+pub fn SubpixelBin::not_equal(Self, Self) -> Bool
+pub fn SubpixelBin::output(Self, &Logger) -> Unit
+pub fn SubpixelBin::to_repr(Self) -> @debug.Repr
+pub fn SubpixelBin::to_string(Self) -> String
 pub impl Eq for SubpixelBin
 pub impl Hash for SubpixelBin
 pub impl Show for SubpixelBin
@@ -903,8 +996,12 @@ pub struct TextDecoration {
   overline : Bool
   overline_color_opt : Color?
 }
+pub fn TextDecoration::equal(Self, Self) -> Bool
 pub fn TextDecoration::has_decoration(Self) -> Bool
+pub fn TextDecoration::hash(Self) -> Int
+pub fn TextDecoration::hash_combine(Self, Hasher) -> Unit
 pub fn TextDecoration::new() -> Self
+pub fn TextDecoration::not_equal(Self, Self) -> Bool
 pub impl Eq for TextDecoration
 pub impl Hash for TextDecoration
 
@@ -927,6 +1024,10 @@ pub(all) enum UnderlineStyle {
   Single
   Double
 }
+pub fn UnderlineStyle::equal(Self, Self) -> Bool
+pub fn UnderlineStyle::hash(Self) -> Int
+pub fn UnderlineStyle::hash_combine(Self, Hasher) -> Unit
+pub fn UnderlineStyle::not_equal(Self, Self) -> Bool
 pub impl Eq for UnderlineStyle
 pub impl Hash for UnderlineStyle
 
@@ -953,18 +1054,35 @@ pub struct ViEditor {
   registers : Array[(Char, Selection, String)]
   register_opt : String?
 }
+pub fn ViEditor::action(Self, Action) -> Self
+pub fn ViEditor::apply_change(Self, Change) -> (Self, Bool)
+pub fn ViEditor::auto_indent(Self) -> Bool
 pub fn ViEditor::changed(Self) -> Bool
+pub fn ViEditor::copy_selection(Self) -> String?
+pub fn ViEditor::cursor(Self) -> Cursor
+pub fn ViEditor::cursor_position(Self) -> (Int, Int)?
+pub fn ViEditor::delete_range(Self, Cursor, Cursor) -> Self
+pub fn ViEditor::delete_selection(Self) -> (Self, Bool)
 pub fn ViEditor::editor(Self) -> Editor
 pub fn ViEditor::escape(Self) -> Self
 pub fn ViEditor::feed_char(Self, Char) -> Self
 pub fn ViEditor::feed_string(Self, String) -> Self
+pub fn ViEditor::finish_change(Self) -> (Self, Change?)
+pub fn ViEditor::insert_string(Self, String, AttrsList?) -> Self
 pub fn ViEditor::mode(Self) -> ViMode
 pub fn ViEditor::new(Editor) -> Self
 pub fn ViEditor::redo(Self) -> Self
 pub fn ViEditor::save_point(Self) -> Self
+pub fn ViEditor::selection(Self) -> Selection
+pub fn ViEditor::set_auto_indent(Self, Bool) -> Self
 pub fn ViEditor::set_changed(Self, Bool) -> Self
+pub fn ViEditor::set_cursor(Self, Cursor) -> Self
 pub fn ViEditor::set_editor(Self, Editor) -> Self
 pub fn ViEditor::set_passthrough(Self, Bool) -> Self
+pub fn ViEditor::set_selection(Self, Selection) -> Self
+pub fn ViEditor::set_tab_width(Self, Int) -> Self
+pub fn ViEditor::start_change(Self) -> Self
+pub fn ViEditor::tab_width(Self) -> Int
 pub fn ViEditor::undo(Self) -> Self
 pub impl Edit for ViEditor
 
@@ -989,8 +1107,14 @@ pub struct Weight {
   value : Int
 }
 pub fn Weight::bold() -> Self
+pub fn Weight::equal(Self, Self) -> Bool
+pub fn Weight::hash(Self) -> Int
+pub fn Weight::hash_combine(Self, Hasher) -> Unit
 pub fn Weight::new(Int) -> Self
 pub fn Weight::normal() -> Self
+pub fn Weight::not_equal(Self, Self) -> Bool
+pub fn Weight::output(Self, &Logger) -> Unit
+pub fn Weight::to_string(Self) -> String
 pub fn Weight::value(Self) -> Int
 pub impl Eq for Weight
 pub impl Hash for Weight
@@ -1033,4 +1157,3 @@ pub(open) trait Renderer {
   fn rectangle(Self, Int, Int, UInt, UInt, Color) -> Unit
   fn glyph(Self, PhysicalGlyph, Color) -> Unit
 }
-
