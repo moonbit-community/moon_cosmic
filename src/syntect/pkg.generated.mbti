@@ -32,7 +32,9 @@ pub struct LineState {
   markdown_fence_char_opt : Char?
   clike_preproc_continuation : Bool
 }
+pub fn LineState::equal(Self, Self) -> Bool
 pub fn LineState::new() -> Self
+pub fn LineState::not_equal(Self, Self) -> Bool
 pub impl Eq for LineState
 
 pub struct SyntaxEditor {
@@ -115,4 +117,3 @@ pub struct TokenSpan {
 // Type aliases
 
 // Traits
-

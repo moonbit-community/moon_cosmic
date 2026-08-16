@@ -73,7 +73,7 @@ pub struct ShapeRunCache {
 
 ///|
 pub fn ShapeRunCache::new() -> ShapeRunCache {
-  ShapeRunCache::{ age: 0UL, cache: @hashmap.HashMap::default() }
+  ShapeRunCache::{ age: 0UL, cache: Default::default() }
 }
 
 ///|
