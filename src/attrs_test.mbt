@@ -92,7 +92,7 @@ test "Family/Weight constructors are usable" {
   ignore(Weight::bold())
   let attrs = Attrs::new()
     .stretch(@moon_swash.Stretch::condensed())
-    .style(@moon_swash.Style::Italic)
+    .style(Italic)
   debug_inspect(
     (attrs.stretch_value().is_condensed(), attrs.style_value().to_string()),
     content="(true, \"italic\")",
@@ -110,7 +110,7 @@ test "Attrs extended fields: color/cache-key/spacing/features/decoration" {
     .cache_key_flags(flags)
     .letter_spacing(0.25F)
     .font_features(features)
-    .underline(UnderlineStyle::Double)
+    .underline(Double)
     .underline_color(Color::rgb(8, 7, 6))
     .strikethrough()
     .overline()
@@ -119,10 +119,7 @@ test "Attrs extended fields: color/cache-key/spacing/features/decoration" {
   inspect(attrs.cache_key_flags_value() == flags, content="true")
   inspect(attrs.font_features_value().features().length(), content="2")
   inspect(attrs.text_decoration_value().has_decoration(), content="true")
-  inspect(
-    attrs.text_decoration_value().underline == UnderlineStyle::Double,
-    content="true",
-  )
+  inspect(attrs.text_decoration_value().underline == Double, content="true")
   inspect(
     attrs.compatible(Attrs::new().color(Color::rgb(255, 0, 0))),
     content="true",

@@ -31,11 +31,11 @@ test "BufferLine.set_align returns changed only on value change" {
   let line0 = BufferLine::new("abc", Lf, attrs, Advanced)
   let (line1, changed1) = line0.set_align(None)
   inspect(changed1, content="false")
-  let (line2, changed2) = line1.set_align(Some(Align::Center))
+  let (line2, changed2) = line1.set_align(Some(Center))
   inspect(changed2, content="true")
-  let (line3, changed3) = line2.set_align(Some(Align::Center))
+  let (line3, changed3) = line2.set_align(Some(Center))
   inspect(changed3, content="false")
-  let (line4, changed4) = line3.set_align(Some(Align::Left))
+  let (line4, changed4) = line3.set_align(Some(Left))
   inspect(changed4, content="true")
   inspect(
     match line4.align() {
@@ -63,15 +63,7 @@ test "BufferLine.set_ending invalidates shaping cache" {
   let line0 = BufferLine::new("abc", Lf, attrs, Advanced)
   let line1 = line0
     .shape(4)
-    .layout(
-      10.0F,
-      Some(100.0F),
-      Wrap::None,
-      Ellipsize::None,
-      None,
-      4,
-      Hinting::Disabled,
-    )
+    .layout(10.0F, Some(100.0F), None, None, None, 4, Disabled)
   inspect(
     match line1.shape_opt() {
       Some(_) => true
@@ -125,15 +117,7 @@ test "BufferLine.shape builds 1 glyph per code unit (tab uses tab_width cells)" 
 test "BufferLine.layout wraps words using whitespace segmentation" {
   let attrs = AttrsList::new(Attrs::new())
   let line0 = BufferLine::new("hello world", Lf, attrs, Advanced)
-  let line1 = line0.layout(
-    10.0F,
-    Some(60.0F),
-    Wrap::Word,
-    Ellipsize::None,
-    None,
-    4,
-    Hinting::Disabled,
-  )
+  let line1 = line0.layout(10.0F, Some(60.0F), Word, None, None, 4, Disabled)
   if line1.layout_opt() is Some(layout) {
     inspect(layout.length(), content="2")
     inspect(layout[0].start, content="0")
@@ -149,16 +133,8 @@ test "BufferLine.layout wraps words using whitespace segmentation" {
 test "BufferLine.layout: Align::Justified does not justify last visual line" {
   let attrs = AttrsList::new(Attrs::new())
   let line0 = BufferLine::new("a a a a a", Lf, attrs, Advanced)
-  let (line0, _) = line0.set_align(Some(Align::Justified))
-  let line1 = line0.layout(
-    10.0F,
-    Some(60.0F),
-    Wrap::Word,
-    Ellipsize::None,
-    None,
-    4,
-    Hinting::Disabled,
-  )
+  let (line0, _) = line0.set_align(Some(Justified))
+  let line1 = line0.layout(10.0F, Some(60.0F), Word, None, None, 4, Disabled)
   if line1.layout_opt() is Some(layout) {
     inspect(layout.length(), content="2")
     // First line: justified to full width.
@@ -174,24 +150,8 @@ test "BufferLine.layout: Align::Justified does not justify last visual line" {
 test "BufferLine.layout: Hinting::Enabled rounds advances" {
   let attrs = AttrsList::new(Attrs::new())
   let line0 = BufferLine::new("ab", Lf, attrs, Advanced)
-  let disabled = line0.layout(
-    10.5F,
-    None,
-    Wrap::None,
-    Ellipsize::None,
-    None,
-    4,
-    Hinting::Disabled,
-  )
-  let enabled = line0.layout(
-    10.5F,
-    None,
-    Wrap::None,
-    Ellipsize::None,
-    None,
-    4,
-    Hinting::Enabled,
-  )
+  let disabled = line0.layout(10.5F, None, None, None, None, 4, Disabled)
+  let enabled = line0.layout(10.5F, None, None, None, None, 4, Enabled)
   if disabled.layout_opt() is Some(l0) && enabled.layout_opt() is Some(l1) {
     inspect(l0[0].w, content="21")
     inspect(l1[0].w, content="22")
@@ -204,16 +164,8 @@ test "BufferLine.layout: Hinting::Enabled rounds advances" {
 test "BufferLine.layout: Align::Start follows paragraph direction in RTL lines" {
   let attrs = AttrsList::new(Attrs::new())
   let line0 = BufferLine::new("\u{05D0}\u{05D1}", Lf, attrs, Advanced)
-  let (line1, _) = line0.set_align(Some(Align::Start))
-  let line2 = line1.layout(
-    10.0F,
-    Some(40.0F),
-    Wrap::None,
-    Ellipsize::None,
-    None,
-    4,
-    Hinting::Disabled,
-  )
+  let (line1, _) = line0.set_align(Some(Start))
+  let line2 = line1.layout(10.0F, Some(40.0F), None, None, None, 4, Disabled)
   if line2.shape_opt() is Some(shape) {
     inspect(shape.rtl, content="true")
   } else {
@@ -233,16 +185,8 @@ test "BufferLine.layout: Align::Start follows paragraph direction in RTL lines" 
 test "BufferLine.layout: Align::End is opposite Start in RTL lines" {
   let attrs = AttrsList::new(Attrs::new())
   let line0 = BufferLine::new("\u{05D0}\u{05D1}", Lf, attrs, Advanced)
-  let (line1, _) = line0.set_align(Some(Align::End))
-  let line2 = line1.layout(
-    10.0F,
-    Some(40.0F),
-    Wrap::None,
-    Ellipsize::None,
-    None,
-    4,
-    Hinting::Disabled,
-  )
+  let (line1, _) = line0.set_align(Some(End))
+  let line2 = line1.layout(10.0F, Some(40.0F), None, None, None, 4, Disabled)
   if line2.layout_opt() is Some(layout) {
     inspect(layout.length(), content="1")
     inspect(layout[0].w, content="20")
@@ -256,15 +200,7 @@ test "BufferLine.layout: Align::End is opposite Start in RTL lines" {
 test "BufferLine.layout: whitespace-only word wrap keeps only final blank segment" {
   let attrs = AttrsList::new(Attrs::new())
   let line0 = BufferLine::new("   ", Lf, attrs, Advanced)
-  let line1 = line0.layout(
-    10.0F,
-    Some(5.0F),
-    Wrap::Word,
-    Ellipsize::None,
-    None,
-    4,
-    Hinting::Disabled,
-  )
+  let line1 = line0.layout(10.0F, Some(5.0F), Word, None, None, 4, Disabled)
   if line1.layout_opt() is Some(layout) {
     inspect(layout.length(), content="1")
     inspect(layout[0].w, content="10")
@@ -280,15 +216,7 @@ test "BufferLine.layout: whitespace-only word wrap keeps only final blank segmen
 test "BufferLine.layout: whitespace-only word wrap keeps blanks when unbounded" {
   let attrs = AttrsList::new(Attrs::new())
   let line0 = BufferLine::new("   ", Lf, attrs, Advanced)
-  let line1 = line0.layout(
-    10.0F,
-    None,
-    Wrap::Word,
-    Ellipsize::None,
-    None,
-    4,
-    Hinting::Disabled,
-  )
+  let line1 = line0.layout(10.0F, None, Word, None, None, 4, Disabled)
   if line1.layout_opt() is Some(layout) {
     inspect(layout.length(), content="1")
     inspect(layout[0].w, content="30")
@@ -307,11 +235,11 @@ test "BufferLine.layout: Ellipsize::End trims to one visual line within width" {
   let line1 = line0.layout(
     10.0F,
     Some(30.0F),
-    Wrap::Word,
-    Ellipsize::End(EllipsizeHeightLimit::Lines(1)),
+    Word,
+    End(Lines(1)),
     None,
     4,
-    Hinting::Disabled,
+    Disabled,
   )
   if line1.layout_opt() is Some(layout) {
     inspect(layout.length(), content="1")
@@ -334,11 +262,11 @@ test "BufferLine.layout: Ellipsize::Start puts ellipsis glyph at line start" {
   let line1 = line0.layout(
     10.0F,
     Some(30.0F),
-    Wrap::Word,
-    Ellipsize::Start(EllipsizeHeightLimit::Height(15.0F)),
+    Word,
+    Start(Height(15.0F)),
     None,
     4,
-    Hinting::Disabled,
+    Disabled,
   )
   if line1.layout_opt() is Some(layout) {
     inspect(layout.length(), content="1")
@@ -352,17 +280,17 @@ test "BufferLine.layout: Ellipsize::Start puts ellipsis glyph at line start" {
 
 ///|
 test "BufferLine.layout: ellipsize keeps decoration spans mapped to visible glyphs" {
-  let decorated = Attrs::new().underline(UnderlineStyle::Double)
+  let decorated = Attrs::new().underline(Double)
   let attrs = AttrsList::new(decorated)
   let line0 = BufferLine::new("a a a a a", Lf, attrs, Advanced)
   let line1 = line0.layout(
     10.0F,
     Some(30.0F),
-    Wrap::Word,
-    Ellipsize::End(EllipsizeHeightLimit::Lines(1)),
+    Word,
+    End(Lines(1)),
     None,
     4,
-    Hinting::Disabled,
+    Disabled,
   )
   if line1.layout_opt() is Some(layout) {
     inspect(layout.length(), content="1")
@@ -404,11 +332,11 @@ test "BufferLine.layout_runs returns visible runs for a laid-out line" {
   let line = BufferLine::new("ab", None, attrs, Basic).layout(
     10.0F,
     Some(100.0F),
-    Wrap::None,
-    Ellipsize::None,
+    None,
+    None,
     None,
     4,
-    Hinting::Disabled,
+    Disabled,
   )
   let runs : Array[LayoutRun] = []
   for run in line.layout_runs(None, 12.0F) {

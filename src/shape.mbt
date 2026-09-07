@@ -61,7 +61,7 @@ pub fn ShapeGlyph::new(
   glyph_id : Int,
   metadata : Int,
 ) -> ShapeGlyph {
-  ShapeGlyph::{
+  {
     start,
     end,
     x_advance,
@@ -90,7 +90,7 @@ pub fn ShapeGlyph::with_ascent_descent(
   ascent : Float,
   descent : Float,
 ) -> ShapeGlyph {
-  ShapeGlyph::{ ..self, ascent, descent, }
+  { ..self, ascent, descent, }
 }
 
 ///|
@@ -102,12 +102,12 @@ pub struct ShapeLine {
 
 ///|
 pub fn ShapeLine::new(rtl : Bool, glyphs : Array[ShapeGlyph]) -> ShapeLine {
-  ShapeLine::{ text: "", rtl, glyphs, }
+  { text: "", rtl, glyphs, }
 }
 
 ///|
 pub fn ShapeLine::empty() -> ShapeLine {
-  ShapeLine::{ text: "", rtl: false, glyphs: [], }
+  { text: "", rtl: false, glyphs: [], }
 }
 
 ///|
@@ -133,10 +133,7 @@ fn script_eq(a : @moon_swash.Script, b : @moon_swash.Script) -> Bool {
 ///|
 fn shape_script_needs_fallback_stage(script : @moon_swash.Script) -> Bool {
   match script {
-    @moon_swash.Script::Common
-    | @moon_swash.Script::Inherited
-    | @moon_swash.Script::Latin
-    | @moon_swash.Script::Unknown => false
+    Common | Inherited | Latin | Unknown => false
     _ => true
   }
 }
@@ -174,7 +171,7 @@ fn shape_primary_script_seed(
   script : @moon_swash.Script,
 ) -> (@moon_swash.Script, Bool) {
   match script {
-    Common | Inherited | Unknown => (@moon_swash.Script::Latin, true)
+    Common | Inherited | Unknown => (Latin, true)
     _ => (script, false)
   }
 }
@@ -333,7 +330,7 @@ fn normalize_rtl_mark_clusters(
         // normalize to cluster start semantics used by reference shaping.
         for m in 0..<marks.length() {
           let g = marks[m]
-          marks.set(m, ShapeGlyph::{ ..g, x_offset: g.x_offset + base_adv, })
+          marks.set(m, { ..g, x_offset: g.x_offset + base_adv, })
         }
         // Keep deterministic mark order for same-range cluster: larger x_offset first.
         let mut a = 0
@@ -388,7 +385,7 @@ fn reorder_run_glyphs_for_bidi(
     if !blank && chunks.length() > 0 && !chunks[chunks.length() - 1].blank {
       chunks[chunks.length() - 1].glyphs.push(glyph)
     } else {
-      chunks.push(RunGlyphChunk::{ blank, glyphs: [glyph], })
+      chunks.push({ blank, glyphs: [glyph], })
     }
   }
 
@@ -533,7 +530,7 @@ fn shape_variation_settings_for_font(
     Some(axis) => {
       let w = attrs.weight_value().value().to_double()
       let value = shape_clamp_double(w, axis.min_value(), axis.max_value())
-      settings.push(@moon_swash.Setting::Setting(SHAPE_WEIGHT_AXIS_TAG, value))
+      settings.push(Setting(SHAPE_WEIGHT_AXIS_TAG, value))
       settings
     }
   }
@@ -674,7 +671,7 @@ fn shape_run_with_harfbuzz(
       missing.push(start)
     }
     let letter_spacing = attrs_letter_spacing(attrs)
-    out.push(ShapeGlyph::{
+    out.push({
       start,
       end: source_end,
       x_advance: Float::from_double(pos.x_advance.to_double() / upem_d) +
@@ -708,7 +705,7 @@ fn shape_run_with_harfbuzz(
       let next_start = out[i - 1].start
       let next_end = out[i - 1].end
       let g = out[i]
-      out.set(i, ShapeGlyph::{
+      out.set(i, {
         ..g,
         end: if g.start == next_start {
           next_end
@@ -723,7 +720,7 @@ fn shape_run_with_harfbuzz(
       let next_start = out[i].start
       let next_end = out[i].end
       let g = out[i - 1]
-      out.set(i - 1, ShapeGlyph::{
+      out.set(i - 1, {
         ..g,
         end: if g.start == next_start {
           next_end
@@ -854,7 +851,7 @@ pub fn ShapeLine::build(
     }
     let attrs = attrs_list.get_span(i)
     let advance = base_advance + attrs_letter_spacing(attrs)
-    glyphs.push(ShapeGlyph::{
+    glyphs.push({
       start: i,
       end: i + 1,
       x_advance: advance,
@@ -880,7 +877,7 @@ pub fn ShapeLine::build(
       metrics_opt: attrs.metrics_opt(),
     })
   }
-  ShapeLine::{ text, rtl, glyphs, }
+  { text, rtl, glyphs, }
 }
 
 ///|
@@ -1016,11 +1013,7 @@ pub fn ShapeLine::build_with_font_system(
     )
     if font_system.shape_run_cache.get(cache_key) is Some(cache_glyphs) {
       for g in cache_glyphs {
-        glyphs.push(ShapeGlyph::{
-          ..g,
-          start: g.start + run_start,
-          end: g.end + run_start,
-        })
+        glyphs.push({ ..g, start: g.start + run_start, end: g.end + run_start, })
       }
       continue
     }
@@ -1088,7 +1081,7 @@ pub fn ShapeLine::build_with_font_system(
     let cached_run_glyphs : Array[ShapeGlyph] = []
     for g in run_glyphs {
       glyphs.push(g)
-      cached_run_glyphs.push(ShapeGlyph::{
+      cached_run_glyphs.push({
         ..g,
         start: g.start - run_start,
         end: g.end - run_start,
@@ -1131,7 +1124,7 @@ pub fn ShapeLine::build_with_font_system(
       x = x + g0.x_advance.to_double()
     }
   }
-  ShapeLine::{ text, rtl, glyphs, }
+  { text, rtl, glyphs, }
 }
 
 ///|
@@ -1180,10 +1173,10 @@ fn shape_hint_layout_line(line : LayoutLine) -> LayoutLine {
   let start_x = x
   for g in line.glyphs {
     let w = roundf(g.w)
-    glyphs.push(LayoutGlyph::{ ..g, x, w, })
+    glyphs.push({ ..g, x, w, })
     x = x + w
   }
-  LayoutLine::{ ..line, w: x - start_x, glyphs, }
+  { ..line, w: x - start_x, glyphs, }
 }
 
 ///|
@@ -1210,7 +1203,7 @@ fn shape_postprocess_layout(
   hinting : Hinting,
 ) -> Array[LayoutLine] {
   let mut lines = lines0
-  let default_align = if rtl { Align::Right } else { Align::Left }
+  let default_align = if rtl { Align::Right } else { Left }
   let align = if align_opt is Some(a) { a } else { default_align }
   let line_width_opt = if width_opt is Some(width) {
     Some(width)
@@ -1220,7 +1213,7 @@ fn shape_postprocess_layout(
   if line_width_opt is Some(width) {
     lines = apply_align_with_rtl(text, lines, width, align, rtl)
   }
-  if hinting is Hinting::Enabled {
+  if hinting is Enabled {
     let hinted : Array[LayoutLine] = []
     for line in lines {
       hinted.push(shape_hint_layout_line(line))

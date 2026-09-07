@@ -25,7 +25,7 @@ fn mk_edit_trait_editor(text : String) -> Editor {
 
 ///|
 fn[E : Edit] edit_move_right(editor : E) -> E {
-  editor.action(Action::Motion(Right))
+  editor.action(Motion(Right))
 }
 
 ///|

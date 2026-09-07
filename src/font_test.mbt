@@ -86,9 +86,7 @@ fn find_alt_family_name(entry : FontEntry) -> String? {
   let base = entry.family_name()
   for s in strings.iter() {
     let id = s.id()
-    if id is @moon_swash.StringId::Family ||
-      id is @moon_swash.StringId::TypographicFamily ||
-      id is @moon_swash.StringId::WwsFamily {
+    if id is Family || id is TypographicFamily || id is WwsFamily {
       let v = s.to_string()
       if v != base {
         return Some(v)
@@ -101,10 +99,7 @@ fn find_alt_family_name(entry : FontEntry) -> String? {
 ///|
 fn script_needs_stage_for_test(script : @moon_swash.Script) -> Bool {
   match script {
-    @moon_swash.Script::Common
-    | @moon_swash.Script::Inherited
-    | @moon_swash.Script::Latin
-    | @moon_swash.Script::Unknown => false
+    Common | Inherited | Latin | Unknown => false
     _ => true
   }
 }
@@ -365,9 +360,9 @@ test "FontSystem.font_matches_for_script keeps candidate set unchanged" {
     .load_font_data(test_font_inter_regular_ttf())
   let attrs = Attrs::new()
   let base = fs.font_matches(attrs)
-  let s1 = fs.font_matches_for_script(attrs, @moon_swash.Script::Arabic)
-  let s2 = fs.font_matches_for_script(attrs, @moon_swash.Script::Han)
-  let s3 = fs.font_matches_for_script(attrs, @moon_swash.Script::Devanagari)
+  let s1 = fs.font_matches_for_script(attrs, Arabic)
+  let s2 = fs.font_matches_for_script(attrs, Han)
+  let s3 = fs.font_matches_for_script(attrs, Devanagari)
   inspect(is_permutation_of_ids_for_test(base, s1), content="true")
   inspect(is_permutation_of_ids_for_test(base, s2), content="true")
   inspect(is_permutation_of_ids_for_test(base, s3), content="true")
@@ -380,13 +375,7 @@ test "FontSystem.font_matches_for_script remains stable across repeated cache hi
     .load_font_data(min_font)
     .load_font_data(test_font_inter_regular_ttf())
   let attrs = Attrs::new()
-  let scripts = [
-    @moon_swash.Script::Arabic,
-    @moon_swash.Script::Han,
-    @moon_swash.Script::Hebrew,
-    @moon_swash.Script::Thai,
-    @moon_swash.Script::Devanagari,
-  ]
+  let scripts = [@moon_swash.Script::Arabic, Han, Hebrew, Thai, Devanagari]
   for i in 0..<2000 {
     fs.font_matches_for_script(attrs, scripts[i % scripts.length()]) |> ignore
   }
@@ -401,8 +390,8 @@ test "FontSystem.font_matches_for_script respects weight-zero gate for script/co
     .load_font_data(test_font_inter_regular_ttf())
   let attrs = Attrs::new().weight(Weight::bold())
   let base = fs.font_matches(attrs)
-  let arabic = fs.font_matches_for_script(attrs, @moon_swash.Script::Arabic)
-  let han = fs.font_matches_for_script(attrs, @moon_swash.Script::Han)
+  let arabic = fs.font_matches_for_script(attrs, Arabic)
+  let han = fs.font_matches_for_script(attrs, Han)
   inspect(base == arabic, content="true")
   inspect(base == han, content="true")
 }
@@ -431,10 +420,10 @@ test "FontSystem.font_matches_for_scripts ignores latin/common/inherited/unknown
   let attrs = Attrs::new()
   let base = fs.font_matches(attrs)
   let staged = fs.font_matches_for_scripts(attrs, [
-    @moon_swash.Script::Latin,
-    @moon_swash.Script::Common,
-    @moon_swash.Script::Inherited,
-    @moon_swash.Script::Unknown,
+    Latin,
+    Common,
+    Inherited,
+    Unknown,
   ])
   inspect(staged == base, content="true")
 }
@@ -446,15 +435,7 @@ test "FontSystem.font_matches_for_scripts deduplicates repeated scripts" {
     .load_font_data(min_font)
     .load_font_data(test_font_inter_regular_ttf())
   let attrs = Attrs::new()
-  let repeated = fs.font_matches_for_scripts(attrs, [
-    @moon_swash.Script::Arabic,
-    @moon_swash.Script::Arabic,
-    @moon_swash.Script::Han,
-    @moon_swash.Script::Han,
-  ])
-  let unique = fs.font_matches_for_scripts(attrs, [
-    @moon_swash.Script::Arabic,
-    @moon_swash.Script::Han,
-  ])
+  let repeated = fs.font_matches_for_scripts(attrs, [Arabic, Arabic, Han, Han])
+  let unique = fs.font_matches_for_scripts(attrs, [Arabic, Han])
   inspect(repeated == unique, content="true")
 }

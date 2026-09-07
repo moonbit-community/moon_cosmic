@@ -271,59 +271,48 @@ test "platform fallback family tables match reference profiles" {
 ///|
 test "script fallback family tables are profile-specific" {
   debug_inspect(
-    script_fallback_family_names(@moon_swash.Script::Arabic, "en-US", Unix),
+    script_fallback_family_names(Arabic, "en-US", Unix),
     content="[\"Noto Sans Arabic\"]",
   )
   debug_inspect(
-    script_fallback_family_names(@moon_swash.Script::Arabic, "en-US", MacOS),
+    script_fallback_family_names(Arabic, "en-US", MacOS),
     content="[\"Geeza Pro\"]",
   )
   debug_inspect(
-    script_fallback_family_names(@moon_swash.Script::Arabic, "en-US", Windows),
+    script_fallback_family_names(Arabic, "en-US", Windows),
     content="[]",
   )
   debug_inspect(
-    script_fallback_family_names(@moon_swash.Script::Han, "zh-TW", Unix),
+    script_fallback_family_names(Han, "zh-TW", Unix),
     content="[\"Noto Sans CJK TC\"]",
   )
   debug_inspect(
-    script_fallback_family_names(@moon_swash.Script::Han, "zh-TW", MacOS),
+    script_fallback_family_names(Han, "zh-TW", MacOS),
     content="[\"PingFang TC\"]",
   )
   debug_inspect(
-    script_fallback_family_names(@moon_swash.Script::Han, "zh-TW", Windows),
+    script_fallback_family_names(Han, "zh-TW", Windows),
     content="[\"Microsoft JhengHei UI\"]",
   )
+  debug_inspect(script_fallback_family_names(Han, "zh-TW", Other), content="[]")
   debug_inspect(
-    script_fallback_family_names(@moon_swash.Script::Han, "zh-TW", Other),
-    content="[]",
-  )
-  debug_inspect(
-    script_fallback_family_names(@moon_swash.Script::TaiLe, "en-US", Unix),
+    script_fallback_family_names(TaiLe, "en-US", Unix),
     content="[\"Noto Sans Tai Le\"]",
   )
   debug_inspect(
-    script_fallback_family_names(@moon_swash.Script::TaiTham, "en-US", Unix),
+    script_fallback_family_names(TaiTham, "en-US", Unix),
     content="[\"Noto Sans Tai Tham\"]",
   )
   debug_inspect(
-    script_fallback_family_names(@moon_swash.Script::TaiViet, "en-US", Unix),
+    script_fallback_family_names(TaiViet, "en-US", Unix),
     content="[\"Noto Sans Tai Viet\"]",
   )
   debug_inspect(
-    script_fallback_family_names(
-      @moon_swash.Script::CanadianAboriginal,
-      "en-US",
-      MacOS,
-    ),
+    script_fallback_family_names(CanadianAboriginal, "en-US", MacOS),
     content="[\"Euphemia UCAS\"]",
   )
   debug_inspect(
-    script_fallback_family_names(
-      @moon_swash.Script::CanadianAboriginal,
-      "en-US",
-      Windows,
-    ),
+    script_fallback_family_names(CanadianAboriginal, "en-US", Windows),
     content="[\"Gadugi\"]",
   )
 }
@@ -592,7 +581,7 @@ test "fallback missing check records script fallback status" {
   let state = FontFallbackIterState::new(
     [0],
     [],
-    [@moon_swash.Script::Arabic],
+    [Arabic],
     ["Noto Sans Arabic"],
     [],
     Weight::normal(),
@@ -614,7 +603,7 @@ test "fallback missing check records script fallback status" {
 test "fallback missing message matches upstream exhausted format" {
   let info = FontFallbackMissingInfo::{
     kind: Exhausted,
-    scripts: [@moon_swash.Script::Arabic, @moon_swash.Script::Han],
+    scripts: [Arabic, Han],
     locale: "zh-CN",
     word: "abc",
     used: None,
@@ -629,7 +618,7 @@ test "fallback missing message matches upstream exhausted format" {
 test "fallback missing message matches upstream preset format" {
   let info = FontFallbackMissingInfo::{
     kind: PresetFallback,
-    scripts: [@moon_swash.Script::Arabic],
+    scripts: [Arabic],
     locale: "en-US",
     word: "xyz",
     used: Some("Last Resort"),
@@ -644,7 +633,7 @@ test "fallback missing message matches upstream preset format" {
 test "fallback missing message matches upstream script format" {
   let info = FontFallbackMissingInfo::{
     kind: ScriptFallback,
-    scripts: [@moon_swash.Script::Arabic],
+    scripts: [Arabic],
     locale: "en-US",
     word: "مرحبا",
     used: Some("Noto Sans Arabic"),
@@ -663,7 +652,7 @@ test "fallback warning handler receives emitted message" {
   })
   let info = FontFallbackMissingInfo::{
     kind: Exhausted,
-    scripts: [@moon_swash.Script::Arabic],
+    scripts: [Arabic],
     locale: "en-US",
     word: "abc",
     used: None,

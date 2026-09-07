@@ -18,7 +18,7 @@ fn mk_vi(text : String) -> ViEditor {
   let buffer = @cosmic.Buffer::new(@cosmic.Metrics::new(14.0, 20.0)).set_text(
     text,
     attrs_list,
-    @cosmic.Advanced,
+    Advanced,
   )
   ViEditor::new(@cosmic.Editor::new(buffer))
 }
@@ -43,10 +43,7 @@ test "ViEditor visual motions keep selection active" {
   let vi = mk_vi("abc def\n")
   let out = vi.feed_string("vw")
   inspect(out.mode() is Visual, content="true")
-  inspect(
-    out.editor().selection() is @cosmic.Selection::Normal(_),
-    content="true",
-  )
+  inspect(out.editor().selection() is Normal(_), content="true")
 }
 
 ///|

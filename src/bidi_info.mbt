@@ -258,7 +258,7 @@ fn bidi_build_text_meta(text : String) -> BidiTextMeta {
     char_len_at.set(idx, bidi_utf16_len(ch))
     char_at_start.set(idx, ch)
   }
-  BidiTextMeta::{ char_len_at, char_at_start, }
+  { char_len_at, char_at_start, }
 }
 
 ///|
@@ -336,15 +336,12 @@ fn bidi_compute_initial_info(
     match class {
       B => {
         let para_end = i + char_len
-        paragraphs.push(ParagraphInfo::{
+        paragraphs.push({
           range_start: para_start,
           range_end: para_end,
           level: para_level.unwrap_or(0),
         })
-        paragraph_flags.push(BidiParagraphFlags::{
-          is_pure_ltr,
-          has_isolate_controls,
-        })
+        paragraph_flags.push({ is_pure_ltr, has_isolate_controls, })
 
         para_start = para_end
         para_level = match default_para_level {
@@ -393,15 +390,12 @@ fn bidi_compute_initial_info(
   }
 
   if para_start < len {
-    paragraphs.push(ParagraphInfo::{
+    paragraphs.push({
       range_start: para_start,
       range_end: len,
       level: para_level.unwrap_or(0),
     })
-    paragraph_flags.push(BidiParagraphFlags::{
-      is_pure_ltr,
-      has_isolate_controls,
-    })
+    paragraph_flags.push({ is_pure_ltr, has_isolate_controls, })
   }
 
   (original_classes, paragraphs, paragraph_flags)
@@ -418,10 +412,7 @@ fn bidi_explicit_compute_for_para(
   runs : Array[BidiLevelRun],
 ) -> Unit {
   let stack : Array[BidiExplicitStatus] = [
-    BidiExplicitStatus::{
-      level: para.level,
-      status: BidiOverrideStatus::Neutral,
-    },
+    { level: para.level, status: Neutral, },
   ]
 
   let mut overflow_isolate_count = 0
@@ -471,7 +462,7 @@ fn bidi_explicit_compute_for_para(
         if new_level_opt is Some(new_level) &&
           overflow_isolate_count == 0 &&
           overflow_embedding_count == 0 {
-          stack.push(BidiExplicitStatus::{
+          stack.push({
             level: new_level,
             status: match class {
               RLO => RTL
@@ -564,14 +555,14 @@ fn bidi_explicit_compute_for_para(
       current_run_level = levels[i]
       has_any_char = true
     } else if !bidi_is_removed_by_x9(class) && levels[i] != current_run_level {
-      runs.push(BidiLevelRun::{ start: current_run_start, end: i, })
+      runs.push({ start: current_run_start, end: i, })
       current_run_level = levels[i]
       current_run_start = i
     }
   }
 
   if has_any_char && para.range_end > current_run_start {
-    runs.push(BidiLevelRun::{ start: current_run_start, end: para.range_end, })
+    runs.push({ start: current_run_start, end: para.range_end, })
   }
 }
 
@@ -794,7 +785,7 @@ fn bidi_prepare_isolating_run_sequences_for_para(
         para.level
       }
 
-      out_sequences.push(BidiIsolatingRunSequence::{
+      out_sequences.push({
         runs: [run],
         sos: bidi_level_to_class(bidi_max_int(seq_level, pred_level)),
         eos: bidi_level_to_class(bidi_max_int(end_level, succ_level)),
@@ -901,7 +892,7 @@ fn bidi_prepare_isolating_run_sequences_for_para(
       }
     }
 
-    out_sequences.push(BidiIsolatingRunSequence::{
+    out_sequences.push({
       runs: result.runs,
       sos: bidi_level_to_class(bidi_max_int(seq_level, pred_level)),
       eos: bidi_level_to_class(bidi_max_int(end_level, succ_level)),
@@ -1124,7 +1115,7 @@ fn bidi_identify_bracket_pairs(
               si = si - 1
               let item = stack[si]
               if item.0 == opening {
-                out_pairs.push(BidiBracketPair::{
+                out_pairs.push({
                   start: item.1,
                   end: i,
                   start_run: item.2,
@@ -1586,7 +1577,7 @@ pub fn BidiInfo::new_with_para_level(
     )
   }
 
-  BidiInfo::{ text, original_classes, levels, paragraphs, }
+  { text, original_classes, levels, paragraphs, }
 }
 
 ///|

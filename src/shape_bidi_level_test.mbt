@@ -19,7 +19,7 @@ test "ShapeLine.build assigns heuristic bidi levels (LTR base)" {
     ShapeLine::empty(),
     text,
     AttrsList::new(Attrs::new()),
-    Shaping::Advanced,
+    Advanced,
     8,
   )
   // "abc " => base LTR (0); Hebrew letters => RTL (1)
@@ -38,7 +38,7 @@ test "ShapeLine.build assigns heuristic bidi levels (RTL base)" {
     ShapeLine::empty(),
     text,
     AttrsList::new(Attrs::new()),
-    Shaping::Advanced,
+    Advanced,
     8,
   )
   // Hebrew => base RTL (1); Latin letters are embedded LTR (2)

@@ -93,7 +93,7 @@ pub fn Cursor::new_with_affinity(
   index : Int,
   affinity : Affinity,
 ) -> Cursor {
-  Cursor::{ line, index, affinity, }
+  { line, index, affinity, }
 }
 
 ///|
@@ -113,7 +113,7 @@ pub impl Eq for LayoutCursor with fn equal(self, other) {
 
 ///|
 pub fn LayoutCursor::new(line : Int, layout : Int, glyph : Int) -> LayoutCursor {
-  LayoutCursor::{ line, layout, glyph, }
+  { line, layout, glyph, }
 }
 
 ///|
@@ -182,12 +182,12 @@ pub struct Scroll {
 
 ///|
 pub fn Scroll::default() -> Scroll {
-  Scroll::{ line: 0, vertical: 0.0F, horizontal: 0.0F, }
+  { line: 0, vertical: 0.0F, horizontal: 0.0F, }
 }
 
 ///|
 pub fn Scroll::new(line : Int, vertical : Float, horizontal : Float) -> Scroll {
-  Scroll::{ line, vertical, horizontal, }
+  { line, vertical, horizontal, }
 }
 
 ///|

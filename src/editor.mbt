@@ -177,7 +177,7 @@ fn line_items_for_insert(data : String) -> Array[(Int, Int, LineEnding)] {
     let last = items[items.length() - 1]
     if last.2.as_str() != "" {
       let len = data.length()
-      items.push((len, len, LineEnding::None))
+      items.push((len, len, None))
     }
   }
   items
@@ -234,11 +234,11 @@ pub struct Editor {
 
 ///|
 pub fn Editor::new(buffer : Buffer) -> Editor {
-  Editor::{
+  {
     buffer,
     cursor: Cursor::new(0, 0),
     cursor_x_opt: None,
-    selection: Selection::None,
+    selection: None,
     cursor_moved: false,
     auto_indent: false,
     change_opt: None,
@@ -260,7 +260,7 @@ pub fn Editor::set_cursor(self : Editor, cursor : Cursor) -> Editor {
   if self.cursor == cursor {
     self
   } else {
-    Editor::{
+    {
       ..self,
       cursor,
       cursor_moved: true,
@@ -279,7 +279,7 @@ pub fn Editor::set_selection(self : Editor, selection : Selection) -> Editor {
   if self.selection == selection {
     self
   } else {
-    Editor::{ ..self, selection, }
+    { ..self, selection, }
   }
 }
 
@@ -293,7 +293,7 @@ pub fn Editor::set_auto_indent(self : Editor, auto_indent : Bool) -> Editor {
   if self.auto_indent == auto_indent {
     self
   } else {
-    Editor::{ ..self, auto_indent, }
+    { ..self, auto_indent, }
   }
 }
 
@@ -303,9 +303,9 @@ pub fn Editor::selection_bounds(self : Editor) -> (Cursor, Cursor)? {
   let cursor = self.cursor
   let buffer = self.buffer
   match self.selection {
-    Selection::None => None
-    Selection::Normal(select) => Some(order_cursors(select, cursor))
-    Selection::Line(select) => {
+    None => None
+    Normal(select) => Some(order_cursors(select, cursor))
+    Line(select) => {
       let start_line = if select.line < cursor.line {
         select.line
       } else {
@@ -320,7 +320,7 @@ pub fn Editor::selection_bounds(self : Editor) -> (Cursor, Cursor)? {
       let end_index = lines[end_line].text().length()
       Some((Cursor::new(start_line, 0), Cursor::new(end_line, end_index)))
     }
-    Selection::Word(select) => {
+    Word(select) => {
       let (start0, end0) = order_cursors(select, cursor)
       let mut start = start0
       let mut end = end0
@@ -375,7 +375,7 @@ pub fn Editor::set_tab_width(self : Editor, tab_width : Int) -> Editor {
   if tab_width <= 0 {
     self
   } else {
-    Editor::{ ..self, buffer: self.buffer.set_tab_width(tab_width), }
+    { ..self, buffer: self.buffer.set_tab_width(tab_width), }
   }
 }
 
@@ -383,13 +383,13 @@ pub fn Editor::set_tab_width(self : Editor, tab_width : Int) -> Editor {
 pub fn Editor::start_change(self : Editor) -> Editor {
   match self.change_opt {
     Some(_) => self
-    None => Editor::{ ..self, change_opt: Some(Change::default()), }
+    None => { ..self, change_opt: Some(Change::default()), }
   }
 }
 
 ///|
 pub fn Editor::finish_change(self : Editor) -> (Editor, Change?) {
-  (Editor::{ ..self, change_opt: None, }, self.change_opt)
+  ({ ..self, change_opt: None, }, self.change_opt)
 }
 
 ///|
@@ -509,7 +509,7 @@ pub fn Editor::insert_at(
       cursor.affinity,
     )
   }
-  buffer = Buffer::{ ..buffer, lines: out, redraw: true, }
+  buffer = { ..buffer, lines: out, redraw: true, }
   let mut editor = Editor::{ ..self, buffer, }
   // Track change if enabled.
   match editor.change_opt {
@@ -519,13 +519,8 @@ pub fn Editor::insert_at(
       for it in change0.items {
         items.push(it)
       }
-      items.push(ChangeItem::{
-        start: cursor,
-        end: new_cursor,
-        text: data,
-        insert: true,
-      })
-      editor = Editor::{ ..editor, change_opt: Some(Change::{ items, }), }
+      items.push({ start: cursor, end: new_cursor, text: data, insert: true, })
+      editor = { ..editor, change_opt: Some({ items, }), }
     }
   }
   (editor, new_cursor)
@@ -587,13 +582,13 @@ pub fn Editor::delete_range(
       for it in change0.items {
         items.push(it)
       }
-      items.push(ChangeItem::{
+      items.push({
         start,
         end,
         text: deleted_text(buffer0, start, end),
         insert: false,
       })
-      editor = Editor::{ ..editor, change_opt: Some(Change::{ items, }), }
+      editor = { ..editor, change_opt: Some({ items, }), }
     }
   }
   editor
@@ -649,7 +644,7 @@ pub fn Editor::delete_selection(self : Editor) -> (Editor, Bool) {
     Some((start, end)) => {
       let editor = self
         .set_cursor(start)
-        .set_selection(Selection::None)
+        .set_selection(None)
         .delete_range(start, end)
       (editor, true)
     }
@@ -706,16 +701,15 @@ pub fn Editor::action(self : Editor, action : Action) -> Editor {
         None => ()
         Some((new_cursor, new_x_opt)) => {
           editor = editor.set_cursor(new_cursor)
-          editor = Editor::{ ..editor, cursor_x_opt: new_x_opt, }
+          editor = { ..editor, cursor_x_opt: new_x_opt, }
         }
       }
     Escape => {
       match editor.selection {
-        Selection::None => ()
-        _ =>
-          editor = Editor::{ ..editor, buffer: editor.buffer.set_redraw(true), }
+        None => ()
+        _ => editor = { ..editor, buffer: editor.buffer.set_redraw(true), }
       }
-      editor = editor.set_selection(Selection::None)
+      editor = editor.set_selection(None)
     }
     Insert(ch) =>
       if ch.is_control() && ch != '\t' && ch != '\n' {
@@ -812,7 +806,7 @@ pub fn Editor::action(self : Editor, action : Action) -> Editor {
             ),
           )
         }
-        editor = Editor::{
+        editor = {
           ..editor,
           selection: selection_shift_ge(
             editor.selection,
@@ -858,7 +852,7 @@ pub fn Editor::action(self : Editor, action : Action) -> Editor {
             ),
           )
         }
-        editor = Editor::{
+        editor = {
           ..editor,
           selection: selection_shift_gt_clamp(
             editor.selection,
@@ -871,7 +865,7 @@ pub fn Editor::action(self : Editor, action : Action) -> Editor {
       }
     }
     Click(x, y) => {
-      editor = editor.set_selection(Selection::None)
+      editor = editor.set_selection(None)
       match
         editor.buffer.hit(
           Float::from_double(x.to_double()),
@@ -883,19 +877,19 @@ pub fn Editor::action(self : Editor, action : Action) -> Editor {
     }
     DoubleClick(x, y) => {
       editor = editor.action(Click(x, y))
-      editor = editor.set_selection(Selection::Word(editor.cursor))
-      editor = Editor::{ ..editor, buffer: editor.buffer.set_redraw(true), }
+      editor = editor.set_selection(Word(editor.cursor))
+      editor = { ..editor, buffer: editor.buffer.set_redraw(true), }
     }
     TripleClick(x, y) => {
       editor = editor.action(Click(x, y))
-      editor = editor.set_selection(Selection::Line(editor.cursor))
-      editor = Editor::{ ..editor, buffer: editor.buffer.set_redraw(true), }
+      editor = editor.set_selection(Line(editor.cursor))
+      editor = { ..editor, buffer: editor.buffer.set_redraw(true), }
     }
     Drag(x, y) => {
       match editor.selection {
-        Selection::None => {
-          editor = editor.set_selection(Selection::Normal(editor.cursor))
-          editor = Editor::{ ..editor, buffer: editor.buffer.set_redraw(true), }
+        None => {
+          editor = editor.set_selection(Normal(editor.cursor))
+          editor = { ..editor, buffer: editor.buffer.set_redraw(true), }
         }
         _ => ()
       }
@@ -911,11 +905,11 @@ pub fn Editor::action(self : Editor, action : Action) -> Editor {
     Scroll(pixels) => {
       let scroll0 = editor.buffer.scroll()
       let scroll = Scroll::{ ..scroll0, vertical: scroll0.vertical + pixels, }
-      editor = Editor::{ ..editor, buffer: editor.buffer.set_scroll(scroll), }
+      editor = { ..editor, buffer: editor.buffer.set_scroll(scroll), }
     }
   }
   if old_cursor != editor.cursor {
-    editor = Editor::{
+    editor = {
       ..editor,
       cursor_moved: true,
       buffer: editor.buffer.set_redraw(true),

@@ -43,7 +43,7 @@ test "ViEditor visual motions keep selection active" {
   let vi = mk_vi("abc def\n")
   let out = vi.feed_string("vw")
   inspect(out.mode() is Visual, content="true")
-  inspect(out.editor().selection() is Selection::Normal(_), content="true")
+  inspect(out.editor().selection() is Normal(_), content="true")
 }
 
 ///|

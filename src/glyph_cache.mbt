@@ -229,7 +229,7 @@ pub fn CacheKey::new(
   let font_size_bits = u32_from_be_bytes(Float::to_be_bytes(font_size))
   let normalized_glyph_id = normalize_glyph_id(glyph_id)
   (
-    CacheKey::{
+    {
       font_id,
       glyph_id: normalized_glyph_id,
       font_size_bits,

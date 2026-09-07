@@ -19,20 +19,15 @@ test "per-span metrics override affects glyph font_size, widths, and line_height
   let a0 = Attrs::new()
   let a1 = Attrs::new().metrics(big_metrics)
   let attrs_list = AttrsList::new(a0).add_span(1, 2, a1)
-  let line0 = BufferLine::new(
-    "ab",
-    LineEnding::None,
-    attrs_list,
-    Shaping::Basic,
-  )
+  let line0 = BufferLine::new("ab", None, attrs_list, Basic)
   let line1 = line0.layout(
     default_metrics.font_size,
     None,
-    Wrap::None,
-    Ellipsize::None,
+    None,
+    None,
     None,
     8,
-    Hinting::Disabled,
+    Disabled,
   )
   let layout = if line1.layout_opt() is Some(v) { v } else { [] }
   inspect(layout.length(), content="1")

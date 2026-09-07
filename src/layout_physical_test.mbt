@@ -29,14 +29,8 @@ test "layout_from_shape propagates font_weight into CacheKey" {
   let attrs = Attrs::new().weight(Weight::bold())
   let attrs_list = AttrsList::new(attrs)
   let text = "a"
-  let shape = ShapeLine::build(
-    ShapeLine::empty(),
-    text,
-    attrs_list,
-    Shaping::Basic,
-    4,
-  )
-  let lines = layout_from_shape(text, shape, 10.0F, 1.0F, None, Wrap::None)
+  let shape = ShapeLine::build(ShapeLine::empty(), text, attrs_list, Basic, 4)
+  let lines = layout_from_shape(text, shape, 10.0F, 1.0F, None, None)
   let g = lines[0].glyphs[0]
   inspect(g.font_weight, content="700")
   let p = g.physical((0.0F, 0.0F), 1.0F)

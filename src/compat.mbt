@@ -36,20 +36,20 @@ pub(all) enum Justify {
 ///|
 pub fn line_break_to_wrap(lb : LineBreak) -> Wrap {
   match lb {
-    NoWrap => Wrap::None
-    AnyCharacter => Wrap::Glyph
-    WordBoundary => Wrap::WordOrGlyph
+    NoWrap => None
+    AnyCharacter => Glyph
+    WordBoundary => WordOrGlyph
   }
 }
 
 ///|
 pub fn justify_to_align(j : Justify) -> Align {
   match j {
-    Left => Align::Left
-    Right => Align::Right
-    Center => Align::Center
-    Justified => Align::Justified
-    Start => Align::Start
-    End => Align::End
+    Left => Left
+    Right => Right
+    Center => Center
+    Justified => Justified
+    Start => Start
+    End => End
   }
 }

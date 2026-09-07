@@ -46,7 +46,7 @@ pub fn word_indices_uax29(s : String) -> Array[(Int, Int)] {
     return []
   }
   let analyze = @moon_swash.analyze(chars.iter())
-  analyze.set_break_strength(@moon_swash.WordBreakStrength::Normal)
+  analyze.set_break_strength(Normal)
   let offs : Array[Int] = []
   let mut pos = 0
   for ch in chars {
@@ -55,17 +55,17 @@ pub fn word_indices_uax29(s : String) -> Array[(Int, Int)] {
   }
   fn category_is_unicode_word_alnum(category : @moon_swash.Category) -> Bool {
     match category {
-      @moon_swash.Category::CasedLetter
-      | @moon_swash.Category::DecimalNumber
-      | @moon_swash.Category::Letter
-      | @moon_swash.Category::LetterNumber
-      | @moon_swash.Category::LowercaseLetter
-      | @moon_swash.Category::ModifierLetter
-      | @moon_swash.Category::Number
-      | @moon_swash.Category::OtherLetter
-      | @moon_swash.Category::OtherNumber
-      | @moon_swash.Category::TitlecaseLetter
-      | @moon_swash.Category::UppercaseLetter => true
+      CasedLetter
+      | DecimalNumber
+      | Letter
+      | LetterNumber
+      | LowercaseLetter
+      | ModifierLetter
+      | Number
+      | OtherLetter
+      | OtherNumber
+      | TitlecaseLetter
+      | UppercaseLetter => true
       _ => false
     }
   }
@@ -211,16 +211,7 @@ fn lb_push_break(
     return
   }
   let pos = offs[i]
-  out.push(
-    (
-      pos,
-      if is_mandatory {
-        BreakOpportunity::Mandatory
-      } else {
-        BreakOpportunity::Allowed
-      },
-    ),
-  )
+  out.push((pos, if is_mandatory { Mandatory } else { Allowed }))
 }
 
 ///|
@@ -232,7 +223,7 @@ pub fn linebreaks(s : String) -> Array[(Int, BreakOpportunity)] {
   }
   let chars = s.to_array()
   if chars.length() == 0 {
-    return [(0, BreakOpportunity::Mandatory)]
+    return [(0, Mandatory)]
   }
   let offs : Array[Int] = []
   let mut pos = 0
@@ -266,7 +257,7 @@ pub fn linebreaks(s : String) -> Array[(Int, BreakOpportunity)] {
     lb_push_break(out, chars, offs, chars.length(), eot_is_mandatory)
   }
   if out.length() == 0 || out[out.length() - 1].0 != pos {
-    out.push((s.length(), BreakOpportunity::Mandatory))
+    out.push((s.length(), Mandatory))
   }
   out
 }
@@ -449,7 +440,7 @@ pub fn grapheme_indices_uax29(s : String) -> Array[(Int, Int)] {
     }
 
     // GB11 (simplified): Extended_Pictographic Extend* ZWJ x Extended_Pictographic
-    if cur is @moon_swash.ClusterBreak::XX && pict[i] && prev is ZWJ {
+    if cur is XX && pict[i] && prev is ZWJ {
       let mut k = i - 2
       while k >= 0 && breaks[k] is EX {
         k = k - 1

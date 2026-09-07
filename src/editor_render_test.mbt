@@ -60,7 +60,7 @@ test "Editor.cursor_position + Editor.render (smoke)" {
   let rects2 : Array[(Int, Int, UInt, UInt, UInt)] = []
   let glyph_pos2 : Array[(Int, Int)] = []
   let renderer2 = TestRenderer::{ rects: rects2, glyph_pos: glyph_pos2, }
-  let editor1 = editor0.set_selection(Selection::Normal(Cursor::new(0, 0)))
+  let editor1 = editor0.set_selection(Normal(Cursor::new(0, 0)))
   editor1.render(
     renderer2,
     Color::rgb(0, 0, 0),
@@ -84,7 +84,7 @@ test "Editor.render highlights internal empty lines in selection" {
   let selection_color = Color::rgb(0, 0, 255)
   let editor = Editor::new(buffer)
     .set_cursor(Cursor::new(2, 1))
-    .set_selection(Selection::Normal(Cursor::new(0, 0)))
+    .set_selection(Normal(Cursor::new(0, 0)))
   editor.render(
     renderer,
     Color::rgb(0, 0, 0),

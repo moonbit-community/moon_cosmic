@@ -34,7 +34,7 @@ fn substring(s : String, start : Int, end : Int) -> String {
 
 ///|
 fn empty_layout_line() -> LayoutLine {
-  LayoutLine::{
+  {
     start: 0,
     end: 0,
     w: 0.0F,
@@ -85,13 +85,13 @@ fn justify_line(text : String, line : LayoutLine, width : Float) -> LayoutLine {
       g.start < text.length() &&
       text.code_unit_at(g.start) == 32 {
       w = w + add
-      glyphs.push(LayoutGlyph::{ ..g, x: g.x + dx, w, })
+      glyphs.push({ ..g, x: g.x + dx, w, })
       dx = dx + add
     } else {
-      glyphs.push(LayoutGlyph::{ ..g, x: g.x + dx, w, })
+      glyphs.push({ ..g, x: g.x + dx, w, })
     }
   }
-  LayoutLine::{ ..line, w: line.w + extra, glyphs, }
+  { ..line, w: line.w + extra, glyphs, }
 }
 
 ///|
@@ -122,10 +122,10 @@ fn hint_line(l : LayoutLine) -> LayoutLine {
   let start_x = x
   for g in l.glyphs {
     let w = roundf(g.w)
-    glyphs.push(LayoutGlyph::{ ..g, x, w, })
+    glyphs.push({ ..g, x, w, })
     x = x + w
   }
-  LayoutLine::{ ..l, w: x - start_x, glyphs, }
+  { ..l, w: x - start_x, glyphs, }
 }
 
 ///|
@@ -181,9 +181,9 @@ fn ellipsis_glyph(
 ) -> LayoutGlyph {
   if line.glyphs.length() > 0 {
     let base = line.glyphs[0]
-    LayoutGlyph::{ ..base, start: line.end, end: line.end, x, w, }
+    { ..base, start: line.end, end: line.end, x, w, }
   } else {
-    LayoutGlyph::{
+    {
       ..LayoutGlyph::new(
         line.start,
         line.end,
@@ -268,7 +268,7 @@ fn reposition_glyphs(
   let out : Array[LayoutGlyph] = []
   let mut x = start_x
   for g in glyphs {
-    out.push(LayoutGlyph::{ ..g, x, })
+    out.push({ ..g, x, })
     x = x + g.w
   }
   (out, x - start_x)
@@ -292,17 +292,13 @@ fn project_decorations(
           run_start = i
         }
       } else if run_start >= 0 {
-        out.push(DecorationSpan::{
-          ..decoration,
-          glyph_start: run_start,
-          glyph_end: i,
-        })
+        out.push({ ..decoration, glyph_start: run_start, glyph_end: i, })
         run_start = -1
       }
       i = i + 1
     }
     if run_start >= 0 {
-      out.push(DecorationSpan::{
+      out.push({
         ..decoration,
         glyph_start: run_start,
         glyph_end: source_indices.length(),
@@ -407,7 +403,7 @@ fn ellipsize_line(
     out_start = line.end
     out_end = line.end
   }
-  LayoutLine::{
+  {
     ..line,
     start: out_start,
     end: out_end,
@@ -433,7 +429,7 @@ fn apply_ellipsize(
     None => layout.length()
     Start(limit) | Middle(limit) | End(limit) =>
       match (wrap, limit) {
-        (Wrap::None, _) => 1
+        (None, _) => 1
         (_, Lines(lines)) => if lines <= 0 { 1 } else { lines }
         (_, Height(height_limit)) => {
           let mut acc = 0.0F
@@ -493,7 +489,7 @@ fn apply_layout_postprocess(
   } else {
     layout0
   }
-  let default_align = if rtl { Align::Right } else { Align::Left }
+  let default_align = if rtl { Align::Right } else { Left }
   let align = if align_opt is Some(a) { a } else { default_align }
   let line_width_opt = if width_opt is Some(width) {
     Some(width)
@@ -506,7 +502,7 @@ fn apply_layout_postprocess(
       _ => layout = apply_align_with_rtl(text, layout, width, align, rtl)
     }
   }
-  if hinting is Hinting::Enabled {
+  if hinting is Enabled {
     let out : Array[LayoutLine] = []
     for l in layout {
       out.push(hint_line(l))
@@ -557,7 +553,7 @@ pub fn BufferLine::new(
   attrs_list : AttrsList,
   shaping : Shaping,
 ) -> BufferLine {
-  BufferLine::{
+  {
     text,
     ending,
     attrs_list,
@@ -632,7 +628,7 @@ pub fn BufferLine::reset_shaping(self : BufferLine) -> BufferLine {
 ///|
 pub fn BufferLine::reset_layout(self : BufferLine) -> BufferLine {
   let layout_opt = self.layout_opt.set_unused()
-  BufferLine::{ ..self, layout_opt, }
+  { ..self, layout_opt, }
 }
 
 ///|
@@ -727,7 +723,7 @@ pub fn BufferLine::layout(
       )
       let (layout_opt, _) = line.layout_opt.take_unused()
       let layout_opt = layout_opt.set_used(layout)
-      BufferLine::{ ..line, layout_opt, }
+      { ..line, layout_opt, }
     } else {
       line
     }
@@ -775,7 +771,7 @@ pub fn BufferLine::layout_with_font_system(
       )
       let (layout_opt, _) = line.layout_opt.take_unused()
       let layout_opt = layout_opt.set_used(layout)
-      BufferLine::{ ..line, layout_opt, }
+      { ..line, layout_opt, }
     } else {
       line
     }
@@ -849,7 +845,7 @@ pub fn BufferLine::layout_runs(
     if line_y + l.max_descent < 0.0F {
       continue
     }
-    runs.push(LayoutRun::{
+    runs.push({
       line_i: 0,
       line_y,
       line_top,
@@ -874,7 +870,7 @@ pub fn BufferLine::set_metadata(
   self : BufferLine,
   metadata : Int,
 ) -> BufferLine {
-  BufferLine::{ ..self, metadata: Some(metadata), }
+  { ..self, metadata: Some(metadata), }
 }
 
 ///|
@@ -930,6 +926,6 @@ pub fn BufferLine::split_off(
     right_attrs,
     self.shaping,
   )
-  right = BufferLine::{ ..right, align: self.align, }
+  right = { ..right, align: self.align, }
   (left, right)
 }

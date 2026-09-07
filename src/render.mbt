@@ -133,8 +133,8 @@ fn[R : Renderer] draw_decoration_span(
   let font_size = span.font_size
 
   match td.underline {
-    UnderlineStyle::None => ()
-    UnderlineStyle::Single => {
+    None => ()
+    Single => {
       let color = pick_decoration_color(
         span.color_opt,
         td.underline_color_opt,
@@ -152,7 +152,7 @@ fn[R : Renderer] draw_decoration_span(
         color,
       )
     }
-    UnderlineStyle::Double => {
+    Double => {
       let color = pick_decoration_color(
         span.color_opt,
         td.underline_color_opt,
@@ -246,7 +246,7 @@ pub fn LegacyRenderer::new(
   cache : SwashCache,
   callback : (Int, Int, UInt, UInt, Color) -> Unit,
 ) -> LegacyRenderer {
-  LegacyRenderer::{ font_system, cache, callback, }
+  { font_system, cache, callback, }
 }
 
 ///|

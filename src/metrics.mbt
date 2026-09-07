@@ -23,7 +23,7 @@ pub struct Metrics {
 
 ///|
 pub fn Metrics::new(font_size : Float, line_height : Float) -> Metrics {
-  Metrics::{ font_size, line_height, }
+  { font_size, line_height, }
 }
 
 ///|
@@ -32,14 +32,11 @@ pub fn Metrics::relative(
   font_size : Float,
   line_height_scale : Float,
 ) -> Metrics {
-  Metrics::{ font_size, line_height: font_size * line_height_scale, }
+  { font_size, line_height: font_size * line_height_scale, }
 }
 
 ///|
 /// Scale font size and line height.
 pub fn Metrics::scale(self : Metrics, scale : Float) -> Metrics {
-  Metrics::{
-    font_size: self.font_size * scale,
-    line_height: self.line_height * scale,
-  }
+  { font_size: self.font_size * scale, line_height: self.line_height * scale, }
 }

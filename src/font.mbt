@@ -150,7 +150,7 @@ pub fn FontSystem::new() -> FontSystem {
 
 ///|
 pub fn FontSystem::new_with_locale(locale : String) -> FontSystem {
-  FontSystem::{
+  {
     locale,
     fonts: [],
     fallback_profile_opt: None,
@@ -198,10 +198,10 @@ fn FontSystem::shape_hb_buffer(self : FontSystem) -> @buffer.Buffer {
 ///|
 fn font_family_name(font : @moon_swash.FontRef, locale : String) -> String {
   let strings = font.localized_strings()
-  match strings.find_by_id(@moon_swash.StringId::Family, Some(locale)) {
+  match strings.find_by_id(Family, Some(locale)) {
     Some(s) => s.to_string()
     None =>
-      match strings.find_by_id(@moon_swash.StringId::Family, None) {
+      match strings.find_by_id(Family, None) {
         Some(s) => s.to_string()
         None => ""
       }
@@ -211,7 +211,7 @@ fn font_family_name(font : @moon_swash.FontRef, locale : String) -> String {
 ///|
 fn font_postscript_name(font : @moon_swash.FontRef) -> String {
   let strings = font.localized_strings()
-  match strings.find_by_id(@moon_swash.StringId::PostScript, None) {
+  match strings.find_by_id(PostScript, None) {
     Some(s) => s.to_string()
     None => ""
   }
@@ -245,9 +245,7 @@ fn string_contains_ascii(haystack : String, needle : String) -> Bool {
 ///|
 fn is_family_name_id(id : @moon_swash.StringId) -> Bool {
   match id {
-    @moon_swash.StringId::Family
-    | @moon_swash.StringId::TypographicFamily
-    | @moon_swash.StringId::WwsFamily => true
+    Family | TypographicFamily | WwsFamily => true
     _ => false
   }
 }
@@ -299,7 +297,7 @@ pub fn FontSystem::load_font_data(
         let postscript_name = font_postscript_name(f)
         let not_emoji = !string_contains_ascii(postscript_name, "Emoji")
         let metrics = f.metrics([])
-        fonts.push(FontEntry::{
+        fonts.push({
           id,
           family_name,
           postscript_name,
@@ -317,7 +315,7 @@ pub fn FontSystem::load_font_data(
       self.font_matches_cache.clear()
       self.shape_run_cache.clear()
       self.fallback_profile_opt = None
-      FontSystem::{ ..self, fonts, }
+      { ..self, fonts, }
     }
   }
 }
@@ -346,11 +344,7 @@ struct FontCachedCodepointSupportInfo {
 
 ///|
 fn FontCachedCodepointSupportInfo::new() -> FontCachedCodepointSupportInfo {
-  FontCachedCodepointSupportInfo::{
-    supported: [],
-    not_supported: [],
-    charmap_opt: None,
-  }
+  { supported: [], not_supported: [], charmap_opt: None, }
 }
 
 ///|
@@ -402,10 +396,10 @@ fn fallback_profile_to_sub(
   profile : FallbackProfile,
 ) -> @font_fallback.FallbackProfile {
   match profile {
-    Unix => @font_fallback.Unix
-    MacOS => @font_fallback.MacOS
-    Windows => @font_fallback.Windows
-    Other => @font_fallback.Other
+    Unix => Unix
+    MacOS => MacOS
+    Windows => Windows
+    Other => Other
   }
 }
 
@@ -414,10 +408,10 @@ fn fallback_profile_from_sub(
   profile : @font_fallback.FallbackProfile,
 ) -> FallbackProfile {
   match profile {
-    @font_fallback.Unix => Unix
-    @font_fallback.MacOS => MacOS
-    @font_fallback.Windows => Windows
-    @font_fallback.Other => Other
+    Unix => Unix
+    MacOS => MacOS
+    Windows => Windows
+    Other => Other
   }
 }
 
@@ -448,13 +442,13 @@ pub fn FontSystem::set_fallback_profile(
   if self.fallback_profile_opt is Some(current) && current == profile {
     self
   } else {
-    FontSystem::{ ..self, fallback_profile_opt: Some(profile), }
+    { ..self, fallback_profile_opt: Some(profile), }
   }
 }
 
 ///|
 pub fn FontSystem::clear_fallback_profile(self : FontSystem) -> FontSystem {
-  FontSystem::{ ..self, fallback_profile_opt: None, }
+  { ..self, fallback_profile_opt: None, }
 }
 
 ///|
@@ -462,14 +456,14 @@ pub fn FontSystem::set_fallback_warning_handler(
   self : FontSystem,
   handler : (String) -> Unit,
 ) -> FontSystem {
-  FontSystem::{ ..self, fallback_warning_handler_opt: Some(handler), }
+  { ..self, fallback_warning_handler_opt: Some(handler), }
 }
 
 ///|
 pub fn FontSystem::clear_fallback_warning_handler(
   self : FontSystem,
 ) -> FontSystem {
-  FontSystem::{ ..self, fallback_warning_handler_opt: None, }
+  { ..self, fallback_warning_handler_opt: None, }
 }
 
 ///|
@@ -751,7 +745,7 @@ fn FontFallbackIterState::new(
   locale : String,
   profile : FallbackProfile,
 ) -> FontFallbackIterState {
-  FontFallbackIterState::{
+  {
     ids,
     defaults,
     scripts,
@@ -893,7 +887,7 @@ fn font_fallback_check_missing(
   word : String,
 ) -> FontFallbackMissingInfo? {
   if state.end {
-    return Some(FontFallbackMissingInfo::{
+    return Some({
       kind: Exhausted,
       scripts: state.scripts.copy(),
       locale: fs.locale,
@@ -908,7 +902,7 @@ fn font_fallback_check_missing(
     } else {
       None
     }
-    return Some(FontFallbackMissingInfo::{
+    return Some({
       kind: PresetFallback,
       scripts: state.scripts.copy(),
       locale: fs.locale,
@@ -923,7 +917,7 @@ fn font_fallback_check_missing(
     } else {
       None
     }
-    return Some(FontFallbackMissingInfo::{
+    return Some({
       kind: ScriptFallback,
       scripts: state.scripts.copy(),
       locale: fs.locale,
@@ -1087,9 +1081,9 @@ fn entry_stretch_diff(
 ///|
 fn style_bucket(style : @moon_swash.Style) -> Int {
   match style {
-    @moon_swash.Style::Normal => 0
-    @moon_swash.Style::Italic => 1
-    @moon_swash.Style::Oblique(_) => 2
+    Normal => 0
+    Italic => 1
+    Oblique(_) => 2
   }
 }
 

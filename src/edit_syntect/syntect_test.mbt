@@ -18,7 +18,7 @@ fn mk_editor(text : String) -> @cosmic.Editor {
   let buffer = @cosmic.Buffer::new(@cosmic.Metrics::new(14.0, 20.0)).set_text(
     text,
     attrs_list,
-    @cosmic.Advanced,
+    Advanced,
   )
   @cosmic.Editor::new(buffer)
 }
@@ -308,7 +308,7 @@ test "SyntaxEditor updates token attrs lazily after edit actions" {
   )
   let syntax_editor2 = syntax_editor1
     .set_cursor(@cosmic.Cursor::new(0, 0))
-    .action(@cosmic.Insert('x'))
+    .action(Insert('x'))
   inspect(
     syntax_editor2.editor().buffer().lines()[0]
     .attrs_list()

@@ -46,7 +46,7 @@ test "Cursor constructors" {
     },
     content="true",
   )
-  let c1 = Cursor::new_with_affinity(3, 4, Affinity::After)
+  let c1 = Cursor::new_with_affinity(3, 4, After)
   inspect(
     match c1.affinity {
       After => true

@@ -15,7 +15,7 @@
 ///|
 test "layout_ascii: Wrap::Word splits on spaces" {
   let text = "hello world"
-  let lines = layout_ascii(text, 10.0F, Some(60.0F), Wrap::Word)
+  let lines = layout_ascii(text, 10.0F, Some(60.0F), Word)
   inspect(lines.length(), content="2")
   inspect(lines[0].start, content="0")
   inspect(lines[0].end, content="5")
@@ -28,7 +28,7 @@ test "layout_ascii: Wrap::Word splits on spaces" {
 ///|
 test "layout_ascii: Wrap::WordOrGlyph falls back for long words" {
   let text = "abcdefghij" // 10 glyphs
-  let lines = layout_ascii(text, 10.0F, Some(30.0F), Wrap::WordOrGlyph)
+  let lines = layout_ascii(text, 10.0F, Some(30.0F), WordOrGlyph)
   inspect(lines.length(), content="4")
   inspect(lines[0].start, content="0")
   inspect(lines[0].end, content="3")
@@ -46,7 +46,7 @@ test "layout_from_shape: supports non-1:1 glyph coverage (ligature)" {
   let shape = ShapeLine::new(false, [
     ShapeGlyph::new(0, 2, 2.0F, 0.0F, 0.0F, 0.0F, 0, 42, 0),
   ])
-  let lines = layout_from_shape(text, shape, 10.0F, 10.0F, None, Wrap::None)
+  let lines = layout_from_shape(text, shape, 10.0F, 10.0F, None, None)
   inspect(lines.length(), content="1")
   inspect(lines[0].start, content="0")
   inspect(lines[0].end, content="2")
@@ -73,7 +73,7 @@ test "layout_from_shape: Wrap::None computes max_ascent/max_descent from glyph m
       0.7F, 0.3F,
     ),
   ])
-  let lines = layout_from_shape(text, shape, 10.0F, 10.0F, None, Wrap::None)
+  let lines = layout_from_shape(text, shape, 10.0F, 10.0F, None, None)
   inspect(lines.length(), content="1")
   inspect(absf(lines[0].max_ascent - 7.0F) < 0.001F, content="true")
   inspect(absf(lines[0].max_descent - 3.0F) < 0.001F, content="true")
@@ -101,14 +101,7 @@ test "layout_from_shape: Wrap::Word computes per-line max_ascent/max_descent" {
       0.8F, 0.3F,
     ),
   ])
-  let lines = layout_from_shape(
-    text,
-    shape,
-    10.0F,
-    10.0F,
-    Some(25.0F),
-    Wrap::Word,
-  )
+  let lines = layout_from_shape(text, shape, 10.0F, 10.0F, Some(25.0F), Word)
   inspect(lines.length(), content="2")
   inspect(absf(lines[0].max_ascent - 6.0F) < 0.001F, content="true")
   inspect(absf(lines[0].max_descent - 2.0F) < 0.001F, content="true")
@@ -127,14 +120,7 @@ test "layout_from_shape: Wrap::Word breaks using text word boundaries" {
     // "cd" ligature
     ShapeGlyph::new(3, 5, 2.0F, 0.0F, 0.0F, 0.0F, 0, 3, 0),
   ])
-  let lines = layout_from_shape(
-    text,
-    shape,
-    10.0F,
-    10.0F,
-    Some(25.0F),
-    Wrap::Word,
-  )
+  let lines = layout_from_shape(text, shape, 10.0F, 10.0F, Some(25.0F), Word)
   inspect(lines.length(), content="2")
   inspect(lines[0].start, content="0")
   inspect(lines[0].end, content="2")
@@ -156,7 +142,7 @@ test "layout_from_shape: Wrap::WordOrGlyph falls back to glyph wrap inside a lon
     10.0F,
     10.0F,
     Some(25.0F),
-    Wrap::WordOrGlyph,
+    WordOrGlyph,
   )
   inspect(lines.length(), content="3")
   debug_inspect((lines[0].start, lines[0].end), content="(0, 2)")
@@ -178,8 +164,8 @@ test "layout_from_shape: match_mono_width snaps per-glyph advance" {
   let shape = ShapeLine::new(false, [
     ShapeGlyph::new(0, 1, 1.3F, 0.0F, 0.0F, 0.0F, 0, 1, 0),
   ])
-  let base = layout_from_shape(text, shape, 10.0F, 10.0F, None, Wrap::None)
-  let snapped = layout_from_shape(text, shape, 10.0F, 8.0F, None, Wrap::None)
+  let base = layout_from_shape(text, shape, 10.0F, 10.0F, None, None)
+  let snapped = layout_from_shape(text, shape, 10.0F, 8.0F, None, None)
   inspect(base.length(), content="1")
   inspect(snapped.length(), content="1")
   inspect(absf(base[0].w - 13.0F) < 0.001F, content="true")
@@ -193,10 +179,10 @@ test "layout_from_shape: Wrap::Word keeps blanks when width is unbounded" {
     ShapeLine::empty(),
     text,
     AttrsList::new(Attrs::new()),
-    Shaping::Basic,
+    Basic,
     8,
   )
-  let lines = layout_from_shape(text, shape, 10.0F, 10.0F, None, Wrap::Word)
+  let lines = layout_from_shape(text, shape, 10.0F, 10.0F, None, Word)
   inspect(lines.length(), content="1")
   debug_inspect((lines[0].start, lines[0].end), content="(0, 5)")
   inspect(lines[0].w, content="50")
@@ -209,17 +195,10 @@ test "layout_from_shape: Wrap::Word keeps trailing blanks on final line" {
     ShapeLine::empty(),
     text,
     AttrsList::new(Attrs::new()),
-    Shaping::Basic,
+    Basic,
     8,
   )
-  let lines = layout_from_shape(
-    text,
-    shape,
-    10.0F,
-    10.0F,
-    Some(20.0F),
-    Wrap::Word,
-  )
+  let lines = layout_from_shape(text, shape, 10.0F, 10.0F, Some(20.0F), Word)
   inspect(lines.length(), content="1")
   debug_inspect((lines[0].start, lines[0].end), content="(0, 3)")
   inspect(lines[0].w, content="30")
@@ -232,7 +211,7 @@ test "layout_from_shape: stable wrap when feeding measured width back as limit" 
       ShapeLine::empty(),
       text,
       AttrsList::new(Attrs::new()),
-      Shaping::Basic,
+      Basic,
       8,
     )
   }
@@ -332,15 +311,15 @@ test "layout_from_shape: stable wrap when feeding measured width back as limit" 
     "I like to render اللغة العربية in Rust!",
   ]
   for text in cases {
-    for wrap in [Wrap::None, Wrap::Glyph, Wrap::Word, Wrap::WordOrGlyph] {
+    for wrap in [Wrap::None, Glyph, Word, WordOrGlyph] {
       for
         align_opt in [
           None,
           Some(Align::Left),
-          Some(Align::Right),
-          Some(Align::Center),
-          Some(Align::Start),
-          Some(Align::End),
+          Some(Right),
+          Some(Center),
+          Some(Start),
+          Some(End),
         ] {
         for
           start_width_opt in [
@@ -452,12 +431,12 @@ test "layout_from_shape: bidi visual order reorders RTL runs inside LTR lines" {
     ShapeLine::empty(),
     text,
     AttrsList::new(Attrs::new()),
-    Shaping::Advanced,
+    Advanced,
     8,
   )
   // Base direction is LTR, but the Hebrew run should appear right-to-left visually.
   inspect(shape.rtl, content="false")
-  let lines = layout_from_shape(text, shape, 10.0F, 10.0F, None, Wrap::None)
+  let lines = layout_from_shape(text, shape, 10.0F, 10.0F, None, None)
   inspect(lines.length(), content="1")
   let gs = lines[0].glyphs
   inspect(gs.length(), content="6")
@@ -482,11 +461,11 @@ test "layout_from_shape: bidi visual order keeps embedded LTR runs LTR in RTL li
     ShapeLine::empty(),
     text,
     AttrsList::new(Attrs::new()),
-    Shaping::Advanced,
+    Advanced,
     8,
   )
   inspect(shape.rtl, content="true")
-  let lines = layout_from_shape(text, shape, 10.0F, 10.0F, None, Wrap::None)
+  let lines = layout_from_shape(text, shape, 10.0F, 10.0F, None, None)
   inspect(lines.length(), content="1")
   let gs = lines[0].glyphs
   inspect(gs.length(), content="6")

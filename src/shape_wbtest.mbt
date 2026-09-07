@@ -39,7 +39,7 @@ fn sort_monospace_infos_for_test(
 
 ///|
 fn token_for_test(ch : Char, offset : Int) -> @moon_swash.Token {
-  @moon_swash.Token::Token(
+  Token(
     ch,
     offset.reinterpret_as_uint(),
     utf16_len_of_char(ch).reinterpret_as_uint(),
@@ -91,9 +91,9 @@ test "collect_run_fallback_scripts keeps first-seen unique script order" {
   ]
   let scripts = collect_run_fallback_scripts(tokens)
   let ok = scripts.length() == 3 &&
-    script_eq(scripts[0], @moon_swash.Script::Arabic) &&
-    script_eq(scripts[1], @moon_swash.Script::Han) &&
-    script_eq(scripts[2], @moon_swash.Script::Hiragana)
+    script_eq(scripts[0], Arabic) &&
+    script_eq(scripts[1], Han) &&
+    script_eq(scripts[2], Hiragana)
   inspect(ok, content="true")
 }
 
@@ -109,21 +109,12 @@ test "collect_run_fallback_scripts ignores latin/common/inherited/unknown" {
 
 ///|
 test "shape_primary_script_seed keeps latin when explicitly latin" {
-  let latin = shape_primary_script_seed(@moon_swash.Script::Latin)
-  let common = shape_primary_script_seed(@moon_swash.Script::Common)
-  let arabic = shape_primary_script_seed(@moon_swash.Script::Arabic)
-  inspect(
-    script_eq(latin.0, @moon_swash.Script::Latin) && !latin.1,
-    content="true",
-  )
-  inspect(
-    script_eq(common.0, @moon_swash.Script::Latin) && common.1,
-    content="true",
-  )
-  inspect(
-    script_eq(arabic.0, @moon_swash.Script::Arabic) && !arabic.1,
-    content="true",
-  )
+  let latin = shape_primary_script_seed(Latin)
+  let common = shape_primary_script_seed(Common)
+  let arabic = shape_primary_script_seed(Arabic)
+  inspect(script_eq(latin.0, Latin) && !latin.1, content="true")
+  inspect(script_eq(common.0, Latin) && common.1, content="true")
+  inspect(script_eq(arabic.0, Arabic) && !arabic.1, content="true")
 }
 
 ///|
@@ -230,7 +221,7 @@ test "shape run cache is cleared when fonts are loaded" {
     fs,
     "B",
     attrs,
-    Shaping::Advanced,
+    Advanced,
     8,
   )
   |> ignore

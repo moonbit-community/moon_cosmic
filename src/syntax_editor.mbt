@@ -67,7 +67,7 @@ pub fn SyntaxTheme::selection(self : SyntaxTheme) -> Color {
 
 ///|
 fn theme_base16_eighties_dark() -> SyntaxTheme {
-  SyntaxTheme::{
+  {
     name: "base16-eighties.dark",
     background: Color::rgb(0x2D, 0x2D, 0x2D),
     foreground: Color::rgb(0xD3, 0xD0, 0xC8),
@@ -83,7 +83,7 @@ fn theme_base16_eighties_dark() -> SyntaxTheme {
 
 ///|
 fn theme_base16_ocean_light() -> SyntaxTheme {
-  SyntaxTheme::{
+  {
     name: "base16-ocean.light",
     background: Color::rgb(0xEF, 0xF1, 0xF5),
     foreground: Color::rgb(0x4F, 0x5B, 0x66),
@@ -102,7 +102,8 @@ pub struct SyntaxSystem {}
 
 ///|
 pub fn SyntaxSystem::new() -> SyntaxSystem {
-  SyntaxSystem::{ }
+  let system = SyntaxSystem::{ }
+  system
 }
 
 ///|
@@ -257,7 +258,7 @@ pub struct LineState {
 
 ///|
 pub fn LineState::new() -> LineState {
-  LineState::{
+  {
     block_comment_depth: 0,
     markup_comment_open: false,
     markup_tag_open: false,
@@ -374,7 +375,7 @@ fn push_token(
   class : TokenClass,
 ) -> Unit {
   if end > start {
-    out.push(TokenSpan::{ start, end, class, })
+    out.push({ start, end, class, })
   }
 }
 
@@ -1056,21 +1057,21 @@ fn tokenize_line(
           []
         } else {
           [
-            TokenSpan::{
+            {
               start: offset_at(text, offsets, line_first),
               end: text.length(),
               class: Keyword,
             },
           ]
         },
-        LineState::{ ..state, clike_preproc_continuation: continuation, },
+        { ..state, clike_preproc_continuation: continuation, },
       )
     }
     if state.clike_preproc_continuation {
-      state = LineState::{ ..state, clike_preproc_continuation: false, }
+      state = { ..state, clike_preproc_continuation: false, }
     }
   } else if state.clike_preproc_continuation {
-    state = LineState::{ ..state, clike_preproc_continuation: false, }
+    state = { ..state, clike_preproc_continuation: false, }
   }
 
   if syntax_name == "ruby" {
@@ -1081,14 +1082,14 @@ fn tokenize_line(
           []
         } else {
           [
-            TokenSpan::{
+            {
               start: offset_at(text, offsets, line_first),
               end: text.length(),
               class: Comment,
             },
           ]
         },
-        LineState::{ ..state, ruby_block_comment_open: !closes, },
+        { ..state, ruby_block_comment_open: !closes, },
       )
     }
     if line_starts_with(chars, line_first, "=begin") {
@@ -1097,14 +1098,14 @@ fn tokenize_line(
           []
         } else {
           [
-            TokenSpan::{
+            {
               start: offset_at(text, offsets, line_first),
               end: text.length(),
               class: Comment,
             },
           ]
         },
-        LineState::{ ..state, ruby_block_comment_open: true, },
+        { ..state, ruby_block_comment_open: true, },
       )
     }
   }
@@ -1123,9 +1124,9 @@ fn tokenize_line(
           if text.length() == 0 {
             []
           } else {
-            [TokenSpan::{ start: 0, end: text.length(), class: StringLit, }]
+            [{ start: 0, end: text.length(), class: StringLit, }]
           },
-          LineState::{
+          {
             ..state,
             shell_heredoc_delim_opt: if closes {
               None
@@ -1151,20 +1152,20 @@ fn tokenize_line(
           Some(c) if c == fence =>
             return (
               [
-                TokenSpan::{
+                {
                   start: offset_at(text, offsets, first),
                   end: text.length(),
                   class: Keyword,
                 },
               ],
-              LineState::{ ..state, markdown_fence_char_opt: None, },
+              { ..state, markdown_fence_char_opt: None, },
             )
           _ =>
             return (
               if text.length() == 0 {
                 []
               } else {
-                [TokenSpan::{ start: 0, end: text.length(), class: StringLit, }]
+                [{ start: 0, end: text.length(), class: StringLit, }]
               },
               state,
             )
@@ -1174,21 +1175,18 @@ fn tokenize_line(
         let mut next_state = state
         match markdown_fence_char(chars, first) {
           Some(c) => {
-            spans_md.push(TokenSpan::{
+            spans_md.push({
               start: offset_at(text, offsets, first),
               end: text.length(),
               class: Keyword,
             })
-            next_state = LineState::{
-              ..next_state,
-              markdown_fence_char_opt: Some(c),
-            }
+            next_state = { ..next_state, markdown_fence_char_opt: Some(c), }
             return (spans_md, next_state)
           }
           None => ()
         }
         if first < n && chars[first] == '#' {
-          spans_md.push(TokenSpan::{
+          spans_md.push({
             start: offset_at(text, offsets, first),
             end: text.length(),
             class: Keyword,
@@ -1221,7 +1219,7 @@ fn tokenize_line(
               }
             }
             let end_i = if closed { p } else { n }
-            spans_md.push(TokenSpan::{
+            spans_md.push({
               start: offset_at(text, offsets, start_i),
               end: offset_at(text, offsets, end_i),
               class: StringLit,
@@ -1267,7 +1265,7 @@ fn tokenize_line(
           StringLit,
         )
         if closed {
-          state = LineState::{ ..state, raw_hash_count_opt: None, }
+          state = { ..state, raw_hash_count_opt: None, }
         }
         continue
       }
@@ -1297,7 +1295,7 @@ fn tokenize_line(
           },
         )
         if closed {
-          state = LineState::{
+          state = {
             ..state,
             lua_long_eq_count_opt: None,
             lua_long_is_comment: false,
@@ -1327,7 +1325,7 @@ fn tokenize_line(
         offset_at(text, offsets, i),
         Comment,
       )
-      state = LineState::{ ..state, markup_comment_open: !closed, }
+      state = { ..state, markup_comment_open: !closed, }
       continue
     }
 
@@ -1348,7 +1346,7 @@ fn tokenize_line(
         offset_at(text, offsets, i),
         Keyword,
       )
-      state = LineState::{ ..state, markup_tag_open: !closed, }
+      state = { ..state, markup_tag_open: !closed, }
       continue
     }
 
@@ -1386,9 +1384,9 @@ fn tokenize_line(
         Comment,
       )
       if close_found {
-        state = LineState::{ ..state, block_comment_depth: 0, }
+        state = { ..state, block_comment_depth: 0, }
       } else {
-        state = LineState::{ ..state, block_comment_depth: depth, }
+        state = { ..state, block_comment_depth: depth, }
       }
       continue
     }
@@ -1437,17 +1435,9 @@ fn tokenize_line(
           StringLit,
         )
         if closed {
-          state = LineState::{
-            ..state,
-            string_delim_opt: None,
-            string_is_triple: false,
-          }
+          state = { ..state, string_delim_opt: None, string_is_triple: false, }
         } else if !triple {
-          state = LineState::{
-            ..state,
-            string_delim_opt: None,
-            string_is_triple: false,
-          }
+          state = { ..state, string_delim_opt: None, string_is_triple: false, }
         }
         continue
       }
@@ -1481,7 +1471,7 @@ fn tokenize_line(
         Comment,
       )
       if !closed {
-        state = LineState::{ ..state, markup_comment_open: true, }
+        state = { ..state, markup_comment_open: true, }
       }
       continue
     }
@@ -1513,7 +1503,7 @@ fn tokenize_line(
         Keyword,
       )
       if !closed {
-        state = LineState::{ ..state, markup_tag_open: true, }
+        state = { ..state, markup_tag_open: true, }
       }
       continue
     }
@@ -1544,7 +1534,7 @@ fn tokenize_line(
             Comment,
           )
           if !closed {
-            state = LineState::{
+            state = {
               ..state,
               lua_long_eq_count_opt: Some(eq_count),
               lua_long_is_comment: true,
@@ -1577,7 +1567,7 @@ fn tokenize_line(
             StringLit,
           )
           if !closed {
-            state = LineState::{
+            state = {
               ..state,
               lua_long_eq_count_opt: Some(eq_count),
               lua_long_is_comment: false,
@@ -1601,7 +1591,7 @@ fn tokenize_line(
             offset_at(text, offsets, end_i),
             Keyword,
           )
-          state = LineState::{
+          state = {
             ..state,
             shell_heredoc_delim_opt: Some(delimiter),
             shell_heredoc_strip_tabs: strip_tabs,
@@ -1659,7 +1649,7 @@ fn tokenize_line(
       }
       if !close_found {
         i = n
-        state = LineState::{ ..state, block_comment_depth: depth, }
+        state = { ..state, block_comment_depth: depth, }
       }
       push_token(
         spans,
@@ -1726,7 +1716,7 @@ fn tokenize_line(
         if !closed {
           let continue_string = triple || escaped
           if continue_string {
-            state = LineState::{
+            state = {
               ..state,
               string_delim_opt: Some(delim),
               string_is_triple: triple,
@@ -1770,7 +1760,7 @@ fn tokenize_line(
           StringLit,
         )
         if !closed && escaped {
-          state = LineState::{ ..state, string_delim_opt: Some(delim), }
+          state = { ..state, string_delim_opt: Some(delim), }
         }
         continue
       }
@@ -1810,7 +1800,7 @@ fn tokenize_line(
             StringLit,
           )
           if !closed {
-            state = LineState::{ ..state, raw_hash_count_opt: Some(hashes), }
+            state = { ..state, raw_hash_count_opt: Some(hashes), }
           }
           continue
         }
@@ -1853,7 +1843,7 @@ fn tokenize_line(
           StringLit,
         )
         if !closed {
-          state = LineState::{ ..state, raw_hash_count_opt: Some(hashes), }
+          state = { ..state, raw_hash_count_opt: Some(hashes), }
         }
         continue
       }
@@ -1934,7 +1924,7 @@ fn tokenize_line(
       if !closed {
         let continue_string = triple || (syntax_name == "python" && escaped)
         if continue_string {
-          state = LineState::{
+          state = {
             ..state,
             string_delim_opt: Some(delim),
             string_is_triple: triple,
@@ -2011,7 +2001,7 @@ fn attrs_for_token(
     Keyword => defaults.color(theme.keyword).weight(Weight::bold())
     TypeName => defaults.color(theme.type_name)
     StringLit => defaults.color(theme.string_lit)
-    Comment => defaults.color(theme.comment).style(@moon_swash.Style::Italic)
+    Comment => defaults.color(theme.comment).style(Italic)
     Number => defaults.color(theme.number)
   }
 }
@@ -2095,7 +2085,7 @@ fn syntax_highlight_buffer(
       updated_line = updated_line.set_metadata(line_i)
     }
     new_lines.push(updated_line)
-    new_cache.push(CachedLine::{
+    new_cache.push({
       text,
       state_in: state,
       state_out,
@@ -2104,7 +2094,7 @@ fn syntax_highlight_buffer(
     state = state_out
   }
   let redraw = buffer.redraw() || changed || highlighted > 0
-  (Buffer::{ ..buffer, lines: new_lines, redraw, }, new_cache, highlighted)
+  ({ ..buffer, lines: new_lines, redraw, }, new_cache, highlighted)
 }
 
 ///|
@@ -2120,7 +2110,7 @@ fn syntax_apply_theme_defaults(buffer : Buffer, theme : SyntaxTheme) -> Buffer {
     }
     new_lines.push(set_line.0)
   }
-  Buffer::{ ..buffer, lines: new_lines, redraw: buffer.redraw() || changed, }
+  { ..buffer, lines: new_lines, redraw: buffer.redraw() || changed, }
 }
 
 ///|
@@ -2138,7 +2128,7 @@ fn syntax_rehighlight_editor(
     old_cache,
     allow_cache,
   )
-  (Editor::{ ..editor, buffer: highlighted.0, }, highlighted.1, highlighted.2)
+  ({ ..editor, buffer: highlighted.0, }, highlighted.1, highlighted.2)
 }
 
 ///|
@@ -2151,13 +2141,7 @@ pub fn SyntaxEditor::new(
     None => None
     Some(theme) => {
       let syntax_name = syntax_system.plain_text_syntax()
-      Some(SyntaxEditor::{
-        editor,
-        syntax_system,
-        syntax_name,
-        theme,
-        cache: [],
-      })
+      Some({ editor, syntax_system, syntax_name, theme, cache: [], })
     }
   }
 }
@@ -2202,7 +2186,7 @@ pub fn SyntaxEditor::set_editor(
   self : SyntaxEditor,
   editor : Editor,
 ) -> SyntaxEditor {
-  SyntaxEditor::{ ..self, editor, }
+  { ..self, editor, }
 }
 
 ///|
@@ -2218,7 +2202,7 @@ pub fn SyntaxEditor::update_theme(
         theme,
       )
       let themed_editor = Editor::{ ..self.editor, buffer: themed_buffer, }
-      (SyntaxEditor::{ ..self, editor: themed_editor, theme, cache: [], }, true)
+      ({ ..self, editor: themed_editor, theme, cache: [], }, true)
     }
   }
 }
@@ -2232,7 +2216,7 @@ pub fn SyntaxEditor::syntax_by_extension(
     None => self.syntax_system.plain_text_syntax()
     Some(name) => name
   }
-  SyntaxEditor::{ ..self, syntax_name, cache: [], }
+  { ..self, syntax_name, cache: [], }
 }
 
 ///|
@@ -2244,7 +2228,7 @@ pub fn SyntaxEditor::rehighlight(self : SyntaxEditor) -> SyntaxEditor {
     self.cache,
     true,
   )
-  SyntaxEditor::{ ..self, editor: highlighted.0, cache: highlighted.1, }
+  { ..self, editor: highlighted.0, cache: highlighted.1, }
 }
 
 ///|
@@ -2252,7 +2236,7 @@ pub fn SyntaxEditor::action(
   self : SyntaxEditor,
   action : Action,
 ) -> SyntaxEditor {
-  SyntaxEditor::{ ..self, editor: self.editor.action(action), }
+  { ..self, editor: self.editor.action(action), }
 }
 
 ///|
@@ -2265,7 +2249,7 @@ pub fn SyntaxEditor::set_cursor(
   self : SyntaxEditor,
   cursor : Cursor,
 ) -> SyntaxEditor {
-  SyntaxEditor::{ ..self, editor: self.editor.set_cursor(cursor), }
+  { ..self, editor: self.editor.set_cursor(cursor), }
 }
 
 ///|
@@ -2278,7 +2262,7 @@ pub fn SyntaxEditor::set_selection(
   self : SyntaxEditor,
   selection : Selection,
 ) -> SyntaxEditor {
-  SyntaxEditor::{ ..self, editor: self.editor.set_selection(selection), }
+  { ..self, editor: self.editor.set_selection(selection), }
 }
 
 ///|
@@ -2291,7 +2275,7 @@ pub fn SyntaxEditor::set_auto_indent(
   self : SyntaxEditor,
   auto_indent : Bool,
 ) -> SyntaxEditor {
-  SyntaxEditor::{ ..self, editor: self.editor.set_auto_indent(auto_indent), }
+  { ..self, editor: self.editor.set_auto_indent(auto_indent), }
 }
 
 ///|
@@ -2304,12 +2288,12 @@ pub fn SyntaxEditor::set_tab_width(
   self : SyntaxEditor,
   tab_width : Int,
 ) -> SyntaxEditor {
-  SyntaxEditor::{ ..self, editor: self.editor.set_tab_width(tab_width), }
+  { ..self, editor: self.editor.set_tab_width(tab_width), }
 }
 
 ///|
 pub fn SyntaxEditor::start_change(self : SyntaxEditor) -> SyntaxEditor {
-  SyntaxEditor::{ ..self, editor: self.editor.start_change(), }
+  { ..self, editor: self.editor.start_change(), }
 }
 
 ///|
@@ -2317,7 +2301,7 @@ pub fn SyntaxEditor::finish_change(
   self : SyntaxEditor,
 ) -> (SyntaxEditor, Change?) {
   let finished = self.editor.finish_change()
-  (SyntaxEditor::{ ..self, editor: finished.0, }, finished.1)
+  ({ ..self, editor: finished.0, }, finished.1)
 }
 
 ///|
@@ -2330,7 +2314,7 @@ pub fn SyntaxEditor::delete_selection(
   self : SyntaxEditor,
 ) -> (SyntaxEditor, Bool) {
   let deleted = self.editor.delete_selection()
-  (SyntaxEditor::{ ..self, editor: deleted.0, }, deleted.1)
+  ({ ..self, editor: deleted.0, }, deleted.1)
 }
 
 ///|
@@ -2339,10 +2323,7 @@ pub fn SyntaxEditor::delete_range(
   start : Cursor,
   end : Cursor,
 ) -> SyntaxEditor {
-  SyntaxEditor::{
-    ..self,
-    editor: self.editor.start_change().delete_range(start, end),
-  }
+  { ..self, editor: self.editor.start_change().delete_range(start, end), }
 }
 
 ///|
@@ -2351,7 +2332,7 @@ pub fn SyntaxEditor::insert_string(
   data : String,
   attrs_list_opt : AttrsList?,
 ) -> SyntaxEditor {
-  SyntaxEditor::{
+  {
     ..self,
     editor: self.editor.start_change().insert_string(data, attrs_list_opt),
   }
@@ -2363,7 +2344,7 @@ pub fn SyntaxEditor::apply_change(
   change : Change,
 ) -> (SyntaxEditor, Bool) {
   let applied = self.editor.apply_change(change)
-  (SyntaxEditor::{ ..self, editor: applied.0, }, applied.1)
+  ({ ..self, editor: applied.0, }, applied.1)
 }
 
 ///|

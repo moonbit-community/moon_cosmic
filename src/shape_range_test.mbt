@@ -118,7 +118,7 @@ test "ShapeLine.build_with_font_system keeps space glyphs on whitespace source r
     font_system,
     text,
     AttrsList::new(Attrs::new()),
-    Shaping::Advanced,
+    Advanced,
     8,
   )
   let space_gid = match font_system.get_font(0) {
@@ -158,10 +158,10 @@ test "ShapeLine.build_with_font_system keeps visible ASCII renderable on physica
     font_system,
     text,
     AttrsList::new(Attrs::new()),
-    Shaping::Advanced,
+    Advanced,
     8,
   )
-  let lines = layout_from_shape(text, shape, 18.0F, 18.0F, None, Wrap::None)
+  let lines = layout_from_shape(text, shape, 18.0F, 18.0F, None, None)
   let cache = SwashCache::new()
   let mut bad = 0
   for line in lines {
@@ -189,7 +189,7 @@ test "ShapeLine.build_with_font_system emits non-inverted in-bounds source range
     font_system,
     text,
     AttrsList::new(Attrs::new()),
-    Shaping::Advanced,
+    Advanced,
     8,
   )
   let mut ok = true
@@ -217,7 +217,7 @@ test "ShapeLine.build_with_font_system assigns metadata by glyph start attrs" {
     font_system,
     text,
     attrs,
-    Shaping::Advanced,
+    Advanced,
     8,
   )
   let mut ok = true
@@ -248,7 +248,7 @@ test "ShapeLine.build_with_font_system preserves per-cluster starts on minimal c
     fs,
     "ABC",
     AttrsList::new(Attrs::new()),
-    Shaping::Advanced,
+    Advanced,
     8,
   )
   let mut font_at_a : Int? = None
@@ -276,30 +276,30 @@ test "ShapeLine layout helpers: width/layout/layout_to_buffer" {
     ShapeLine::empty(),
     "ab",
     AttrsList::new(Attrs::new()),
-    Shaping::Basic,
+    Basic,
     8,
   )
   inspect(shape.width(10.0F), content="20")
   let lines = shape.layout(
     10.0F,
     Some(100.0F),
-    Wrap::None,
-    Ellipsize::None,
     None,
     None,
-    Hinting::Disabled,
+    None,
+    None,
+    Disabled,
   )
   inspect(lines.length(), content="1")
   let lines2 : Array[LayoutLine] = []
   shape.layout_to_buffer(
     10.0F,
     Some(100.0F),
-    Wrap::None,
-    Ellipsize::None,
+    None,
+    None,
     None,
     lines2,
     None,
-    Hinting::Disabled,
+    Disabled,
   )
   inspect(lines2.length(), content="1")
 }
@@ -310,17 +310,17 @@ test "ShapeLine.layout applies ellipsize trimming semantics" {
     ShapeLine::empty(),
     "a a a a a",
     AttrsList::new(Attrs::new()),
-    Shaping::Basic,
+    Basic,
     8,
   )
   let end_lines = shape.layout(
     10.0F,
     Some(30.0F),
-    Wrap::Word,
-    Ellipsize::End(EllipsizeHeightLimit::Lines(1)),
+    Word,
+    End(Lines(1)),
     None,
     None,
-    Hinting::Disabled,
+    Disabled,
   )
   inspect(end_lines.length(), content="1")
   let end_glyphs = end_lines[0].glyphs
@@ -334,11 +334,11 @@ test "ShapeLine.layout applies ellipsize trimming semantics" {
   let start_lines = shape.layout(
     10.0F,
     Some(30.0F),
-    Wrap::Word,
-    Ellipsize::Start(EllipsizeHeightLimit::Lines(1)),
+    Word,
+    Start(Lines(1)),
     None,
     None,
-    Hinting::Disabled,
+    Disabled,
   )
   inspect(start_lines.length(), content="1")
   let start_glyphs = start_lines[0].glyphs

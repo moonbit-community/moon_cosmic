@@ -32,7 +32,7 @@ pub fn ShapeRunKey::new(text : String, attrs_list : AttrsList) -> ShapeRunKey {
       spans.push((s.start, s.end, s.attrs))
     }
   }
-  ShapeRunKey::{ text, default_attrs, attrs_spans: spans, }
+  { text, default_attrs, attrs_spans: spans, }
 }
 
 ///|
@@ -73,7 +73,7 @@ pub struct ShapeRunCache {
 
 ///|
 pub fn ShapeRunCache::new() -> ShapeRunCache {
-  ShapeRunCache::{ age: 0UL, cache: Default::default(), }
+  { age: 0UL, cache: Default::default(), }
 }
 
 ///|

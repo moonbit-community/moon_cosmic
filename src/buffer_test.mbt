@@ -75,7 +75,7 @@ test "Buffer.set_rich_text builds per-line AttrsList spans and uses default line
     spans,
     Attrs::new(),
     Advanced,
-    Some(Align::Center),
+    Some(Center),
   )
   let lines = buf.lines()
   inspect(lines.length(), content="2")
@@ -148,11 +148,11 @@ test "Buffer.layout_runs returns no runs before layout cache is built" {
 ///|
 test "Buffer setters mark redraw when value changes" {
   let buf0 = Buffer::new_empty(Metrics::new(12.0F, 14.0F))
-  let buf1 = buf0.set_wrap(Wrap::Glyph)
+  let buf1 = buf0.set_wrap(Glyph)
   inspect(buf1.redraw(), content="true")
   let buf2 = buf1.set_tab_width(2)
   inspect(buf2.redraw(), content="true")
-  let buf3 = buf2.set_hinting(Hinting::Enabled)
+  let buf3 = buf2.set_hinting(Enabled)
   inspect(buf3.redraw(), content="true")
   let buf4 = buf3.set_monospace_width(Some(8.0F))
   inspect(buf4.redraw(), content="true")
@@ -167,7 +167,7 @@ test "Buffer.set_wrap invalidates cached layout and relayout reflects new wrap m
   buf = buf
     .set_text("a a a a a a", attrs, Advanced)
     .set_size(Some(24.0F), None)
-    .set_wrap(Wrap::None)
+    .set_wrap(None)
     .layout_all()
 
   let mut runs_none = 0
@@ -175,7 +175,7 @@ test "Buffer.set_wrap invalidates cached layout and relayout reflects new wrap m
     runs_none = runs_none + 1
   }
 
-  let buf2 = buf.set_wrap(Wrap::WordOrGlyph).layout_all()
+  let buf2 = buf.set_wrap(WordOrGlyph).layout_all()
   let mut runs_wrap = 0
   for _ in buf2.layout_runs() {
     runs_wrap = runs_wrap + 1
@@ -233,7 +233,7 @@ test "Buffer.layout_runs follows scroll line and viewport height" {
 test "wrap_word_fallback: layout_runs never overflow width" {
   let metrics = Metrics::new(14.0F, 20.0F)
   let mut buffer = Buffer::new(metrics)
-  buffer = buffer.set_wrap(Wrap::WordOrGlyph)
+  buffer = buffer.set_wrap(WordOrGlyph)
   buffer = buffer.set_text(
     "Lorem ipsum dolor sit amet, qui minim labore adipisicing minim sint cillum sint consectetur cupidatat.",
     AttrsList::new(Attrs::new()),
@@ -258,7 +258,7 @@ test "wrap_word_fallback: layout_runs never overflow width" {
 test "wrap_extra_line: matches upstream empty/overflow line counts" {
   let metrics = Metrics::new(14.0F, 20.0F)
   let mut buffer = Buffer::new(metrics)
-  buffer = buffer.set_wrap(Wrap::Word)
+  buffer = buffer.set_wrap(Word)
   buffer = buffer.set_text(
     "Lorem ipsum dolor sit amet, qui minim labore adipisicing\n\nweeewoooo minim sint cillum sint consectetur cupidatat.",
     AttrsList::new(Attrs::new().family(Name("Inter"))),
@@ -400,7 +400,7 @@ test "Buffer.shape_until_cursor scrolls to include target line and keeps x in vi
 
   let horizontal_buf0 = Buffer::new(Metrics::new(10.0F, 10.0F))
     .set_text("abcdefghij", attrs, Basic)
-    .set_wrap(Wrap::None)
+    .set_wrap(None)
     .set_size(Some(20.0F), Some(20.0F))
   let horizontal_buf1 = horizontal_buf0.shape_until_cursor(
     FontSystem::new(),

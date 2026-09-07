@@ -23,9 +23,7 @@ test "Editor change tracking: insert and delete" {
   let editor0 = Editor::new(buffer).start_change()
 
   // Insert
-  let editor1 = editor0
-    .set_cursor(Cursor::new(0, 1))
-    .action(Action::Insert('X'))
+  let editor1 = editor0.set_cursor(Cursor::new(0, 1)).action(Insert('X'))
   let (editor2, change_opt) = editor1.finish_change()
   ignore(editor2)
   match change_opt {
@@ -64,29 +62,27 @@ test "Editor.action: backspace/delete/enter and motion" {
   let editor0 = Editor::new(buffer).set_cursor(Cursor::new(0, 2))
 
   // Enter inserts newline.
-  let editor1 = editor0.action(Action::Enter)
+  let editor1 = editor0.action(Enter)
   inspect(editor1.buffer().lines().length(), content="3")
   inspect(editor1.buffer().lines()[0].text(), content="ab")
 
   // Backspace deletes previous code unit.
   let editor2 = Editor::new(buffer)
     .set_cursor(Cursor::new(0, 2))
-    .action(Action::Backspace)
+    .action(Backspace)
   inspect(editor2.buffer().lines()[0].text(), content="a")
   inspect(editor2.cursor().index, content="1")
 
   // Delete deletes forward.
-  let editor3 = Editor::new(buffer)
-    .set_cursor(Cursor::new(0, 1))
-    .action(Action::Delete)
+  let editor3 = Editor::new(buffer).set_cursor(Cursor::new(0, 1)).action(Delete)
   inspect(editor3.buffer().lines()[0].text(), content="a")
   inspect(editor3.cursor().index, content="1")
 
   // Motion right then down.
   let editor4 = Editor::new(buffer)
     .set_cursor(Cursor::new(0, 0))
-    .action(Action::Motion(Motion::Right))
-    .action(Action::Motion(Motion::Down))
+    .action(Motion(Right))
+    .action(Motion(Down))
   inspect(editor4.cursor().line, content="1")
   inspect(editor4.cursor().index, content="1")
 }
@@ -106,9 +102,9 @@ test "Buffer.hit + Editor.action click/drag" {
     Some(c) => inspect(c.index, content="1")
   }
   let editor0 = Editor::new(buffer).set_cursor(Cursor::new(0, 0))
-  let editor1 = editor0.action(Action::Click(7, 0))
+  let editor1 = editor0.action(Click(7, 0))
   inspect(editor1.cursor().index, content="1")
-  let editor2 = editor0.action(Action::Drag(7, 0))
+  let editor2 = editor0.action(Drag(7, 0))
   inspect(editor2.cursor().index, content="1")
   inspect(
     match editor2.selection {
@@ -166,10 +162,10 @@ test "Editor.action Backspace/Delete are grapheme-aware (combining mark)" {
     Advanced,
   )
   let editor0 = Editor::new(buffer).set_cursor(Cursor::new(0, 2))
-  let editor1 = editor0.action(Action::Backspace)
+  let editor1 = editor0.action(Backspace)
   inspect(editor1.buffer().lines()[0].text(), content="")
   let editor2 = Editor::new(buffer).set_cursor(Cursor::new(0, 0))
-  let editor3 = editor2.action(Action::Delete)
+  let editor3 = editor2.action(Delete)
   inspect(editor3.buffer().lines()[0].text(), content="")
 }
 
@@ -181,7 +177,7 @@ test "Buffer.cursor_motion Previous/Next are grapheme-aware (combining mark)" {
   let buffer = Buffer::new(Metrics::new(12.0F, 12.0F))
     .set_text(s, attrs, Advanced)
     .set_size(Some(1000.0F), None)
-  match buffer.cursor_motion(Cursor::new(0, 2), None, Motion::Previous) {
+  match buffer.cursor_motion(Cursor::new(0, 2), None, Previous) {
     None => abort("expected motion")
     Some((c, _x)) => {
       inspect(c.index, content="0")
@@ -194,7 +190,7 @@ test "Buffer.cursor_motion Previous/Next are grapheme-aware (combining mark)" {
       )
     }
   }
-  match buffer.cursor_motion(Cursor::new(0, 0), None, Motion::Next) {
+  match buffer.cursor_motion(Cursor::new(0, 0), None, Next) {
     None => abort("expected motion")
     Some((c, _x)) => {
       inspect(c.index, content="2")
@@ -215,11 +211,11 @@ test "Buffer.cursor_motion SoftHome jumps to first non-whitespace" {
   let buffer = Buffer::new(Metrics::new(12.0F, 12.0F))
     .set_text("  foo", attrs, Advanced)
     .set_size(Some(1000.0F), None)
-  match buffer.cursor_motion(Cursor::new(0, 0), None, Motion::SoftHome) {
+  match buffer.cursor_motion(Cursor::new(0, 0), None, SoftHome) {
     None => abort("expected motion")
     Some((c, _x)) => inspect(c.index, content="2")
   }
-  match buffer.cursor_motion(Cursor::new(0, 2), None, Motion::SoftHome) {
+  match buffer.cursor_motion(Cursor::new(0, 2), None, SoftHome) {
     None => abort("expected motion")
     Some((c, _x)) => inspect(c.index, content="2")
   }
@@ -231,7 +227,7 @@ test "Buffer.cursor_motion SoftHome on all-whitespace line returns 0" {
   let buffer = Buffer::new(Metrics::new(12.0F, 12.0F))
     .set_text("   ", attrs, Advanced)
     .set_size(Some(1000.0F), None)
-  match buffer.cursor_motion(Cursor::new(0, 1), None, Motion::SoftHome) {
+  match buffer.cursor_motion(Cursor::new(0, 1), None, SoftHome) {
     None => abort("expected motion")
     Some((c, _x)) => inspect(c.index, content="0")
   }
@@ -259,7 +255,7 @@ test "Buffer.cursor_motion Home/End operate on visual line when wrapped" {
   let home_expected = run1.glyphs[0].start
   let end_expected = run1.glyphs[run1.glyphs.length() - 1].end
   let mid_idx = run1.glyphs[0].end
-  match buffer.cursor_motion(Cursor::new(0, mid_idx), None, Motion::Home) {
+  match buffer.cursor_motion(Cursor::new(0, mid_idx), None, Home) {
     None => abort("expected motion")
     Some((c, _x)) => {
       inspect(c.index == home_expected, content="true")
@@ -272,7 +268,7 @@ test "Buffer.cursor_motion Home/End operate on visual line when wrapped" {
       )
     }
   }
-  match buffer.cursor_motion(Cursor::new(0, home_expected), None, Motion::End) {
+  match buffer.cursor_motion(Cursor::new(0, home_expected), None, End) {
     None => abort("expected motion")
     Some((c, _x)) => {
       inspect(c.index == end_expected, content="true")
@@ -293,14 +289,14 @@ test "Buffer.cursor_motion PreviousWord/NextWord cross lines" {
   let buffer = Buffer::new(Metrics::new(12.0F, 12.0F))
     .set_text("foo\nbar", attrs, Advanced)
     .set_size(Some(1000.0F), None)
-  match buffer.cursor_motion(Cursor::new(1, 0), None, Motion::PreviousWord) {
+  match buffer.cursor_motion(Cursor::new(1, 0), None, PreviousWord) {
     None => abort("expected motion")
     Some((c, _x)) => {
       inspect(c.line, content="0")
       inspect(c.index, content="3")
     }
   }
-  match buffer.cursor_motion(Cursor::new(0, 3), None, Motion::NextWord) {
+  match buffer.cursor_motion(Cursor::new(0, 3), None, NextWord) {
     None => abort("expected motion")
     Some((c, _x)) => {
       inspect(c.line, content="1")
@@ -315,11 +311,11 @@ test "Buffer.cursor_motion ParagraphStart/ParagraphEnd" {
   let buffer = Buffer::new(Metrics::new(12.0F, 12.0F))
     .set_text("foo", attrs, Advanced)
     .set_size(Some(1000.0F), None)
-  match buffer.cursor_motion(Cursor::new(0, 2), None, Motion::ParagraphStart) {
+  match buffer.cursor_motion(Cursor::new(0, 2), None, ParagraphStart) {
     None => abort("expected motion")
     Some((c, _x)) => inspect(c.index, content="0")
   }
-  match buffer.cursor_motion(Cursor::new(0, 1), None, Motion::ParagraphEnd) {
+  match buffer.cursor_motion(Cursor::new(0, 1), None, ParagraphEnd) {
     None => abort("expected motion")
     Some((c, _x)) => inspect(c.index, content="3")
   }
@@ -331,14 +327,14 @@ test "Buffer.cursor_motion GotoLine uses LayoutCursor mapping" {
   let buffer = Buffer::new(Metrics::new(12.0F, 12.0F))
     .set_text("abc\ndefg\nhi", attrs, Advanced)
     .set_size(Some(1000.0F), None)
-  match buffer.cursor_motion(Cursor::new(0, 2), None, Motion::GotoLine(1)) {
+  match buffer.cursor_motion(Cursor::new(0, 2), None, GotoLine(1)) {
     None => abort("expected motion")
     Some((c, _x)) => {
       inspect(c.line, content="1")
       inspect(c.index, content="2")
     }
   }
-  match buffer.cursor_motion(Cursor::new(0, 0), None, Motion::GotoLine(99)) {
+  match buffer.cursor_motion(Cursor::new(0, 0), None, GotoLine(99)) {
     None => ()
     Some((_c, _x)) => abort("expected None for out-of-range")
   }
@@ -351,7 +347,7 @@ test "Buffer.cursor_motion Left/Right respect base RTL lines" {
   let buffer = Buffer::new(Metrics::new(12.0F, 12.0F))
     .set_text(s, attrs, Advanced)
     .set_size(Some(1000.0F), None)
-  match buffer.cursor_motion(Cursor::new(0, 0), None, Motion::Left) {
+  match buffer.cursor_motion(Cursor::new(0, 0), None, Left) {
     None => abort("expected motion")
     Some((c, _x)) => {
       inspect(c.index, content="1")
@@ -364,7 +360,7 @@ test "Buffer.cursor_motion Left/Right respect base RTL lines" {
       )
     }
   }
-  match buffer.cursor_motion(Cursor::new(0, 1), None, Motion::Right) {
+  match buffer.cursor_motion(Cursor::new(0, 1), None, Right) {
     None => abort("expected motion")
     Some((c, _x)) => {
       inspect(c.index, content="0")

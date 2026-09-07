@@ -42,10 +42,7 @@ pub impl Renderer for DecorationTestRenderer with fn glyph(
 ///|
 test "render_decoration draws underline rectangles" {
   let glyph = LayoutGlyph::new(0, 1, 10.0F, 0, 400, 1, 0.0F, 0.0F, 10.0F, 0)
-  let td = TextDecoration::{
-    ..TextDecoration::new(),
-    underline: UnderlineStyle::Single,
-  }
+  let td = TextDecoration::{ ..TextDecoration::new(), underline: Single, }
   let data = GlyphDecorationData::{
     text_decoration: td,
     underline_metrics: DecorationMetrics::new(-0.125F, 1.0F / 14.0F),

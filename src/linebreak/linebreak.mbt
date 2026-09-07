@@ -35,9 +35,9 @@ fn map_break_opportunity(
   op : @unicode_linebreak.BreakOpportunity,
 ) -> BreakOpportunity {
   match op {
-    @unicode_linebreak.BreakOpportunity::Mandatory => Mandatory
-    @unicode_linebreak.BreakOpportunity::Allowed => Allowed
-    @unicode_linebreak.BreakOpportunity::Prohibited => Prohibited
+    Mandatory => Mandatory
+    Allowed => Allowed
+    Prohibited => Prohibited
   }
 }
 

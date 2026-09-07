@@ -34,7 +34,7 @@ test "Editor.selection_bounds: none/normal/line/word" {
   // Normal
   let editor1 = editor0
     .set_cursor(Cursor::new(0, 2))
-    .set_selection(Selection::Normal(Cursor::new(0, 5)))
+    .set_selection(Normal(Cursor::new(0, 5)))
   match editor1.selection_bounds() {
     None => abort("expected selection bounds")
     Some((start, end)) => {
@@ -48,7 +48,7 @@ test "Editor.selection_bounds: none/normal/line/word" {
   // Line selection expands to full lines.
   let editor2 = editor0
     .set_cursor(Cursor::new(1, 2))
-    .set_selection(Selection::Line(Cursor::new(0, 0)))
+    .set_selection(Line(Cursor::new(0, 0)))
   match editor2.selection_bounds() {
     None => abort("expected selection bounds")
     Some((start, end)) => {
@@ -62,7 +62,7 @@ test "Editor.selection_bounds: none/normal/line/word" {
   // Word selection expands to whole words.
   let editor3 = editor0
     .set_cursor(Cursor::new(0, 8))
-    .set_selection(Selection::Word(Cursor::new(0, 1)))
+    .set_selection(Word(Cursor::new(0, 1)))
   match editor3.selection_bounds() {
     None => abort("expected selection bounds")
     Some((start, end)) => {

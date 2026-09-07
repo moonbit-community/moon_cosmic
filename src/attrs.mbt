@@ -37,7 +37,7 @@ pub fn Color::rgba(r : Byte, g : Byte, b : Byte, a : Byte) -> Color {
   let rv = r.to_int().reinterpret_as_uint()
   let gv = g.to_int().reinterpret_as_uint()
   let bv = b.to_int().reinterpret_as_uint()
-  Color::{ value: (av << 24) | (rv << 16) | (gv << 8) | bv, }
+  { value: (av << 24) | (rv << 16) | (gv << 8) | bv, }
 }
 
 ///|
@@ -201,7 +201,7 @@ fn float_to_bits(v : Float) -> UInt {
 
 ///|
 pub fn CacheMetrics::from_metrics(metrics : Metrics) -> CacheMetrics {
-  CacheMetrics::{
+  {
     font_size_bits: float_to_bits(metrics.font_size),
     line_height_bits: float_to_bits(metrics.line_height),
   }
@@ -248,7 +248,7 @@ pub impl Show for CacheMetrics with fn output(self, logger) {
 
 ///|
 pub fn Weight::new(value : Int) -> Weight {
-  Weight::{ value, }
+  { value, }
 }
 
 ///|
@@ -288,12 +288,12 @@ pub struct FeatureTag {
 
 ///|
 pub fn FeatureTag::new(tag : String) -> FeatureTag {
-  FeatureTag::{ value: @moon_swash.tag_from_str_lossy(tag), }
+  { value: @moon_swash.tag_from_str_lossy(tag), }
 }
 
 ///|
 pub fn FeatureTag::from_tag(tag : UInt) -> FeatureTag {
-  FeatureTag::{ value: tag, }
+  { value: tag, }
 }
 
 ///|
@@ -319,7 +319,7 @@ pub struct Feature {
 
 ///|
 pub fn Feature::new(tag : FeatureTag, value : UInt) -> Feature {
-  Feature::{ tag, value, }
+  { tag, value, }
 }
 
 ///|
@@ -350,7 +350,7 @@ pub struct FontFeatures {
 
 ///|
 pub fn FontFeatures::new() -> FontFeatures {
-  FontFeatures::{ features: [], }
+  { features: [], }
 }
 
 ///|
@@ -366,7 +366,7 @@ pub fn FontFeatures::set(
 ) -> FontFeatures {
   let features = self.features
   features.push(Feature::new(tag, value))
-  FontFeatures::{ features, }
+  { features, }
 }
 
 ///|
@@ -430,7 +430,7 @@ fn normalize_letter_spacing_bits(value : Float) -> UInt {
 
 ///|
 pub fn LetterSpacing::new(value : Float) -> LetterSpacing {
-  LetterSpacing::{ bits: normalize_letter_spacing_bits(value), }
+  { bits: normalize_letter_spacing_bits(value), }
 }
 
 ///|
@@ -486,8 +486,8 @@ pub struct TextDecoration {
 
 ///|
 pub fn TextDecoration::new() -> TextDecoration {
-  TextDecoration::{
-    underline: UnderlineStyle::None,
+  {
+    underline: None,
     underline_color_opt: None,
     strikethrough: false,
     strikethrough_color_opt: None,
@@ -498,7 +498,7 @@ pub fn TextDecoration::new() -> TextDecoration {
 
 ///|
 pub fn TextDecoration::has_decoration(self : TextDecoration) -> Bool {
-  self.underline != UnderlineStyle::None || self.strikethrough || self.overline
+  self.underline != None || self.strikethrough || self.overline
 }
 
 ///|
@@ -550,7 +550,7 @@ pub fn DecorationMetrics::new(
   offset : Float,
   thickness : Float,
 ) -> DecorationMetrics {
-  DecorationMetrics::{ offset, thickness, }
+  { offset, thickness, }
 }
 
 ///|
@@ -610,13 +610,13 @@ pub fn Attrs::new() -> Attrs {
 
 ///|
 pub fn Attrs::with_metadata(metadata : Int) -> Attrs {
-  Attrs::{
+  {
     color_opt: None,
     metadata,
-    family: Family::SansSerif,
+    family: SansSerif,
     weight: Weight::normal(),
     stretch: @moon_swash.Stretch::normal(),
-    style: @moon_swash.Style::Normal,
+    style: Normal,
     cache_key_flags: 0U,
     metrics_opt: None,
     letter_spacing_opt: None,
@@ -632,27 +632,27 @@ pub fn Attrs::metadata(self : Attrs) -> Int {
 
 ///|
 pub fn Attrs::color(self : Attrs, color : Color) -> Attrs {
-  Attrs::{ ..self, color_opt: Some(color), }
+  { ..self, color_opt: Some(color), }
 }
 
 ///|
 pub fn Attrs::family(self : Attrs, family : Family) -> Attrs {
-  Attrs::{ ..self, family, }
+  { ..self, family, }
 }
 
 ///|
 pub fn Attrs::weight(self : Attrs, weight : Weight) -> Attrs {
-  Attrs::{ ..self, weight, }
+  { ..self, weight, }
 }
 
 ///|
 pub fn Attrs::stretch(self : Attrs, stretch : @moon_swash.Stretch) -> Attrs {
-  Attrs::{ ..self, stretch, }
+  { ..self, stretch, }
 }
 
 ///|
 pub fn Attrs::style(self : Attrs, style : @moon_swash.Style) -> Attrs {
-  Attrs::{ ..self, style, }
+  { ..self, style, }
 }
 
 ///|
@@ -660,21 +660,18 @@ pub fn Attrs::cache_key_flags(
   self : Attrs,
   cache_key_flags : CacheKeyFlags,
 ) -> Attrs {
-  Attrs::{ ..self, cache_key_flags, }
+  { ..self, cache_key_flags, }
 }
 
 ///|
 /// Set Metrics, overriding values in Buffer for this span.
 pub fn Attrs::metrics(self : Attrs, metrics : Metrics) -> Attrs {
-  Attrs::{ ..self, metrics_opt: Some(CacheMetrics::from_metrics(metrics)), }
+  { ..self, metrics_opt: Some(CacheMetrics::from_metrics(metrics)), }
 }
 
 ///|
 pub fn Attrs::letter_spacing(self : Attrs, letter_spacing : Float) -> Attrs {
-  Attrs::{
-    ..self,
-    letter_spacing_opt: Some(LetterSpacing::new(letter_spacing)),
-  }
+  { ..self, letter_spacing_opt: Some(LetterSpacing::new(letter_spacing)), }
 }
 
 ///|
@@ -682,7 +679,7 @@ pub fn Attrs::font_features(
   self : Attrs,
   font_features : FontFeatures,
 ) -> Attrs {
-  Attrs::{ ..self, font_features, }
+  { ..self, font_features, }
 }
 
 ///|
@@ -690,13 +687,13 @@ pub fn Attrs::text_decoration(
   self : Attrs,
   text_decoration : TextDecoration,
 ) -> Attrs {
-  Attrs::{ ..self, text_decoration, }
+  { ..self, text_decoration, }
 }
 
 ///|
 pub fn Attrs::underline(self : Attrs, style : UnderlineStyle) -> Attrs {
   let td = TextDecoration::{ ..self.text_decoration, underline: style, }
-  Attrs::{ ..self, text_decoration: td, }
+  { ..self, text_decoration: td, }
 }
 
 ///|
@@ -705,13 +702,13 @@ pub fn Attrs::underline_color(self : Attrs, color : Color) -> Attrs {
     ..self.text_decoration,
     underline_color_opt: Some(color),
   }
-  Attrs::{ ..self, text_decoration: td, }
+  { ..self, text_decoration: td, }
 }
 
 ///|
 pub fn Attrs::strikethrough(self : Attrs) -> Attrs {
   let td = TextDecoration::{ ..self.text_decoration, strikethrough: true, }
-  Attrs::{ ..self, text_decoration: td, }
+  { ..self, text_decoration: td, }
 }
 
 ///|
@@ -720,13 +717,13 @@ pub fn Attrs::strikethrough_color(self : Attrs, color : Color) -> Attrs {
     ..self.text_decoration,
     strikethrough_color_opt: Some(color),
   }
-  Attrs::{ ..self, text_decoration: td, }
+  { ..self, text_decoration: td, }
 }
 
 ///|
 pub fn Attrs::overline(self : Attrs) -> Attrs {
   let td = TextDecoration::{ ..self.text_decoration, overline: true, }
-  Attrs::{ ..self, text_decoration: td, }
+  { ..self, text_decoration: td, }
 }
 
 ///|
@@ -735,15 +732,15 @@ pub fn Attrs::overline_color(self : Attrs, color : Color) -> Attrs {
     ..self.text_decoration,
     overline_color_opt: Some(color),
   }
-  Attrs::{ ..self, text_decoration: td, }
+  { ..self, text_decoration: td, }
 }
 
 ///|
 /// Return optional Metrics override.
 pub fn Attrs::metrics_opt(self : Attrs) -> Metrics? {
   match self.metrics_opt {
-    Option::None => Option::None
-    Option::Some(cm) => Option::Some(cm.to_metrics())
+    None => None
+    Some(cm) => Some(cm.to_metrics())
   }
 }
 
@@ -834,8 +831,8 @@ pub impl Hash for Attrs with fn hash_combine(self, hasher) {
   hasher.combine_string(self.style.to_string())
   hasher.combine_uint(self.cache_key_flags)
   match self.metrics_opt {
-    Option::None => hasher.combine_int(0)
-    Option::Some(cm) => {
+    None => hasher.combine_int(0)
+    Some(cm) => {
       hasher.combine_int(1)
       cm.hash_combine(hasher)
     }
@@ -880,7 +877,7 @@ pub struct AttrsList {
 
 ///|
 pub fn AttrsList::new(defaults : Attrs) -> AttrsList {
-  AttrsList::{ defaults, spans: [], }
+  { defaults, spans: [], }
 }
 
 ///|
@@ -929,7 +926,7 @@ fn merge_adjacent_spans(spans : Array[AttrsSpan]) -> Array[AttrsSpan] {
     }
     let last = merged[merged.length() - 1]
     if last.end == span.start && last.attrs == span.attrs {
-      merged.set(merged.length() - 1, AttrsSpan::{
+      merged.set(merged.length() - 1, {
         start: last.start,
         end: span.end,
         attrs: last.attrs,
@@ -965,7 +962,7 @@ pub fn AttrsList::add_span(
     // Fully after new range.
     if span.start >= end {
       if !inserted {
-        spans0.push(AttrsSpan::{ start, end, attrs, })
+        spans0.push({ start, end, attrs, })
         inserted = true
       }
       spans0.push(span)
@@ -973,26 +970,22 @@ pub fn AttrsList::add_span(
     }
     // Overlap: keep left remainder.
     if span.start < start {
-      spans0.push(AttrsSpan::{
-        start: span.start,
-        end: start,
-        attrs: span.attrs,
-      })
+      spans0.push({ start: span.start, end: start, attrs: span.attrs, })
     }
     // Overlap with right remainder means this old span crosses `end`.
     if span.end > end {
       if !inserted {
-        spans0.push(AttrsSpan::{ start, end, attrs, })
+        spans0.push({ start, end, attrs, })
         inserted = true
       }
-      spans0.push(AttrsSpan::{ start: end, end: span.end, attrs: span.attrs, })
+      spans0.push({ start: end, end: span.end, attrs: span.attrs, })
     }
   }
   if !inserted {
-    spans0.push(AttrsSpan::{ start, end, attrs, })
+    spans0.push({ start, end, attrs, })
   }
   let spans = merge_adjacent_spans(spans0)
-  AttrsList::{ ..self, spans, }
+  { ..self, spans, }
 }
 
 ///|
@@ -1032,24 +1025,20 @@ pub fn AttrsList::split_off(
     if span.end <= index {
       left.push(span)
     } else if span.start >= index {
-      right.push(AttrsSpan::{
+      right.push({
         start: span.start - index,
         end: span.end - index,
         attrs: span.attrs,
       })
     } else {
       // Span crosses the split point.
-      left.push(AttrsSpan::{ start: span.start, end: index, attrs: span.attrs, })
-      right.push(AttrsSpan::{
-        start: 0,
-        end: span.end - index,
-        attrs: span.attrs,
-      })
+      left.push({ start: span.start, end: index, attrs: span.attrs, })
+      right.push({ start: 0, end: span.end - index, attrs: span.attrs, })
     }
   }
   (
-    AttrsList::{ defaults: self.defaults, spans: left, },
-    AttrsList::{ defaults: self.defaults, spans: right, },
+    { defaults: self.defaults, spans: left, },
+    { defaults: self.defaults, spans: right, },
   )
 }
 

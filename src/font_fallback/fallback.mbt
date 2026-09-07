@@ -120,53 +120,53 @@ fn script_fallback_family_names_unix(
   locale : String,
 ) -> Array[String] {
   match script {
-    @moon_swash.Script::Adlam => ["Noto Sans Adlam", "Noto Sans Adlam Unjoined"]
-    @moon_swash.Script::Arabic => ["Noto Sans Arabic"]
-    @moon_swash.Script::Armenian => ["Noto Sans Armenian"]
-    @moon_swash.Script::Bengali => ["Noto Sans Bengali"]
-    @moon_swash.Script::Bopomofo => han_unification_family_names(Unix, locale)
-    @moon_swash.Script::Braille => ["FreeMono"]
-    @moon_swash.Script::Buhid => ["Noto Sans Buhid"]
-    @moon_swash.Script::Chakma => ["Noto Sans Chakma"]
-    @moon_swash.Script::Cherokee => ["Noto Sans Cherokee"]
-    @moon_swash.Script::Deseret => ["Noto Sans Deseret"]
-    @moon_swash.Script::Devanagari => ["Noto Sans Devanagari"]
-    @moon_swash.Script::Ethiopic => ["Noto Sans Ethiopic"]
-    @moon_swash.Script::Georgian => ["Noto Sans Georgian"]
-    @moon_swash.Script::Gothic => ["Noto Sans Gothic"]
-    @moon_swash.Script::Grantha => ["Noto Sans Grantha"]
-    @moon_swash.Script::Gujarati => ["Noto Sans Gujarati"]
-    @moon_swash.Script::Gurmukhi => ["Noto Sans Gurmukhi"]
-    @moon_swash.Script::Han => han_unification_family_names(Unix, locale)
-    @moon_swash.Script::Hangul => han_unification_family_names(Unix, "ko")
-    @moon_swash.Script::Hanunoo => ["Noto Sans Hanunoo"]
-    @moon_swash.Script::Hebrew => ["Noto Sans Hebrew"]
-    @moon_swash.Script::Hiragana => han_unification_family_names(Unix, "ja")
-    @moon_swash.Script::Javanese => ["Noto Sans Javanese"]
-    @moon_swash.Script::Kannada => ["Noto Sans Kannada"]
-    @moon_swash.Script::Katakana => han_unification_family_names(Unix, "ja")
-    @moon_swash.Script::Khmer => ["Noto Sans Khmer"]
-    @moon_swash.Script::Lao => ["Noto Sans Lao"]
-    @moon_swash.Script::Malayalam => ["Noto Sans Malayalam"]
-    @moon_swash.Script::Mongolian => ["Noto Sans Mongolian"]
-    @moon_swash.Script::Myanmar => ["Noto Sans Myanmar"]
-    @moon_swash.Script::Oriya => ["Noto Sans Oriya"]
-    @moon_swash.Script::Runic => ["Noto Sans Runic"]
-    @moon_swash.Script::Sinhala => ["Noto Sans Sinhala"]
-    @moon_swash.Script::Syriac => ["Noto Sans Syriac"]
-    @moon_swash.Script::Tagalog => ["Noto Sans Tagalog"]
-    @moon_swash.Script::Tagbanwa => ["Noto Sans Tagbanwa"]
-    @moon_swash.Script::TaiLe => ["Noto Sans Tai Le"]
-    @moon_swash.Script::TaiTham => ["Noto Sans Tai Tham"]
-    @moon_swash.Script::TaiViet => ["Noto Sans Tai Viet"]
-    @moon_swash.Script::Tamil => ["Noto Sans Tamil"]
-    @moon_swash.Script::Telugu => ["Noto Sans Telugu"]
-    @moon_swash.Script::Thaana => ["Noto Sans Thaana"]
-    @moon_swash.Script::Thai => ["Noto Sans Thai"]
-    @moon_swash.Script::Tibetan => ["Noto Serif Tibetan"]
-    @moon_swash.Script::Tifinagh => ["Noto Sans Tifinagh"]
-    @moon_swash.Script::Vai => ["Noto Sans Vai"]
-    @moon_swash.Script::Yi => ["Noto Sans Yi", "Noto Sans CJK SC"]
+    Adlam => ["Noto Sans Adlam", "Noto Sans Adlam Unjoined"]
+    Arabic => ["Noto Sans Arabic"]
+    Armenian => ["Noto Sans Armenian"]
+    Bengali => ["Noto Sans Bengali"]
+    Bopomofo => han_unification_family_names(Unix, locale)
+    Braille => ["FreeMono"]
+    Buhid => ["Noto Sans Buhid"]
+    Chakma => ["Noto Sans Chakma"]
+    Cherokee => ["Noto Sans Cherokee"]
+    Deseret => ["Noto Sans Deseret"]
+    Devanagari => ["Noto Sans Devanagari"]
+    Ethiopic => ["Noto Sans Ethiopic"]
+    Georgian => ["Noto Sans Georgian"]
+    Gothic => ["Noto Sans Gothic"]
+    Grantha => ["Noto Sans Grantha"]
+    Gujarati => ["Noto Sans Gujarati"]
+    Gurmukhi => ["Noto Sans Gurmukhi"]
+    Han => han_unification_family_names(Unix, locale)
+    Hangul => han_unification_family_names(Unix, "ko")
+    Hanunoo => ["Noto Sans Hanunoo"]
+    Hebrew => ["Noto Sans Hebrew"]
+    Hiragana => han_unification_family_names(Unix, "ja")
+    Javanese => ["Noto Sans Javanese"]
+    Kannada => ["Noto Sans Kannada"]
+    Katakana => han_unification_family_names(Unix, "ja")
+    Khmer => ["Noto Sans Khmer"]
+    Lao => ["Noto Sans Lao"]
+    Malayalam => ["Noto Sans Malayalam"]
+    Mongolian => ["Noto Sans Mongolian"]
+    Myanmar => ["Noto Sans Myanmar"]
+    Oriya => ["Noto Sans Oriya"]
+    Runic => ["Noto Sans Runic"]
+    Sinhala => ["Noto Sans Sinhala"]
+    Syriac => ["Noto Sans Syriac"]
+    Tagalog => ["Noto Sans Tagalog"]
+    Tagbanwa => ["Noto Sans Tagbanwa"]
+    TaiLe => ["Noto Sans Tai Le"]
+    TaiTham => ["Noto Sans Tai Tham"]
+    TaiViet => ["Noto Sans Tai Viet"]
+    Tamil => ["Noto Sans Tamil"]
+    Telugu => ["Noto Sans Telugu"]
+    Thaana => ["Noto Sans Thaana"]
+    Thai => ["Noto Sans Thai"]
+    Tibetan => ["Noto Serif Tibetan"]
+    Tifinagh => ["Noto Sans Tifinagh"]
+    Vai => ["Noto Sans Vai"]
+    Yi => ["Noto Sans Yi", "Noto Sans CJK SC"]
     _ => []
   }
 }
@@ -177,48 +177,48 @@ fn script_fallback_family_names_macos(
   locale : String,
 ) -> Array[String] {
   match script {
-    @moon_swash.Script::Adlam => ["Noto Sans Adlam"]
-    @moon_swash.Script::Arabic => ["Geeza Pro"]
-    @moon_swash.Script::Armenian => ["Noto Sans Armenian"]
-    @moon_swash.Script::Bengali => ["Bangla Sangam MN"]
-    @moon_swash.Script::Buhid => ["Noto Sans Buhid"]
-    @moon_swash.Script::CanadianAboriginal => ["Euphemia UCAS"]
-    @moon_swash.Script::Chakma => ["Noto Sans Chakma"]
-    @moon_swash.Script::Devanagari => ["Devanagari Sangam MN"]
-    @moon_swash.Script::Ethiopic => ["Kefa"]
-    @moon_swash.Script::Gothic => ["Noto Sans Gothic"]
-    @moon_swash.Script::Grantha => ["Grantha Sangam MN"]
-    @moon_swash.Script::Gujarati => ["Gujarati Sangam MN"]
-    @moon_swash.Script::Gurmukhi => ["Gurmukhi Sangam MN"]
-    @moon_swash.Script::Han => han_unification_family_names(MacOS, locale)
-    @moon_swash.Script::Hangul => han_unification_family_names(MacOS, "ko")
-    @moon_swash.Script::Hanunoo => ["Noto Sans Hanunoo"]
-    @moon_swash.Script::Hebrew => ["Arial"]
-    @moon_swash.Script::Hiragana => han_unification_family_names(MacOS, "ja")
-    @moon_swash.Script::Javanese => ["Noto Sans Javanese"]
-    @moon_swash.Script::Kannada => ["Noto Sans Kannada"]
-    @moon_swash.Script::Katakana => han_unification_family_names(MacOS, "ja")
-    @moon_swash.Script::Khmer => ["Khmer Sangam MN"]
-    @moon_swash.Script::Lao => ["Lao Sangam MN"]
-    @moon_swash.Script::Malayalam => ["Malayalam Sangam MN"]
-    @moon_swash.Script::Mongolian => ["Noto Sans Mongolian"]
-    @moon_swash.Script::Myanmar => ["Noto Sans Myanmar"]
-    @moon_swash.Script::Oriya => ["Noto Sans Oriya"]
-    @moon_swash.Script::Sinhala => ["Sinhala Sangam MN"]
-    @moon_swash.Script::Syriac => ["Noto Sans Syriac"]
-    @moon_swash.Script::Tagalog => ["Noto Sans Tagalog"]
-    @moon_swash.Script::Tagbanwa => ["Noto Sans Tagbanwa"]
-    @moon_swash.Script::TaiLe => ["Noto Sans Tai Le"]
-    @moon_swash.Script::TaiTham => ["Noto Sans Tai Tham"]
-    @moon_swash.Script::TaiViet => ["Noto Sans Tai Viet"]
-    @moon_swash.Script::Tamil => ["InaiMathi"]
-    @moon_swash.Script::Telugu => ["Telugu Sangam MN"]
-    @moon_swash.Script::Thaana => ["Noto Sans Thaana"]
-    @moon_swash.Script::Thai => ["Ayuthaya"]
-    @moon_swash.Script::Tibetan => ["Kailasa"]
-    @moon_swash.Script::Tifinagh => ["Noto Sans Tifinagh"]
-    @moon_swash.Script::Vai => ["Noto Sans Vai"]
-    @moon_swash.Script::Yi => ["Noto Sans Yi", "PingFang SC"]
+    Adlam => ["Noto Sans Adlam"]
+    Arabic => ["Geeza Pro"]
+    Armenian => ["Noto Sans Armenian"]
+    Bengali => ["Bangla Sangam MN"]
+    Buhid => ["Noto Sans Buhid"]
+    CanadianAboriginal => ["Euphemia UCAS"]
+    Chakma => ["Noto Sans Chakma"]
+    Devanagari => ["Devanagari Sangam MN"]
+    Ethiopic => ["Kefa"]
+    Gothic => ["Noto Sans Gothic"]
+    Grantha => ["Grantha Sangam MN"]
+    Gujarati => ["Gujarati Sangam MN"]
+    Gurmukhi => ["Gurmukhi Sangam MN"]
+    Han => han_unification_family_names(MacOS, locale)
+    Hangul => han_unification_family_names(MacOS, "ko")
+    Hanunoo => ["Noto Sans Hanunoo"]
+    Hebrew => ["Arial"]
+    Hiragana => han_unification_family_names(MacOS, "ja")
+    Javanese => ["Noto Sans Javanese"]
+    Kannada => ["Noto Sans Kannada"]
+    Katakana => han_unification_family_names(MacOS, "ja")
+    Khmer => ["Khmer Sangam MN"]
+    Lao => ["Lao Sangam MN"]
+    Malayalam => ["Malayalam Sangam MN"]
+    Mongolian => ["Noto Sans Mongolian"]
+    Myanmar => ["Noto Sans Myanmar"]
+    Oriya => ["Noto Sans Oriya"]
+    Sinhala => ["Sinhala Sangam MN"]
+    Syriac => ["Noto Sans Syriac"]
+    Tagalog => ["Noto Sans Tagalog"]
+    Tagbanwa => ["Noto Sans Tagbanwa"]
+    TaiLe => ["Noto Sans Tai Le"]
+    TaiTham => ["Noto Sans Tai Tham"]
+    TaiViet => ["Noto Sans Tai Viet"]
+    Tamil => ["InaiMathi"]
+    Telugu => ["Telugu Sangam MN"]
+    Thaana => ["Noto Sans Thaana"]
+    Thai => ["Ayuthaya"]
+    Tibetan => ["Kailasa"]
+    Tifinagh => ["Noto Sans Tifinagh"]
+    Vai => ["Noto Sans Vai"]
+    Yi => ["Noto Sans Yi", "PingFang SC"]
     _ => []
   }
 }
@@ -229,36 +229,36 @@ fn script_fallback_family_names_windows(
   locale : String,
 ) -> Array[String] {
   match script {
-    @moon_swash.Script::Adlam => ["Ebrima"]
-    @moon_swash.Script::Bengali => ["Nirmala UI"]
-    @moon_swash.Script::CanadianAboriginal => ["Gadugi"]
-    @moon_swash.Script::Chakma => ["Nirmala UI"]
-    @moon_swash.Script::Cherokee => ["Gadugi"]
-    @moon_swash.Script::Devanagari => ["Nirmala UI"]
-    @moon_swash.Script::Ethiopic => ["Ebrima"]
-    @moon_swash.Script::Gujarati => ["Nirmala UI"]
-    @moon_swash.Script::Gurmukhi => ["Nirmala UI"]
-    @moon_swash.Script::Han => han_unification_family_names(Windows, locale)
-    @moon_swash.Script::Hangul => han_unification_family_names(Windows, "ko")
-    @moon_swash.Script::Hiragana => han_unification_family_names(Windows, "ja")
-    @moon_swash.Script::Javanese => ["Javanese Text"]
-    @moon_swash.Script::Kannada => ["Nirmala UI"]
-    @moon_swash.Script::Katakana => han_unification_family_names(Windows, "ja")
-    @moon_swash.Script::Khmer => ["Leelawadee UI"]
-    @moon_swash.Script::Lao => ["Leelawadee UI"]
-    @moon_swash.Script::Malayalam => ["Nirmala UI"]
-    @moon_swash.Script::Mongolian => ["Mongolian Baiti"]
-    @moon_swash.Script::Myanmar => ["Myanmar Text"]
-    @moon_swash.Script::Oriya => ["Nirmala UI"]
-    @moon_swash.Script::Sinhala => ["Nirmala UI"]
-    @moon_swash.Script::Tamil => ["Nirmala UI"]
-    @moon_swash.Script::Telugu => ["Nirmala UI"]
-    @moon_swash.Script::Thaana => ["MV Boli"]
-    @moon_swash.Script::Thai => ["Leelawadee UI"]
-    @moon_swash.Script::Tibetan => ["Microsoft Himalaya"]
-    @moon_swash.Script::Tifinagh => ["Ebrima"]
-    @moon_swash.Script::Vai => ["Ebrima"]
-    @moon_swash.Script::Yi => ["Microsoft Yi Baiti"]
+    Adlam => ["Ebrima"]
+    Bengali => ["Nirmala UI"]
+    CanadianAboriginal => ["Gadugi"]
+    Chakma => ["Nirmala UI"]
+    Cherokee => ["Gadugi"]
+    Devanagari => ["Nirmala UI"]
+    Ethiopic => ["Ebrima"]
+    Gujarati => ["Nirmala UI"]
+    Gurmukhi => ["Nirmala UI"]
+    Han => han_unification_family_names(Windows, locale)
+    Hangul => han_unification_family_names(Windows, "ko")
+    Hiragana => han_unification_family_names(Windows, "ja")
+    Javanese => ["Javanese Text"]
+    Kannada => ["Nirmala UI"]
+    Katakana => han_unification_family_names(Windows, "ja")
+    Khmer => ["Leelawadee UI"]
+    Lao => ["Leelawadee UI"]
+    Malayalam => ["Nirmala UI"]
+    Mongolian => ["Mongolian Baiti"]
+    Myanmar => ["Myanmar Text"]
+    Oriya => ["Nirmala UI"]
+    Sinhala => ["Nirmala UI"]
+    Tamil => ["Nirmala UI"]
+    Telugu => ["Nirmala UI"]
+    Thaana => ["MV Boli"]
+    Thai => ["Leelawadee UI"]
+    Tibetan => ["Microsoft Himalaya"]
+    Tifinagh => ["Ebrima"]
+    Vai => ["Ebrima"]
+    Yi => ["Microsoft Yi Baiti"]
     _ => []
   }
 }
@@ -280,10 +280,7 @@ pub fn script_fallback_family_names(
 ///|
 pub fn script_uses_fallback_stage(script : @moon_swash.Script) -> Bool {
   match script {
-    @moon_swash.Script::Common
-    | @moon_swash.Script::Inherited
-    | @moon_swash.Script::Latin
-    | @moon_swash.Script::Unknown => false
+    Common | Inherited | Latin | Unknown => false
     _ => true
   }
 }

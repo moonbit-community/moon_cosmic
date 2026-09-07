@@ -19,7 +19,7 @@ test "Editor.action Indent aligns to next tab stop at after_whitespace" {
     .set_text("  foo", attrs, Advanced)
     .set_tab_width(4)
   let editor0 = Editor::new(buffer).set_cursor(Cursor::new(0, 3))
-  let editor1 = editor0.action(Action::Indent)
+  let editor1 = editor0.action(Indent)
   inspect(editor1.buffer().lines()[0].text(), content="    foo")
   inspect(editor1.cursor().index, content="5")
 }
@@ -31,7 +31,7 @@ test "Editor.action Unindent removes one tab stop chunk" {
     .set_text("      foo", attrs, Advanced) // 6 spaces
     .set_tab_width(4)
   let editor0 = Editor::new(buffer).set_cursor(Cursor::new(0, 6))
-  let editor1 = editor0.action(Action::Unindent)
+  let editor1 = editor0.action(Unindent)
   inspect(editor1.buffer().lines()[0].text(), content="    foo")
   inspect(editor1.cursor().index, content="4")
 }

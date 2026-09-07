@@ -48,7 +48,7 @@ pub struct LineIter {
 
 ///|
 pub fn LineIter::new(string : String) -> LineIter {
-  LineIter::{ string, start: 0, end: string.length(), }
+  { string, start: 0, end: string.length(), }
 }
 
 ///|

@@ -49,7 +49,7 @@ fn build_scaler(
         variation.max_value(),
       )
       let settings : Array[@moon_swash.Setting[Double]] = [
-        @moon_swash.Setting::Setting(wght_tag, weight),
+        Setting(wght_tag, weight),
       ]
       builder = builder.variations(settings[:])
     }
@@ -78,18 +78,14 @@ fn swash_image(
       cache_key.y_bin.as_float().to_double().round(),
     )
   } else {
-    @scale.Vector::Vector(
+    Vector(
       cache_key.x_bin.as_float().to_double(),
       cache_key.y_bin.as_float().to_double(),
     )
   }
 
-  @scale.Render::Render([
-    @scale.Source::ColorOutline(0),
-    @scale.Source::ColorBitmap(@scale.StrikeWith::BestFit),
-    @scale.Source::Outline,
-  ])
-  .format(@scale.Format::Alpha)
+  @scale.Render::Render([ColorOutline(0), ColorBitmap(BestFit), Outline])
+  .format(Alpha)
   .offset(offset)
   .transform(
     if cache_key.has_fake_italic() {
@@ -149,8 +145,8 @@ pub struct SwashCache {
 
 ///|
 pub fn SwashCache::new() -> SwashCache {
-  SwashCache::{
-    context: @scale.ScaleContext::ScaleContext(),
+  {
+    context: ScaleContext(),
     image_cache: Default::default(),
     outline_path_cache: Default::default(),
   }

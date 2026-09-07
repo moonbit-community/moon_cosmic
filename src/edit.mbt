@@ -64,7 +64,7 @@ pub(all) struct ChangeItem {
 
 ///|
 pub fn ChangeItem::reverse(self : ChangeItem) -> ChangeItem {
-  ChangeItem::{ ..self, insert: !self.insert, }
+  { ..self, insert: !self.insert, }
 }
 
 ///|
@@ -75,7 +75,7 @@ pub(all) struct Change {
 
 ///|
 pub fn Change::default() -> Change {
-  Change::{ items: [], }
+  { items: [], }
 }
 
 ///|
@@ -90,7 +90,7 @@ pub fn Change::reverse(self : Change) -> Change {
     }
     i = i - 1
   }
-  Change::{ items, }
+  { items, }
 }
 
 ///|

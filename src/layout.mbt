@@ -88,7 +88,7 @@ pub fn LayoutGlyph::new(
   w : Float,
   metadata : Int,
 ) -> LayoutGlyph {
-  LayoutGlyph::{
+  {
     start,
     end,
     font_size,
@@ -162,7 +162,7 @@ pub fn LayoutGlyph::physical(
     self.font_weight,
     self.cache_key_flags,
   )
-  PhysicalGlyph::{ cache_key, x, y, }
+  { cache_key, x, y, }
 }
 
 ///|
@@ -177,8 +177,8 @@ fn glyph_layout_width(
   cell_w : Float,
 ) -> Float {
   let glyph_font_size = match glyph.metrics_opt {
-    Option::None => default_font_size
-    Option::Some(m) => m.font_size
+    None => default_font_size
+    Some(m) => m.font_size
   }
   let mut w = glyph.x_advance * glyph_font_size
   if cell_w != default_font_size && default_font_size != 0.0F {
@@ -214,14 +214,11 @@ fn push_decoration_for_layout_glyph(
       last.data == data &&
       last.color_opt == shape_glyph.color_opt &&
       last.font_size == glyph_font_size {
-      decorations.set(last_i, DecorationSpan::{
-        ..last,
-        glyph_end: glyph_i + 1,
-      })
+      decorations.set(last_i, { ..last, glyph_end: glyph_i + 1, })
       return
     }
   }
-  decorations.push(DecorationSpan::{
+  decorations.push({
     glyph_start: glyph_i,
     glyph_end: glyph_i + 1,
     data,
@@ -308,7 +305,7 @@ fn build_glyph_wrap_segments(
   while i < n {
     let blank = layout_glyph_is_blank(text, shape.glyphs[i])
     if blank {
-      segs.push(GlyphWrapSegment::{ glyph_start: i, glyph_end: i + 1, blank, })
+      segs.push({ glyph_start: i, glyph_end: i + 1, blank, })
       i = i + 1
       continue
     }
@@ -317,7 +314,7 @@ fn build_glyph_wrap_segments(
     while i < n && !layout_glyph_is_blank(text, shape.glyphs[i]) {
       i = i + 1
     }
-    segs.push(GlyphWrapSegment::{ glyph_start: start, glyph_end: i, blank, })
+    segs.push({ glyph_start: start, glyph_end: i, blank, })
   }
   segs
 }
@@ -345,26 +342,23 @@ fn build_layout_line_from_shape(
     }
   }
   let mut x = 0.0F
-  let mut max_line_height : Float? = Option::None
+  let mut max_line_height : Float? = None
   let mut max_ascent = 0.0F
   let mut max_descent = 0.0F
   for i in glyph_start..<glyph_end {
     let g = shape.glyphs[i]
     let glyph_font_size = match g.metrics_opt {
-      Option::None => default_font_size
-      Option::Some(m) => m.font_size
+      None => default_font_size
+      Some(m) => m.font_size
     }
     let w = glyph_layout_width(g, default_font_size, cell_w)
     let glyph_line_height_opt = match g.metrics_opt {
-      Option::None => Option::None
-      Option::Some(m) => Option::Some(m.line_height)
+      None => Option::None
+      Some(m) => Some(m.line_height)
     }
     match (max_line_height, glyph_line_height_opt) {
-      (Option::None, Option::Some(h)) => max_line_height = Option::Some(h)
-      (Option::Some(a), Option::Some(b)) =>
-        if b > a {
-          max_line_height = Option::Some(b)
-        }
+      (None, Some(h)) => max_line_height = Some(h)
+      (Some(a), Some(b)) => if b > a { max_line_height = Some(b) }
       _ => ()
     }
     let glyph_ascent = glyph_font_size * g.ascent
@@ -376,7 +370,7 @@ fn build_layout_line_from_shape(
       max_descent = glyph_descent
     }
     let glyph_i = glyphs.length()
-    glyphs.push(LayoutGlyph::{
+    glyphs.push({
       start: g.start,
       end: g.end,
       font_size: glyph_font_size,
@@ -397,7 +391,7 @@ fn build_layout_line_from_shape(
     push_decoration_for_layout_glyph(decorations, glyph_i, g, glyph_font_size)
     x = x + w
   }
-  LayoutLine::{
+  {
     start: text_start,
     end: text_end,
     w: x,
@@ -440,7 +434,7 @@ fn push_line(
   // Monospace fallback helper: 1 glyph per code unit.
   let glyphs : Array[LayoutGlyph] = []
   for i in 0..<len {
-    glyphs.push(LayoutGlyph::{
+    glyphs.push({
       start: text_start + i,
       end: text_start + i + 1,
       font_size: glyph_w,
@@ -459,7 +453,7 @@ fn push_line(
       cache_key_flags: 0U,
     })
   }
-  lines.push(LayoutLine::{
+  lines.push({
     start: text_start,
     end: text_end,
     w,
@@ -619,9 +613,9 @@ fn finalize_layout_lines(
   for line in lines {
     let glyphs : Array[LayoutGlyph] = []
     for glyph in line.glyphs {
-      glyphs.push(LayoutGlyph::{ ..glyph, x: line_width - (glyph.x + glyph.w), })
+      glyphs.push({ ..glyph, x: line_width - (glyph.x + glyph.w), })
     }
-    out.push(LayoutLine::{ ..line, glyphs, })
+    out.push({ ..line, glyphs, })
   }
   out
 }
@@ -671,12 +665,7 @@ fn build_wrap_spans_from_shape(
       let blank = layout_glyph_is_blank(text, shape.glyphs[i])
       if blank {
         let w = glyph_layout_width(shape.glyphs[i], font_size, cell_w)
-        words.push(WrapWordLayout::{
-          glyph_start: i,
-          glyph_end: i + 1,
-          blank: true,
-          w,
-        })
+        words.push({ glyph_start: i, glyph_end: i + 1, blank: true, w, })
         i = i + 1
       } else {
         let word_start = i
@@ -685,15 +674,10 @@ fn build_wrap_spans_from_shape(
           w = w + glyph_layout_width(shape.glyphs[i], font_size, cell_w)
           i = i + 1
         }
-        words.push(WrapWordLayout::{
-          glyph_start: word_start,
-          glyph_end: i,
-          blank: false,
-          w,
-        })
+        words.push({ glyph_start: word_start, glyph_end: i, blank: false, w, })
       }
     }
-    spans.push(WrapSpanLayout::{ level, words, })
+    spans.push({ level, words, })
     span_start = span_end
   }
   spans
@@ -713,13 +697,7 @@ fn add_visual_range(
   if start_word == end_word && start_glyph == end_glyph {
     return cur_w
   }
-  ranges.push(VisualRangeLayout::{
-    span_index,
-    start_word,
-    start_glyph,
-    end_word,
-    end_glyph,
-  })
+  ranges.push({ span_index, start_word, start_glyph, end_word, end_glyph, })
   cur_w + width
 }
 
@@ -888,7 +866,7 @@ fn build_layout_lines_from_visual_ranges(
             Some(v) => if g.end > v { te = Some(g.end) }
           }
           let glyph_i = glyphs.length()
-          glyphs.push(LayoutGlyph::{
+          glyphs.push({
             start: g.start,
             end: g.end,
             font_size: glyph_font_size,
@@ -950,7 +928,7 @@ fn build_layout_lines_from_visual_ranges(
     }
     let s = if text_start is Some(v) { v } else { 0 }
     let e = if text_end is Some(v) { v } else { s }
-    lines.push(LayoutLine::{
+    lines.push({
       start: s,
       end: e,
       w: visual_widths[li],
@@ -978,7 +956,7 @@ pub fn layout_from_shape(
 ) -> Array[LayoutLine] {
   let lines : Array[LayoutLine] = []
   if text.length() == 0 {
-    lines.push(LayoutLine::{
+    lines.push({
       start: 0,
       end: 0,
       w: 0.0F,
@@ -1009,7 +987,7 @@ pub fn layout_from_shape(
           total_w = total_w + word.w
         }
       }
-      line = LayoutLine::{ ..line, w: total_w, }
+      line = { ..line, w: total_w, }
       lines.push(line)
       return finalize_layout_lines(lines, shape_for_wrap.rtl, width_opt)
     }
@@ -1490,9 +1468,9 @@ fn apply_align_to_line(
     }
     let glyphs : Array[LayoutGlyph] = []
     for g in line.glyphs {
-      glyphs.push(LayoutGlyph::{ ..g, x: g.x + dx, })
+      glyphs.push({ ..g, x: g.x + dx, })
     }
-    LayoutLine::{ ..line, glyphs, }
+    { ..line, glyphs, }
   }
 
   match align {
@@ -1528,13 +1506,13 @@ fn apply_align_to_line(
           g.start < text.length() &&
           text.code_unit_at(g.start) == 32 {
           w = w + add
-          glyphs.push(LayoutGlyph::{ ..g, x: g.x + dx, w, })
+          glyphs.push({ ..g, x: g.x + dx, w, })
           dx = dx + add
         } else {
-          glyphs.push(LayoutGlyph::{ ..g, x: g.x + dx, w, })
+          glyphs.push({ ..g, x: g.x + dx, w, })
         }
       }
-      LayoutLine::{ ..line, w: line.w + extra, glyphs, }
+      { ..line, w: line.w + extra, glyphs, }
     }
   }
 }
