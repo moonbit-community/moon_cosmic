@@ -64,7 +64,7 @@ pub(all) struct ChangeItem {
 
 ///|
 pub fn ChangeItem::reverse(self : ChangeItem) -> ChangeItem {
-  ChangeItem::{ ..self, insert: !self.insert }
+  ChangeItem::{ ..self, insert: !self.insert, }
 }
 
 ///|
@@ -75,7 +75,7 @@ pub(all) struct Change {
 
 ///|
 pub fn Change::default() -> Change {
-  Change::{ items: [] }
+  Change::{ items: [], }
 }
 
 ///|
@@ -92,3 +92,6 @@ pub fn Change::reverse(self : Change) -> Change {
   }
   Change::{ items, }
 }
+
+///|
+pub extend Selection with Eq::{not_equal, equal}

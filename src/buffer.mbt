@@ -100,7 +100,7 @@ pub fn Buffer::set_scroll(self : Buffer, scroll : Scroll) -> Buffer {
     self.scroll.horizontal == scroll.horizontal {
     self
   } else {
-    Buffer::{ ..self, scroll, redraw: true, dirty_scroll: true }
+    Buffer::{ ..self, scroll, redraw: true, dirty_scroll: true, }
   }
 }
 
@@ -310,7 +310,7 @@ pub fn Buffer::set_wrap(self : Buffer, wrap : Wrap) -> Buffer {
   if wrap_eq(self.wrap, wrap) {
     self
   } else {
-    Buffer::{ ..self, wrap, redraw: true, dirty_relayout: true }
+    Buffer::{ ..self, wrap, redraw: true, dirty_relayout: true, }
   }
 }
 
@@ -319,7 +319,7 @@ pub fn Buffer::set_ellipsize(self : Buffer, ellipsize : Ellipsize) -> Buffer {
   if ellipsize_eq(self.ellipsize, ellipsize) {
     self
   } else {
-    Buffer::{ ..self, ellipsize, redraw: true, dirty_relayout: true }
+    Buffer::{ ..self, ellipsize, redraw: true, dirty_relayout: true, }
   }
 }
 
@@ -343,7 +343,7 @@ pub fn Buffer::set_hinting(self : Buffer, hinting : Hinting) -> Buffer {
   if hinting_eq(self.hinting, hinting) {
     self
   } else {
-    Buffer::{ ..self, hinting, redraw: true, dirty_relayout: true }
+    Buffer::{ ..self, hinting, redraw: true, dirty_relayout: true, }
   }
 }
 
@@ -355,7 +355,7 @@ pub fn Buffer::set_monospace_width(
   if float_opt_eq(self.monospace_width, monospace_width) {
     self
   } else {
-    Buffer::{ ..self, monospace_width, redraw: true, dirty_relayout: true }
+    Buffer::{ ..self, monospace_width, redraw: true, dirty_relayout: true, }
   }
 }
 
@@ -411,7 +411,7 @@ pub fn Buffer::size(self : Buffer) -> (Float?, Float?) {
 
 ///|
 fn slice_string(s : String, start : Int, end : Int) -> String {
-  let sb = StringBuilder::new(size_hint=(end - start) * 2)
+  let sb = StringBuilder(size_hint=(end - start) * 2)
   sb.write_view(s[:].view(start_offset=start, end_offset=end))
   sb.to_string()
 }
@@ -499,7 +499,7 @@ pub fn Buffer::set_rich_text(
   shaping : Shaping,
   alignment : Align?,
 ) -> Buffer {
-  let string_sb = StringBuilder::new(size_hint=256)
+  let string_sb = StringBuilder(size_hint=256)
   let span_data : Array[(Attrs, Int, Int)] = []
   let mut end = 0
   for sp in spans {
@@ -728,7 +728,7 @@ pub fn Buffer::shape_until_scroll(
           vertical: scroll.vertical + layout_height,
         }
       } else {
-        scroll = Scroll::{ ..scroll, vertical: 0.0F }
+        scroll = Scroll::{ ..scroll, vertical: 0.0F, }
         break
       }
     }
@@ -794,7 +794,7 @@ pub fn Buffer::shape_until_scroll(
     old_scroll.line != scroll.line ||
     old_scroll.vertical != scroll.vertical ||
     old_scroll.horizontal != scroll.horizontal
-  Buffer::{ ..resolved, lines, scroll, redraw }
+  Buffer::{ ..resolved, lines, scroll, redraw, }
 }
 
 ///|
@@ -881,12 +881,12 @@ pub fn Buffer::shape_until_cursor(
   let mut scroll = base.scroll
   if scroll.line > layout_cursor.line ||
     (scroll.line == layout_cursor.line && scroll.vertical > layout_y) {
-    scroll = Scroll::{ ..scroll, line: layout_cursor.line, vertical: layout_y }
+    scroll = Scroll::{ ..scroll, line: layout_cursor.line, vertical: layout_y, }
   } else if base.height_opt is Some(height) {
     let mut line_i = layout_cursor.line
     if line_i <= scroll.line {
       if total_height > height + scroll.vertical {
-        scroll = Scroll::{ ..scroll, vertical: total_height - height }
+        scroll = Scroll::{ ..scroll, vertical: total_height - height, }
       }
     } else {
       while line_i > scroll.line {
@@ -917,7 +917,7 @@ pub fn Buffer::shape_until_cursor(
   let mut buffer = if scroll.line != base.scroll.line ||
     scroll.vertical != base.scroll.vertical ||
     scroll.horizontal != base.scroll.horizontal {
-    Buffer::{ ..base, scroll, redraw: true, dirty_scroll: true }
+    Buffer::{ ..base, scroll, redraw: true, dirty_scroll: true, }
   } else {
     base
   }
@@ -949,7 +949,7 @@ pub fn Buffer::shape_until_cursor(
                   if x_min < buffer.scroll.horizontal {
                     buffer = Buffer::{
                       ..buffer,
-                      scroll: Scroll::{ ..buffer.scroll, horizontal: x_min },
+                      scroll: Scroll::{ ..buffer.scroll, horizontal: x_min, },
                       redraw: true,
                     }
                   }
@@ -978,7 +978,7 @@ pub fn Buffer::shape_until_cursor(
   if old_scroll.line != buffer.scroll.line ||
     old_scroll.vertical != buffer.scroll.vertical ||
     old_scroll.horizontal != buffer.scroll.horizontal {
-    Buffer::{ ..buffer, redraw: true }
+    Buffer::{ ..buffer, redraw: true, }
   } else {
     buffer
   }

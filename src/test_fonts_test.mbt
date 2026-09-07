@@ -71,7 +71,7 @@ fn decode_base64_ascii(s : String) -> Bytes {
 
 ///|
 fn inter_regular_ttf_b64() -> String {
-  let sb = StringBuilder::new(size_hint=413672)
+  let sb = StringBuilder(size_hint=413672)
   sb.write_string(
     "AAEAAAAQAQAABAAAR0RFRjEzMboAAAJAAAAEGEdQT1MX3XHDAAF+KAABIJpHU1VCSydsUwAAXvQA",
   )

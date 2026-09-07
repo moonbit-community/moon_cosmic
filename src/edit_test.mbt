@@ -26,7 +26,7 @@ test "Change.reverse reverses items and flips insert/delete" {
     text: "yy",
     insert: false,
   }
-  let change = Change::{ items: [a, b] }
+  let change = Change::{ items: [a, b], }
   let rev = change.reverse()
   inspect(rev.items.length(), content="2")
   inspect(rev.items[0].text, content="yy")

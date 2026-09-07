@@ -32,7 +32,7 @@ pub fn ShapeRunKey::new(text : String, attrs_list : AttrsList) -> ShapeRunKey {
       spans.push((s.start, s.end, s.attrs))
     }
   }
-  ShapeRunKey::{ text, default_attrs, attrs_spans: spans }
+  ShapeRunKey::{ text, default_attrs, attrs_spans: spans, }
 }
 
 ///|
@@ -73,7 +73,7 @@ pub struct ShapeRunCache {
 
 ///|
 pub fn ShapeRunCache::new() -> ShapeRunCache {
-  ShapeRunCache::{ age: 0UL, cache: @hashmap.HashMap::default() }
+  ShapeRunCache::{ age: 0UL, cache: Default::default(), }
 }
 
 ///|
@@ -137,3 +137,12 @@ pub fn ShapeRunCache::trim(self : ShapeRunCache, keep_ages : UInt64) -> Unit {
 pub impl Show for ShapeRunCache with fn output(_self, logger) {
   logger.write_string("ShapeRunCache { .. }")
 }
+
+///|
+pub extend ShapeRunCache with Show::{to_string, output}
+
+///|
+pub extend ShapeRunKey with Eq::{not_equal, equal}
+
+///|
+pub extend ShapeRunKey with Hash::{hash, hash_combine}

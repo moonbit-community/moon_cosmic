@@ -48,7 +48,7 @@ pub struct LineIter {
 
 ///|
 pub fn LineIter::new(string : String) -> LineIter {
-  LineIter::{ string, start: 0, end: string.length() }
+  LineIter::{ string, start: 0, end: string.length(), }
 }
 
 ///|
@@ -89,13 +89,13 @@ pub fn LineIter::next(self : LineIter) -> (LineIter, (Int, Int, LineEnding)?) {
         None
       }
       let next_start = i + ending.as_str().length()
-      let iter = LineIter::{ ..self, start: next_start }
+      let iter = LineIter::{ ..self, start: next_start, }
       return (iter, Some((start, end, ending)))
     }
     i = i + 1
   }
   if start < len {
-    let iter = LineIter::{ ..self, start: len }
+    let iter = LineIter::{ ..self, start: len, }
     (iter, Some((start, len, None)))
   } else {
     (self, None)

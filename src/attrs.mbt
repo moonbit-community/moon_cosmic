@@ -37,7 +37,7 @@ pub fn Color::rgba(r : Byte, g : Byte, b : Byte, a : Byte) -> Color {
   let rv = r.to_int().reinterpret_as_uint()
   let gv = g.to_int().reinterpret_as_uint()
   let bv = b.to_int().reinterpret_as_uint()
-  Color::{ value: (av << 24) | (rv << 16) | (gv << 8) | bv }
+  Color::{ value: (av << 24) | (rv << 16) | (gv << 8) | bv, }
 }
 
 ///|
@@ -288,12 +288,12 @@ pub struct FeatureTag {
 
 ///|
 pub fn FeatureTag::new(tag : String) -> FeatureTag {
-  FeatureTag::{ value: @moon_swash.tag_from_str_lossy(tag) }
+  FeatureTag::{ value: @moon_swash.tag_from_str_lossy(tag), }
 }
 
 ///|
 pub fn FeatureTag::from_tag(tag : UInt) -> FeatureTag {
-  FeatureTag::{ value: tag }
+  FeatureTag::{ value: tag, }
 }
 
 ///|
@@ -319,7 +319,7 @@ pub struct Feature {
 
 ///|
 pub fn Feature::new(tag : FeatureTag, value : UInt) -> Feature {
-  Feature::{ tag, value }
+  Feature::{ tag, value, }
 }
 
 ///|
@@ -350,7 +350,7 @@ pub struct FontFeatures {
 
 ///|
 pub fn FontFeatures::new() -> FontFeatures {
-  FontFeatures::{ features: [] }
+  FontFeatures::{ features: [], }
 }
 
 ///|
@@ -430,7 +430,7 @@ fn normalize_letter_spacing_bits(value : Float) -> UInt {
 
 ///|
 pub fn LetterSpacing::new(value : Float) -> LetterSpacing {
-  LetterSpacing::{ bits: normalize_letter_spacing_bits(value) }
+  LetterSpacing::{ bits: normalize_letter_spacing_bits(value), }
 }
 
 ///|
@@ -550,7 +550,7 @@ pub fn DecorationMetrics::new(
   offset : Float,
   thickness : Float,
 ) -> DecorationMetrics {
-  DecorationMetrics::{ offset, thickness }
+  DecorationMetrics::{ offset, thickness, }
 }
 
 ///|
@@ -632,7 +632,7 @@ pub fn Attrs::metadata(self : Attrs) -> Int {
 
 ///|
 pub fn Attrs::color(self : Attrs, color : Color) -> Attrs {
-  Attrs::{ ..self, color_opt: Some(color) }
+  Attrs::{ ..self, color_opt: Some(color), }
 }
 
 ///|
@@ -666,7 +666,7 @@ pub fn Attrs::cache_key_flags(
 ///|
 /// Set Metrics, overriding values in Buffer for this span.
 pub fn Attrs::metrics(self : Attrs, metrics : Metrics) -> Attrs {
-  Attrs::{ ..self, metrics_opt: Some(CacheMetrics::from_metrics(metrics)) }
+  Attrs::{ ..self, metrics_opt: Some(CacheMetrics::from_metrics(metrics)), }
 }
 
 ///|
@@ -695,8 +695,8 @@ pub fn Attrs::text_decoration(
 
 ///|
 pub fn Attrs::underline(self : Attrs, style : UnderlineStyle) -> Attrs {
-  let td = TextDecoration::{ ..self.text_decoration, underline: style }
-  Attrs::{ ..self, text_decoration: td }
+  let td = TextDecoration::{ ..self.text_decoration, underline: style, }
+  Attrs::{ ..self, text_decoration: td, }
 }
 
 ///|
@@ -705,13 +705,13 @@ pub fn Attrs::underline_color(self : Attrs, color : Color) -> Attrs {
     ..self.text_decoration,
     underline_color_opt: Some(color),
   }
-  Attrs::{ ..self, text_decoration: td }
+  Attrs::{ ..self, text_decoration: td, }
 }
 
 ///|
 pub fn Attrs::strikethrough(self : Attrs) -> Attrs {
-  let td = TextDecoration::{ ..self.text_decoration, strikethrough: true }
-  Attrs::{ ..self, text_decoration: td }
+  let td = TextDecoration::{ ..self.text_decoration, strikethrough: true, }
+  Attrs::{ ..self, text_decoration: td, }
 }
 
 ///|
@@ -720,13 +720,13 @@ pub fn Attrs::strikethrough_color(self : Attrs, color : Color) -> Attrs {
     ..self.text_decoration,
     strikethrough_color_opt: Some(color),
   }
-  Attrs::{ ..self, text_decoration: td }
+  Attrs::{ ..self, text_decoration: td, }
 }
 
 ///|
 pub fn Attrs::overline(self : Attrs) -> Attrs {
-  let td = TextDecoration::{ ..self.text_decoration, overline: true }
-  Attrs::{ ..self, text_decoration: td }
+  let td = TextDecoration::{ ..self.text_decoration, overline: true, }
+  Attrs::{ ..self, text_decoration: td, }
 }
 
 ///|
@@ -735,7 +735,7 @@ pub fn Attrs::overline_color(self : Attrs, color : Color) -> Attrs {
     ..self.text_decoration,
     overline_color_opt: Some(color),
   }
-  Attrs::{ ..self, text_decoration: td }
+  Attrs::{ ..self, text_decoration: td, }
 }
 
 ///|
@@ -880,7 +880,7 @@ pub struct AttrsList {
 
 ///|
 pub fn AttrsList::new(defaults : Attrs) -> AttrsList {
-  AttrsList::{ defaults, spans: [] }
+  AttrsList::{ defaults, spans: [], }
 }
 
 ///|
@@ -965,7 +965,7 @@ pub fn AttrsList::add_span(
     // Fully after new range.
     if span.start >= end {
       if !inserted {
-        spans0.push(AttrsSpan::{ start, end, attrs })
+        spans0.push(AttrsSpan::{ start, end, attrs, })
         inserted = true
       }
       spans0.push(span)
@@ -982,14 +982,14 @@ pub fn AttrsList::add_span(
     // Overlap with right remainder means this old span crosses `end`.
     if span.end > end {
       if !inserted {
-        spans0.push(AttrsSpan::{ start, end, attrs })
+        spans0.push(AttrsSpan::{ start, end, attrs, })
         inserted = true
       }
-      spans0.push(AttrsSpan::{ start: end, end: span.end, attrs: span.attrs })
+      spans0.push(AttrsSpan::{ start: end, end: span.end, attrs: span.attrs, })
     }
   }
   if !inserted {
-    spans0.push(AttrsSpan::{ start, end, attrs })
+    spans0.push(AttrsSpan::{ start, end, attrs, })
   }
   let spans = merge_adjacent_spans(spans0)
   AttrsList::{ ..self, spans, }
@@ -1039,7 +1039,7 @@ pub fn AttrsList::split_off(
       })
     } else {
       // Span crosses the split point.
-      left.push(AttrsSpan::{ start: span.start, end: index, attrs: span.attrs })
+      left.push(AttrsSpan::{ start: span.start, end: index, attrs: span.attrs, })
       right.push(AttrsSpan::{
         start: 0,
         end: span.end - index,
@@ -1048,8 +1048,8 @@ pub fn AttrsList::split_off(
     }
   }
   (
-    AttrsList::{ defaults: self.defaults, spans: left },
-    AttrsList::{ defaults: self.defaults, spans: right },
+    AttrsList::{ defaults: self.defaults, spans: left, },
+    AttrsList::{ defaults: self.defaults, spans: right, },
   )
 }
 
@@ -1071,3 +1071,102 @@ pub fn AttrsList::eq(self : AttrsList, other : AttrsList) -> Bool {
   }
   true
 }
+
+///|
+pub extend Attrs with Eq::{not_equal, equal}
+
+///|
+pub extend Attrs with Hash::{hash, hash_combine}
+
+///|
+pub extend AttrsList with Eq::{not_equal, equal}
+
+///|
+pub extend AttrsList with Hash::{hash, hash_combine}
+
+///|
+pub extend AttrsSpan with Eq::{not_equal, equal}
+
+///|
+pub extend AttrsSpan with Hash::{hash, hash_combine}
+
+///|
+pub extend CacheMetrics with Eq::{not_equal, equal}
+
+///|
+pub extend CacheMetrics with Hash::{hash, hash_combine}
+
+///|
+pub extend CacheMetrics with Show::{to_string, output}
+
+///|
+pub extend Color with Eq::{not_equal, equal}
+
+///|
+pub extend Color with Hash::{hash, hash_combine}
+
+///|
+pub extend DecorationMetrics with Eq::{not_equal, equal}
+
+///|
+pub extend DecorationMetrics with Hash::{hash, hash_combine}
+
+///|
+pub extend Family with Eq::{not_equal, equal}
+
+///|
+pub extend Family with Hash::{hash, hash_combine}
+
+///|
+pub extend Family with Show::{to_string, output}
+
+///|
+pub extend Feature with Eq::{not_equal, equal}
+
+///|
+pub extend Feature with Hash::{hash, hash_combine}
+
+///|
+pub extend FeatureTag with Eq::{not_equal, equal}
+
+///|
+pub extend FeatureTag with Hash::{hash, hash_combine}
+
+///|
+pub extend FontFeatures with Eq::{not_equal, equal}
+
+///|
+pub extend FontFeatures with Hash::{hash, hash_combine}
+
+///|
+pub extend GlyphDecorationData with Eq::{not_equal, equal}
+
+///|
+pub extend GlyphDecorationData with Hash::{hash, hash_combine}
+
+///|
+pub extend LetterSpacing with Eq::{not_equal, equal}
+
+///|
+pub extend LetterSpacing with Hash::{hash, hash_combine}
+
+///|
+pub extend TextDecoration with Eq::{not_equal, equal}
+
+///|
+pub extend TextDecoration with Hash::{hash, hash_combine}
+
+///|
+pub extend UnderlineStyle with Eq::{not_equal, equal}
+
+///|
+pub extend UnderlineStyle with Hash::{hash, hash_combine}
+
+///|
+pub extend Weight with Eq::{not_equal, equal}
+
+///|
+pub extend Weight with Hash::{hash, hash_combine}
+
+///|
+pub extend Weight with Show::{to_string, output}

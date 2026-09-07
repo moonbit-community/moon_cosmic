@@ -246,7 +246,7 @@ pub fn LegacyRenderer::new(
   cache : SwashCache,
   callback : (Int, Int, UInt, UInt, Color) -> Unit,
 ) -> LegacyRenderer {
-  LegacyRenderer::{ font_system, cache, callback }
+  LegacyRenderer::{ font_system, cache, callback, }
 }
 
 ///|
@@ -270,3 +270,6 @@ pub impl Renderer for LegacyRenderer with fn glyph(self, physical_glyph, color) 
     )
   })
 }
+
+///|
+pub extend LegacyRenderer with Renderer::{glyph, rectangle}

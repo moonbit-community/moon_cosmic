@@ -14,7 +14,7 @@
 
 ///|
 fn ulb_slice_string(s : String, start : Int, end : Int) -> String {
-  let sb = StringBuilder::new(size_hint=end - start)
+  let sb = StringBuilder(size_hint=end - start)
   sb.write_view(s[:].view(start_offset=start, end_offset=end))
   sb.to_string()
 }
@@ -160,7 +160,7 @@ fn ulb_codepoint_utf16_len(cp : Int) -> Int {
 
 ///|
 fn ulb_build_text(codepoints : Array[Int]) -> String {
-  let sb = StringBuilder::new(size_hint=codepoints.length() * 2)
+  let sb = StringBuilder(size_hint=codepoints.length() * 2)
   for cp in codepoints {
     match ulb_codepoint_to_char(cp) {
       None => abort("invalid codepoint in LineBreakTest.txt")

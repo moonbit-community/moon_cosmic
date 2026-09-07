@@ -135,7 +135,7 @@ test "shape_levels_require_new_run splits on any level change" {
 
 ///|
 fn repeated_ascii_digit(n : Int) -> String {
-  let sb = StringBuilder::new(size_hint=n)
+  let sb = StringBuilder(size_hint=n)
   for _ in 0..<n {
     sb.write_char('1')
   }

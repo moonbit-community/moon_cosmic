@@ -123,7 +123,7 @@ fn vi_open_line_above(editor : Editor) -> Editor {
 
 ///|
 fn string_append_char(s : String, ch : Char) -> String {
-  let sb = StringBuilder::new(size_hint=s.length() + ch.utf16_len())
+  let sb = StringBuilder(size_hint=s.length() + ch.utf16_len())
   sb.write_string(s)
   sb.write_char(ch)
   sb.to_string()
@@ -243,7 +243,7 @@ fn string_pop_last_char(s : String) -> String {
   for p in s.iter2() {
     last = p.0
   }
-  let sb = StringBuilder::new(size_hint=last)
+  let sb = StringBuilder(size_hint=last)
   sb.write_view(s[:].view(start_offset=0, end_offset=last))
   sb.to_string()
 }
@@ -829,7 +829,7 @@ fn vi_capture_lines(
   } else {
     lines.length()
   }
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   let mut i = start_line
   while i < end_exclusive {
     let line = lines[i]
@@ -973,7 +973,11 @@ pub fn ViEditor::set_changed(self : ViEditor, changed : Bool) -> ViEditor {
 
 ///|
 pub fn ViEditor::save_point(self : ViEditor) -> ViEditor {
-  ViEditor::{ ..self, save_pivot_opt: Some(self.history_index), changed: false }
+  ViEditor::{
+    ..self,
+    save_pivot_opt: Some(self.history_index),
+    changed: false,
+  }
 }
 
 ///|
@@ -1205,7 +1209,11 @@ fn ViEditor::feed_char_inner(self : ViEditor, key : Char) -> ViEditor {
     if key == 'n' || key == 'N' {
       match self.search_opt {
         None =>
-          return ViEditor::{ ..self, pending_g: false, pending_count_opt: None }
+          return ViEditor::{
+            ..self,
+            pending_g: false,
+            pending_count_opt: None,
+          }
         Some((query, forwards0)) => {
           let forwards = if key == 'n' { forwards0 } else { !forwards0 }
           let searched = vi_search(self.editor, query, forwards)
@@ -1222,25 +1230,25 @@ fn ViEditor::feed_char_inner(self : ViEditor, key : Char) -> ViEditor {
         }
       }
     }
-    return ViEditor::{ ..self, pending_g: false }.feed_char_inner(key)
+    return ViEditor::{ ..self, pending_g: false, }.feed_char_inner(key)
   }
 
   if self.passthrough {
     if key == '\n' {
-      return ViEditor::{ ..self, editor: self.editor.action(Enter) }
+      return ViEditor::{ ..self, editor: self.editor.action(Enter), }
     }
-    return ViEditor::{ ..self, editor: self.editor.action(Insert(key)) }
+    return ViEditor::{ ..self, editor: self.editor.action(Insert(key)), }
   }
   match self.mode {
     Insert =>
       if key == '\n' {
-        ViEditor::{ ..self, editor: self.editor.action(Enter) }
+        ViEditor::{ ..self, editor: self.editor.action(Enter), }
       } else {
-        ViEditor::{ ..self, editor: self.editor.action(Insert(key)) }
+        ViEditor::{ ..self, editor: self.editor.action(Insert(key)), }
       }
     Replace =>
       if key == '\n' {
-        ViEditor::{ ..self, editor: self.editor.action(Enter) }
+        ViEditor::{ ..self, editor: self.editor.action(Enter), }
       } else {
         ViEditor::{
           ..self,
@@ -1257,7 +1265,7 @@ fn ViEditor::feed_char_inner(self : ViEditor, key : Char) -> ViEditor {
       match vi_motion_for_key(key) {
         None => self
         Some(motion) =>
-          ViEditor::{ ..self, editor: self.editor.action(Motion(motion)) }
+          ViEditor::{ ..self, editor: self.editor.action(Motion(motion)), }
       }
     }
     Search => self
@@ -1427,7 +1435,7 @@ fn ViEditor::feed_char_inner(self : ViEditor, key : Char) -> ViEditor {
           }
         None =>
           if key == 'i' {
-            ViEditor::{ ..self, mode: Insert, pending_count_opt: None }
+            ViEditor::{ ..self, mode: Insert, pending_count_opt: None, }
           } else if key == 'I' {
             ViEditor::{
               ..self,
@@ -1491,7 +1499,7 @@ fn ViEditor::feed_char_inner(self : ViEditor, key : Char) -> ViEditor {
               pending_count_opt: None,
             }
           } else if key == 'R' {
-            ViEditor::{ ..self, mode: Replace, pending_count_opt: None }
+            ViEditor::{ ..self, mode: Replace, pending_count_opt: None, }
           } else if key == 'o' {
             ViEditor::{
               ..self,
@@ -1543,15 +1551,15 @@ fn ViEditor::feed_char_inner(self : ViEditor, key : Char) -> ViEditor {
           } else if key == 'Y' {
             match
               vi_capture_lines(self.editor, self.editor.cursor().line, count) {
-              None => ViEditor::{ ..self, pending_count_opt: None }
+              None => ViEditor::{ ..self, pending_count_opt: None, }
               Some(captured) =>
-                ViEditor::{ ..self, pending_count_opt: None }.set_register(
+                ViEditor::{ ..self, pending_count_opt: None, }.set_register(
                   captured.0,
                   captured.1,
                 )
             }
           } else if key == 'g' {
-            ViEditor::{ ..self, pending_g: true }
+            ViEditor::{ ..self, pending_g: true, }
           } else if key == 'G' {
             let editor = match self.pending_count_opt {
               None => self.editor.action(Motion(BufferEnd))
@@ -1560,9 +1568,9 @@ fn ViEditor::feed_char_inner(self : ViEditor, key : Char) -> ViEditor {
                   Motion(GotoLine(if n <= 0 { 0 } else { n - 1 })),
                 )
             }
-            ViEditor::{ ..self, editor, pending_count_opt: None }
+            ViEditor::{ ..self, editor, pending_count_opt: None, }
           } else if key == '"' {
-            ViEditor::{ ..self, pending_register_prefix: true }
+            ViEditor::{ ..self, pending_register_prefix: true, }
           } else if key == '/' {
             ViEditor::{
               ..self,
@@ -1625,7 +1633,7 @@ fn ViEditor::feed_char_inner(self : ViEditor, key : Char) -> ViEditor {
             }
           } else if key == ';' {
             match self.last_find_opt {
-              None => ViEditor::{ ..self, pending_count_opt: None }
+              None => ViEditor::{ ..self, pending_count_opt: None, }
               Some(last) =>
                 ViEditor::{
                   ..self,
@@ -1635,7 +1643,7 @@ fn ViEditor::feed_char_inner(self : ViEditor, key : Char) -> ViEditor {
             }
           } else if key == ',' {
             match self.last_find_opt {
-              None => ViEditor::{ ..self, pending_count_opt: None }
+              None => ViEditor::{ ..self, pending_count_opt: None, }
               Some(last) =>
                 ViEditor::{
                   ..self,
@@ -1656,9 +1664,9 @@ fn ViEditor::feed_char_inner(self : ViEditor, key : Char) -> ViEditor {
               pending_count_opt: None,
             }
           } else if key == '<' {
-            ViEditor::{ ..self, pending_operator: Some(ShiftLeft) }
+            ViEditor::{ ..self, pending_operator: Some(ShiftLeft), }
           } else if key == '>' {
-            ViEditor::{ ..self, pending_operator: Some(ShiftRight) }
+            ViEditor::{ ..self, pending_operator: Some(ShiftRight), }
           } else if key == 'p' {
             match self.register_for_put() {
               None => self
@@ -1694,18 +1702,18 @@ fn ViEditor::feed_char_inner(self : ViEditor, key : Char) -> ViEditor {
                 }
             }
           } else if key == 'd' {
-            ViEditor::{ ..self, pending_operator: Some(Delete) }
+            ViEditor::{ ..self, pending_operator: Some(Delete), }
           } else if key == 'c' {
-            ViEditor::{ ..self, pending_operator: Some(Change) }
+            ViEditor::{ ..self, pending_operator: Some(Change), }
           } else if key == 'y' {
-            ViEditor::{ ..self, pending_operator: Some(Yank) }
+            ViEditor::{ ..self, pending_operator: Some(Yank), }
           } else if key == 'u' {
             self.undo()
           } else if key == '\u{12}' {
             self.redo()
           } else {
             match vi_motion_for_key(key) {
-              None => ViEditor::{ ..self, pending_count_opt: None }
+              None => ViEditor::{ ..self, pending_count_opt: None, }
               Some(motion) =>
                 ViEditor::{
                   ..self,
@@ -1724,7 +1732,7 @@ pub fn ViEditor::feed_char(self : ViEditor, key : Char) -> ViEditor {
   if key == '\u{1B}' {
     return self.escape()
   }
-  let started = ViEditor::{ ..self, editor: self.editor.start_change() }
+  let started = ViEditor::{ ..self, editor: self.editor.start_change(), }
   started.feed_char_inner(key).finalize_change()
 }
 

@@ -155,9 +155,9 @@ pub fn FontSystem::new_with_locale(locale : String) -> FontSystem {
     fonts: [],
     fallback_profile_opt: None,
     fallback_warning_handler_opt: None,
-    font_matches_cache: @hashmap.HashMap::default(),
-    codepoint_support_cache: @hashmap.HashMap::default(),
-    hb_font_cache: @hashmap.HashMap::default(),
+    font_matches_cache: Default::default(),
+    codepoint_support_cache: Default::default(),
+    hb_font_cache: Default::default(),
     hb_shape_buffer: @buffer.Buffer::new(),
     shape_run_cache: ShapeRunCache::new(),
   }
@@ -448,13 +448,13 @@ pub fn FontSystem::set_fallback_profile(
   if self.fallback_profile_opt is Some(current) && current == profile {
     self
   } else {
-    FontSystem::{ ..self, fallback_profile_opt: Some(profile) }
+    FontSystem::{ ..self, fallback_profile_opt: Some(profile), }
   }
 }
 
 ///|
 pub fn FontSystem::clear_fallback_profile(self : FontSystem) -> FontSystem {
-  FontSystem::{ ..self, fallback_profile_opt: None }
+  FontSystem::{ ..self, fallback_profile_opt: None, }
 }
 
 ///|
@@ -462,14 +462,14 @@ pub fn FontSystem::set_fallback_warning_handler(
   self : FontSystem,
   handler : (String) -> Unit,
 ) -> FontSystem {
-  FontSystem::{ ..self, fallback_warning_handler_opt: Some(handler) }
+  FontSystem::{ ..self, fallback_warning_handler_opt: Some(handler), }
 }
 
 ///|
 pub fn FontSystem::clear_fallback_warning_handler(
   self : FontSystem,
 ) -> FontSystem {
-  FontSystem::{ ..self, fallback_warning_handler_opt: None }
+  FontSystem::{ ..self, fallback_warning_handler_opt: None, }
 }
 
 ///|
@@ -1429,3 +1429,12 @@ pub fn FontSystem::get_font_entry(
   }
   Some(self.fonts[font_id])
 }
+
+///|
+pub extend FallbackProfile with Eq::{not_equal, equal}
+
+///|
+pub extend FontMatchAttrs with Eq::{not_equal, equal}
+
+///|
+pub extend FontMatchAttrs with Hash::{hash, hash_combine}

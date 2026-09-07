@@ -94,7 +94,7 @@ fn bidi_paragraphs_trim_trailing_b_separator(para : String) -> String {
 pub fn BidiParagraphs::new(text : String) -> BidiParagraphs {
   let ranges = bidi_paragraphs_ranges(text)
   let pos = if ranges.length() == 0 { text.length() } else { ranges[0].0 }
-  BidiParagraphs::{ text, ranges, cursor: 0, pos }
+  BidiParagraphs::{ text, ranges, cursor: 0, pos, }
 }
 
 ///|
@@ -112,7 +112,7 @@ pub fn BidiParagraphs::next(self : BidiParagraphs) -> (BidiParagraphs, String)? 
   } else {
     self.ranges[next_cursor].0
   }
-  Some((BidiParagraphs::{ ..self, cursor: next_cursor, pos: next_pos }, para))
+  Some((BidiParagraphs::{ ..self, cursor: next_cursor, pos: next_pos, }, para))
 }
 
 ///|

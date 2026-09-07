@@ -19,7 +19,7 @@
 /// - It focuses on cache invalidation and text/span mutations (append/split_off),
 ///   keeping API naming/semantics aligned with upstream.
 fn string_concat(a : String, b : String) -> String {
-  let sb = StringBuilder::new(size_hint=(a.length() + b.length()) * 2)
+  let sb = StringBuilder(size_hint=(a.length() + b.length()) * 2)
   sb.write_string(a)
   sb.write_string(b)
   sb.to_string()
@@ -27,7 +27,7 @@ fn string_concat(a : String, b : String) -> String {
 
 ///|
 fn substring(s : String, start : Int, end : Int) -> String {
-  let sb = StringBuilder::new(size_hint=(end - start) * 2)
+  let sb = StringBuilder(size_hint=(end - start) * 2)
   sb.write_view(s[:].view(start_offset=start, end_offset=end))
   sb.to_string()
 }
@@ -85,13 +85,13 @@ fn justify_line(text : String, line : LayoutLine, width : Float) -> LayoutLine {
       g.start < text.length() &&
       text.code_unit_at(g.start) == 32 {
       w = w + add
-      glyphs.push(LayoutGlyph::{ ..g, x: g.x + dx, w })
+      glyphs.push(LayoutGlyph::{ ..g, x: g.x + dx, w, })
       dx = dx + add
     } else {
-      glyphs.push(LayoutGlyph::{ ..g, x: g.x + dx, w })
+      glyphs.push(LayoutGlyph::{ ..g, x: g.x + dx, w, })
     }
   }
-  LayoutLine::{ ..line, w: line.w + extra, glyphs }
+  LayoutLine::{ ..line, w: line.w + extra, glyphs, }
 }
 
 ///|
@@ -122,10 +122,10 @@ fn hint_line(l : LayoutLine) -> LayoutLine {
   let start_x = x
   for g in l.glyphs {
     let w = roundf(g.w)
-    glyphs.push(LayoutGlyph::{ ..g, x, w })
+    glyphs.push(LayoutGlyph::{ ..g, x, w, })
     x = x + w
   }
-  LayoutLine::{ ..l, w: x - start_x, glyphs }
+  LayoutLine::{ ..l, w: x - start_x, glyphs, }
 }
 
 ///|
@@ -181,7 +181,7 @@ fn ellipsis_glyph(
 ) -> LayoutGlyph {
   if line.glyphs.length() > 0 {
     let base = line.glyphs[0]
-    LayoutGlyph::{ ..base, start: line.end, end: line.end, x, w }
+    LayoutGlyph::{ ..base, start: line.end, end: line.end, x, w, }
   } else {
     LayoutGlyph::{
       ..LayoutGlyph::new(
@@ -620,7 +620,7 @@ pub fn BufferLine::align(self : BufferLine) -> Align? {
 
 ///|
 pub fn BufferLine::reset(self : BufferLine) -> BufferLine {
-  BufferLine::{ ..self, metadata: None }.reset_shaping()
+  BufferLine::{ ..self, metadata: None, }.reset_shaping()
 }
 
 ///|
@@ -797,7 +797,7 @@ pub fn BufferLine::set_text(
   if text != self.text ||
     ending.as_str() != self.ending.as_str() ||
     !attrs_list.eq(self.attrs_list) {
-    let updated = BufferLine::{ ..self, text, ending, attrs_list }.reset()
+    let updated = BufferLine::{ ..self, text, ending, attrs_list, }.reset()
     (updated, true)
   } else {
     (self, false)
@@ -874,7 +874,7 @@ pub fn BufferLine::set_metadata(
   self : BufferLine,
   metadata : Int,
 ) -> BufferLine {
-  BufferLine::{ ..self, metadata: Some(metadata) }
+  BufferLine::{ ..self, metadata: Some(metadata), }
 }
 
 ///|
@@ -930,6 +930,6 @@ pub fn BufferLine::split_off(
     right_attrs,
     self.shaping,
   )
-  right = BufferLine::{ ..right, align: self.align }
+  right = BufferLine::{ ..right, align: self.align, }
   (left, right)
 }

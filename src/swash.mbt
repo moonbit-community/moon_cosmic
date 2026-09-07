@@ -151,8 +151,8 @@ pub struct SwashCache {
 pub fn SwashCache::new() -> SwashCache {
   SwashCache::{
     context: @scale.ScaleContext::ScaleContext(),
-    image_cache: @hashmap.HashMap::default(),
-    outline_path_cache: @hashmap.HashMap::default(),
+    image_cache: Default::default(),
+    outline_path_cache: Default::default(),
   }
 }
 

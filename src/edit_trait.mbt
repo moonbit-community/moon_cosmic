@@ -323,3 +323,27 @@ pub impl Edit for ViEditor with fn cursor_position(self) {
 pub impl Edit for ViEditor with fn action(self, action) {
   self.set_editor(self.editor().action(action))
 }
+
+///|
+pub extend Editor with Edit::{set_editor, editor}
+
+///|
+pub extend ViEditor with Edit::{
+  start_change,
+  copy_selection,
+  finish_change,
+  action,
+  set_auto_indent,
+  tab_width,
+  selection,
+  apply_change,
+  cursor,
+  set_cursor,
+  insert_string,
+  set_selection,
+  set_tab_width,
+  cursor_position,
+  auto_indent,
+  delete_selection,
+  delete_range,
+}

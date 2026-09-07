@@ -258,7 +258,7 @@ fn bidi_build_text_meta(text : String) -> BidiTextMeta {
     char_len_at.set(idx, bidi_utf16_len(ch))
     char_at_start.set(idx, ch)
   }
-  BidiTextMeta::{ char_len_at, char_at_start }
+  BidiTextMeta::{ char_len_at, char_at_start, }
 }
 
 ///|
@@ -564,14 +564,14 @@ fn bidi_explicit_compute_for_para(
       current_run_level = levels[i]
       has_any_char = true
     } else if !bidi_is_removed_by_x9(class) && levels[i] != current_run_level {
-      runs.push(BidiLevelRun::{ start: current_run_start, end: i })
+      runs.push(BidiLevelRun::{ start: current_run_start, end: i, })
       current_run_level = levels[i]
       current_run_start = i
     }
   }
 
   if has_any_char && para.range_end > current_run_start {
-    runs.push(BidiLevelRun::{ start: current_run_start, end: para.range_end })
+    runs.push(BidiLevelRun::{ start: current_run_start, end: para.range_end, })
   }
 }
 
@@ -849,7 +849,7 @@ fn bidi_prepare_isolating_run_sequences_for_para(
     let runs_len = seq.length()
     let end_of_seq = seq[runs_len - 1].end
 
-    let result = BidiIsolatingRunSequence::{ runs: seq, sos: L, eos: L }
+    let result = BidiIsolatingRunSequence::{ runs: seq, sos: L, eos: L, }
 
     let seq_level = match
       bidi_sequence_find_forward_from(result, start_of_seq, 0, fn(i) {
@@ -1586,7 +1586,7 @@ pub fn BidiInfo::new_with_para_level(
     )
   }
 
-  BidiInfo::{ text, original_classes, levels, paragraphs }
+  BidiInfo::{ text, original_classes, levels, paragraphs, }
 }
 
 ///|

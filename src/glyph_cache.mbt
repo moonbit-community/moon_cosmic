@@ -267,3 +267,24 @@ pub fn CacheKey::x_bin(self : CacheKey) -> SubpixelBin {
 pub fn CacheKey::y_bin(self : CacheKey) -> SubpixelBin {
   self.y_bin
 }
+
+///|
+pub extend CacheKey with Eq::{not_equal, equal}
+
+///|
+pub extend CacheKey with Hash::{hash, hash_combine}
+
+///|
+pub extend CacheKey with Show::{to_string, output}
+
+///|
+pub extend SubpixelBin with Debug::{to_repr}
+
+///|
+pub extend SubpixelBin with Eq::{not_equal, equal}
+
+///|
+pub extend SubpixelBin with Hash::{hash, hash_combine}
+
+///|
+pub extend SubpixelBin with Show::{to_string, output}

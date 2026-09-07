@@ -162,7 +162,7 @@ pub fn LayoutGlyph::physical(
     self.font_weight,
     self.cache_key_flags,
   )
-  PhysicalGlyph::{ cache_key, x, y }
+  PhysicalGlyph::{ cache_key, x, y, }
 }
 
 ///|
@@ -214,7 +214,10 @@ fn push_decoration_for_layout_glyph(
       last.data == data &&
       last.color_opt == shape_glyph.color_opt &&
       last.font_size == glyph_font_size {
-      decorations.set(last_i, DecorationSpan::{ ..last, glyph_end: glyph_i + 1 })
+      decorations.set(last_i, DecorationSpan::{
+        ..last,
+        glyph_end: glyph_i + 1,
+      })
       return
     }
   }
@@ -305,7 +308,7 @@ fn build_glyph_wrap_segments(
   while i < n {
     let blank = layout_glyph_is_blank(text, shape.glyphs[i])
     if blank {
-      segs.push(GlyphWrapSegment::{ glyph_start: i, glyph_end: i + 1, blank })
+      segs.push(GlyphWrapSegment::{ glyph_start: i, glyph_end: i + 1, blank, })
       i = i + 1
       continue
     }
@@ -314,7 +317,7 @@ fn build_glyph_wrap_segments(
     while i < n && !layout_glyph_is_blank(text, shape.glyphs[i]) {
       i = i + 1
     }
-    segs.push(GlyphWrapSegment::{ glyph_start: start, glyph_end: i, blank })
+    segs.push(GlyphWrapSegment::{ glyph_start: start, glyph_end: i, blank, })
   }
   segs
 }
@@ -616,7 +619,7 @@ fn finalize_layout_lines(
   for line in lines {
     let glyphs : Array[LayoutGlyph] = []
     for glyph in line.glyphs {
-      glyphs.push(LayoutGlyph::{ ..glyph, x: line_width - (glyph.x + glyph.w) })
+      glyphs.push(LayoutGlyph::{ ..glyph, x: line_width - (glyph.x + glyph.w), })
     }
     out.push(LayoutLine::{ ..line, glyphs, })
   }
@@ -690,7 +693,7 @@ fn build_wrap_spans_from_shape(
         })
       }
     }
-    spans.push(WrapSpanLayout::{ level, words })
+    spans.push(WrapSpanLayout::{ level, words, })
     span_start = span_end
   }
   spans
@@ -1006,7 +1009,7 @@ pub fn layout_from_shape(
           total_w = total_w + word.w
         }
       }
-      line = LayoutLine::{ ..line, w: total_w }
+      line = LayoutLine::{ ..line, w: total_w, }
       lines.push(line)
       return finalize_layout_lines(lines, shape_for_wrap.rtl, width_opt)
     }
@@ -1487,7 +1490,7 @@ fn apply_align_to_line(
     }
     let glyphs : Array[LayoutGlyph] = []
     for g in line.glyphs {
-      glyphs.push(LayoutGlyph::{ ..g, x: g.x + dx })
+      glyphs.push(LayoutGlyph::{ ..g, x: g.x + dx, })
     }
     LayoutLine::{ ..line, glyphs, }
   }
@@ -1525,13 +1528,13 @@ fn apply_align_to_line(
           g.start < text.length() &&
           text.code_unit_at(g.start) == 32 {
           w = w + add
-          glyphs.push(LayoutGlyph::{ ..g, x: g.x + dx, w })
+          glyphs.push(LayoutGlyph::{ ..g, x: g.x + dx, w, })
           dx = dx + add
         } else {
-          glyphs.push(LayoutGlyph::{ ..g, x: g.x + dx, w })
+          glyphs.push(LayoutGlyph::{ ..g, x: g.x + dx, w, })
         }
       }
-      LayoutLine::{ ..line, w: line.w + extra, glyphs }
+      LayoutLine::{ ..line, w: line.w + extra, glyphs, }
     }
   }
 }

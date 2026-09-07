@@ -95,7 +95,7 @@ fn vi_copy_current_line(editor : @cosmic.Editor) -> String? {
 
 ///|
 fn string_append_char(s : String, ch : Char) -> String {
-  let sb = StringBuilder::new(size_hint=s.length() + ch.utf16_len())
+  let sb = StringBuilder(size_hint=s.length() + ch.utf16_len())
   sb.write_string(s)
   sb.write_char(ch)
   sb.to_string()
@@ -110,7 +110,7 @@ fn string_pop_last_char(s : String) -> String {
   for p in s.iter2() {
     last = p.0
   }
-  let sb = StringBuilder::new(size_hint=last)
+  let sb = StringBuilder(size_hint=last)
   sb.write_view(s[:].view(start_offset=0, end_offset=last))
   sb.to_string()
 }
@@ -643,7 +643,11 @@ pub fn ViEditor::set_changed(self : ViEditor, changed : Bool) -> ViEditor {
 
 ///|
 pub fn ViEditor::save_point(self : ViEditor) -> ViEditor {
-  ViEditor::{ ..self, save_pivot_opt: Some(self.history_index), changed: false }
+  ViEditor::{
+    ..self,
+    save_pivot_opt: Some(self.history_index),
+    changed: false,
+  }
 }
 
 ///|
@@ -776,16 +780,19 @@ fn ViEditor::feed_char_inner(self : ViEditor, key : Char) -> ViEditor {
 
   if self.passthrough {
     if key == '\n' {
-      return ViEditor::{ ..self, editor: self.editor.action(@cosmic.Enter) }
+      return ViEditor::{ ..self, editor: self.editor.action(@cosmic.Enter), }
     }
-    return ViEditor::{ ..self, editor: self.editor.action(@cosmic.Insert(key)) }
+    return ViEditor::{
+      ..self,
+      editor: self.editor.action(@cosmic.Insert(key)),
+    }
   }
   match self.mode {
     Insert =>
       if key == '\n' {
-        ViEditor::{ ..self, editor: self.editor.action(@cosmic.Enter) }
+        ViEditor::{ ..self, editor: self.editor.action(@cosmic.Enter), }
       } else {
-        ViEditor::{ ..self, editor: self.editor.action(@cosmic.Insert(key)) }
+        ViEditor::{ ..self, editor: self.editor.action(@cosmic.Insert(key)), }
       }
     Visual | VisualLine => {
       if key == 'v' && self.mode is Visual {
@@ -826,7 +833,7 @@ fn ViEditor::feed_char_inner(self : ViEditor, key : Char) -> ViEditor {
               pending_operator: None,
             }
           } else {
-            let after_op = ViEditor::{ ..self, pending_operator: None }
+            let after_op = ViEditor::{ ..self, pending_operator: None, }
             match vi_motion_for_key(key) {
               None => after_op
               Some(motion) =>
@@ -859,7 +866,7 @@ fn ViEditor::feed_char_inner(self : ViEditor, key : Char) -> ViEditor {
               pending_operator: None,
             }
           } else {
-            let after_op = ViEditor::{ ..self, pending_operator: None }
+            let after_op = ViEditor::{ ..self, pending_operator: None, }
             match vi_motion_for_key(key) {
               None => after_op
               Some(motion) =>
@@ -887,13 +894,13 @@ fn ViEditor::feed_char_inner(self : ViEditor, key : Char) -> ViEditor {
             }
           } else if key == 'y' {
             let register_opt = vi_copy_current_line(self.editor)
-            ViEditor::{ ..self, pending_operator: None, register_opt }
+            ViEditor::{ ..self, pending_operator: None, register_opt, }
           } else {
-            ViEditor::{ ..self, pending_operator: None }
+            ViEditor::{ ..self, pending_operator: None, }
           }
         None =>
           if key == 'i' {
-            ViEditor::{ ..self, mode: Insert }
+            ViEditor::{ ..self, mode: Insert, }
           } else if key == 'a' {
             ViEditor::{
               ..self,
@@ -915,9 +922,9 @@ fn ViEditor::feed_char_inner(self : ViEditor, key : Char) -> ViEditor {
               editor: vi_with_visual_selection(self.editor, mode),
             }
           } else if key == 'x' {
-            ViEditor::{ ..self, editor: self.editor.action(@cosmic.Delete) }
+            ViEditor::{ ..self, editor: self.editor.action(@cosmic.Delete), }
           } else if key == '/' {
-            ViEditor::{ ..self, mode: Search, search_input_opt: Some("") }
+            ViEditor::{ ..self, mode: Search, search_input_opt: Some(""), }
           } else if key == 'n' {
             match self.search_opt {
               None => self
@@ -937,13 +944,13 @@ fn ViEditor::feed_char_inner(self : ViEditor, key : Char) -> ViEditor {
                 }
             }
           } else if key == 'f' {
-            ViEditor::{ ..self, pending_find_opt: Some((true, false)) }
+            ViEditor::{ ..self, pending_find_opt: Some((true, false)), }
           } else if key == 'F' {
-            ViEditor::{ ..self, pending_find_opt: Some((false, false)) }
+            ViEditor::{ ..self, pending_find_opt: Some((false, false)), }
           } else if key == 't' {
-            ViEditor::{ ..self, pending_find_opt: Some((true, true)) }
+            ViEditor::{ ..self, pending_find_opt: Some((true, true)), }
           } else if key == 'T' {
-            ViEditor::{ ..self, pending_find_opt: Some((false, true)) }
+            ViEditor::{ ..self, pending_find_opt: Some((false, true)), }
           } else if key == 'p' {
             match self.register_opt {
               None => self
@@ -954,11 +961,11 @@ fn ViEditor::feed_char_inner(self : ViEditor, key : Char) -> ViEditor {
                 }
             }
           } else if key == 'd' {
-            ViEditor::{ ..self, pending_operator: Some(Delete) }
+            ViEditor::{ ..self, pending_operator: Some(Delete), }
           } else if key == 'c' {
-            ViEditor::{ ..self, pending_operator: Some(Change) }
+            ViEditor::{ ..self, pending_operator: Some(Change), }
           } else if key == 'y' {
-            ViEditor::{ ..self, pending_operator: Some(Yank) }
+            ViEditor::{ ..self, pending_operator: Some(Yank), }
           } else {
             match vi_motion_for_key(key) {
               None => self
@@ -978,7 +985,7 @@ pub fn ViEditor::feed_char(self : ViEditor, key : Char) -> ViEditor {
   if key == '\u{1B}' {
     return self.escape()
   }
-  let started = ViEditor::{ ..self, editor: self.editor.start_change() }
+  let started = ViEditor::{ ..self, editor: self.editor.start_change(), }
   started.feed_char_inner(key).finalize_change()
 }
 

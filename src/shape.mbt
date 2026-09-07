@@ -90,7 +90,7 @@ pub fn ShapeGlyph::with_ascent_descent(
   ascent : Float,
   descent : Float,
 ) -> ShapeGlyph {
-  ShapeGlyph::{ ..self, ascent, descent }
+  ShapeGlyph::{ ..self, ascent, descent, }
 }
 
 ///|
@@ -102,12 +102,12 @@ pub struct ShapeLine {
 
 ///|
 pub fn ShapeLine::new(rtl : Bool, glyphs : Array[ShapeGlyph]) -> ShapeLine {
-  ShapeLine::{ text: "", rtl, glyphs }
+  ShapeLine::{ text: "", rtl, glyphs, }
 }
 
 ///|
 pub fn ShapeLine::empty() -> ShapeLine {
-  ShapeLine::{ text: "", rtl: false, glyphs: [] }
+  ShapeLine::{ text: "", rtl: false, glyphs: [], }
 }
 
 ///|
@@ -221,7 +221,7 @@ fn slice_text_utf16(text : String, start : Int, end : Int) -> String {
   let s = clamp_text_index(start, text_len)
   let e = clamp_text_index(end, text_len)
   let to = if e < s { s } else { e }
-  let sb = StringBuilder::new(size_hint=(to - s) * 2)
+  let sb = StringBuilder(size_hint=(to - s) * 2)
   sb.write_view(text[:].view(start_offset=s, end_offset=to))
   sb.to_string()
 }
@@ -333,7 +333,7 @@ fn normalize_rtl_mark_clusters(
         // normalize to cluster start semantics used by reference shaping.
         for m in 0..<marks.length() {
           let g = marks[m]
-          marks.set(m, ShapeGlyph::{ ..g, x_offset: g.x_offset + base_adv })
+          marks.set(m, ShapeGlyph::{ ..g, x_offset: g.x_offset + base_adv, })
         }
         // Keep deterministic mark order for same-range cluster: larger x_offset first.
         let mut a = 0
@@ -388,7 +388,7 @@ fn reorder_run_glyphs_for_bidi(
     if !blank && chunks.length() > 0 && !chunks[chunks.length() - 1].blank {
       chunks[chunks.length() - 1].glyphs.push(glyph)
     } else {
-      chunks.push(RunGlyphChunk::{ blank, glyphs: [glyph] })
+      chunks.push(RunGlyphChunk::{ blank, glyphs: [glyph], })
     }
   }
 
@@ -880,7 +880,7 @@ pub fn ShapeLine::build(
       metrics_opt: attrs.metrics_opt(),
     })
   }
-  ShapeLine::{ text, rtl, glyphs }
+  ShapeLine::{ text, rtl, glyphs, }
 }
 
 ///|
@@ -1121,7 +1121,7 @@ pub fn ShapeLine::build_with_font_system(
       if step != 0.0 {
         let next = ((x / step).floor() + 1.0) * step
         let adv = next - x
-        let g1 = ShapeGlyph::{ ..g0, x_advance: Float::from_double(adv) }
+        let g1 = ShapeGlyph::{ ..g0, x_advance: Float::from_double(adv), }
         glyphs.set(i, g1)
         x = next
       } else {
@@ -1131,7 +1131,7 @@ pub fn ShapeLine::build_with_font_system(
       x = x + g0.x_advance.to_double()
     }
   }
-  ShapeLine::{ text, rtl, glyphs }
+  ShapeLine::{ text, rtl, glyphs, }
 }
 
 ///|
@@ -1163,7 +1163,7 @@ fn shape_line_source_text(line : ShapeLine) -> String {
       max_end = g.end
     }
   }
-  let sb = StringBuilder::new(size_hint=max_end)
+  let sb = StringBuilder(size_hint=max_end)
   for _ in 0..<max_end {
     sb.write_char(' ')
   }
@@ -1180,10 +1180,10 @@ fn shape_hint_layout_line(line : LayoutLine) -> LayoutLine {
   let start_x = x
   for g in line.glyphs {
     let w = roundf(g.w)
-    glyphs.push(LayoutGlyph::{ ..g, x, w })
+    glyphs.push(LayoutGlyph::{ ..g, x, w, })
     x = x + w
   }
-  LayoutLine::{ ..line, w: x - start_x, glyphs }
+  LayoutLine::{ ..line, w: x - start_x, glyphs, }
 }
 
 ///|
