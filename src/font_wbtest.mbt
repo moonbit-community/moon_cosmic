@@ -78,16 +78,16 @@ fn mk_min_font_cmap4_single(cp_hi_byte : Byte, cp_lo_byte : Byte) -> Bytes {
 }
 
 ///|
-fn wb_push_u16_be(out : Array[Byte], v : Int) -> Unit {
+fn wb_push_u16_be(out : Array[Byte], v : Int32) -> Unit {
   let u = v.reinterpret_as_uint()
-  let mask = 255 |> Int::reinterpret_as_uint
+  let mask = 255 |> Int32::reinterpret_as_uint
   out.push(((u >> 8) & mask).to_byte())
   out.push((u & mask).to_byte())
 }
 
 ///|
-fn wb_push_u32_be(out : Array[Byte], v : UInt) -> Unit {
-  let mask = 255 |> Int::reinterpret_as_uint
+fn wb_push_u32_be(out : Array[Byte], v : UInt32) -> Unit {
+  let mask = 255 |> Int32::reinterpret_as_uint
   out.push(((v >> 24) & mask).to_byte())
   out.push(((v >> 16) & mask).to_byte())
   out.push(((v >> 8) & mask).to_byte())
@@ -95,16 +95,16 @@ fn wb_push_u32_be(out : Array[Byte], v : UInt) -> Unit {
 }
 
 ///|
-fn wb_set_u16_be(buf : Array[Byte], off : Int, v : Int) -> Unit {
+fn wb_set_u16_be(buf : Array[Byte], off : Int32, v : Int32) -> Unit {
   let u = v.reinterpret_as_uint()
-  let mask = 255 |> Int::reinterpret_as_uint
+  let mask = 255 |> Int32::reinterpret_as_uint
   buf[off] = ((u >> 8) & mask).to_byte()
   buf[off + 1] = (u & mask).to_byte()
 }
 
 ///|
-fn wb_set_u32_be(buf : Array[Byte], off : Int, v : UInt) -> Unit {
-  let mask = 255 |> Int::reinterpret_as_uint
+fn wb_set_u32_be(buf : Array[Byte], off : Int32, v : UInt32) -> Unit {
+  let mask = 255 |> Int32::reinterpret_as_uint
   buf[off] = ((v >> 24) & mask).to_byte()
   buf[off + 1] = ((v >> 16) & mask).to_byte()
   buf[off + 2] = ((v >> 8) & mask).to_byte()
@@ -112,12 +112,12 @@ fn wb_set_u32_be(buf : Array[Byte], off : Int, v : UInt) -> Unit {
 }
 
 ///|
-fn wb_fixed_16_16(x : Int) -> UInt {
+fn wb_fixed_16_16(x : Int32) -> UInt32 {
   x.reinterpret_as_uint() << 16
 }
 
 ///|
-fn wb_build_sfnt(tables : Array[(UInt, Bytes)]) -> Bytes {
+fn wb_build_sfnt(tables : Array[(UInt32, Bytes)]) -> Bytes {
   // Caller provides tags in ascending order for parser binary-search paths.
   let num_tables = tables.length()
   let header_len = 12 + num_tables * 16
@@ -410,7 +410,7 @@ test "named fallback stage promotes only first match for each family" {
     Some(entry) => entry.family_name()
     None => ""
   }
-  let promoted : Array[Int] = []
+  let promoted : Array[Int32] = []
   for _ in 0..<2 {
     match
       first_named_fallback_candidate(
@@ -465,7 +465,7 @@ test "forbidden filtering applies to other-stage candidates only" {
     Some(entry) => [entry.family_name()]
     None => []
   }
-  let filtered : Array[Int] = []
+  let filtered : Array[Int32] = []
   for id in [0, 99] {
     match fs.get_font_entry(id) {
       None => filtered.push(id)

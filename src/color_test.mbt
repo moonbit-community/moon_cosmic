@@ -14,12 +14,12 @@
 
 ///|
 test "Color rgb/rgba packing" {
-  let c0 = Color::rgb(1, 2, 3)
+  let c0 = @moon_cosmic.Color::rgb(1, 2, 3)
   inspect(c0.r().to_int(), content="1")
   inspect(c0.g().to_int(), content="2")
   inspect(c0.b().to_int(), content="3")
   inspect(c0.a().to_int(), content="255")
-  let c1 = Color::rgba(9, 8, 7, 6)
+  let c1 = @moon_cosmic.Color::rgba(9, 8, 7, 6)
   inspect(c1.as_rgba().0.to_int(), content="9")
   inspect(c1.as_rgba().1.to_int(), content="8")
   inspect(c1.as_rgba().2.to_int(), content="7")

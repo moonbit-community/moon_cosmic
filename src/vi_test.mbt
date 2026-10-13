@@ -13,14 +13,14 @@
 // limitations under the License.
 
 ///|
-fn mk_vi(text : String) -> ViEditor {
-  let attrs_list = AttrsList::new(Attrs::new())
-  let buffer = Buffer::new(Metrics::new(14.0, 20.0)).set_text(
+fn mk_vi(text : String) -> @moon_cosmic.ViEditor {
+  let attrs_list = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
+  let buffer = @moon_cosmic.Buffer::new(@moon_cosmic.Metrics::new(14.0, 20.0)).set_text(
     text,
     attrs_list,
     Advanced,
   )
-  ViEditor::new(Editor::new(buffer))
+  @moon_cosmic.ViEditor::new(@moon_cosmic.Editor::new(buffer))
 }
 
 ///|

@@ -14,11 +14,11 @@
 
 ///|
 fn sort_monospace_infos_for_test(
-  infos : Array[(Int, Bool, Int, Int, Int)],
-) -> Array[Int] {
+  infos : Array[(Int32, Bool, Int32, Int32, Int32)],
+) -> Array[Int32] {
   let n = infos.length()
   let used : Array[Bool] = Array::makei(n, _ => false)
-  let ids : Array[Int] = []
+  let ids : Array[Int32] = []
   for _ in 0..<n {
     let mut best = -1
     for i in 0..<n {
@@ -38,7 +38,7 @@ fn sort_monospace_infos_for_test(
 }
 
 ///|
-fn token_for_test(ch : Char, offset : Int) -> @moon_swash.Token {
+fn token_for_test(ch : Char, offset : Int32) -> @moon_swash.Token {
   Token(
     ch,
     offset.reinterpret_as_uint(),
@@ -50,7 +50,7 @@ fn token_for_test(ch : Char, offset : Int) -> @moon_swash.Token {
 
 ///|
 test "monospace fallback primary-default rank has top priority" {
-  let infos : Array[(Int, Bool, Int, Int, Int)] = [
+  let infos : Array[(Int32, Bool, Int32, Int32, Int32)] = [
     (10, false, 0, 0, 400),
     (11, true, 10, 999, 900),
     (12, false, 0, 0, 300),
@@ -60,7 +60,7 @@ test "monospace fallback primary-default rank has top priority" {
 
 ///|
 test "monospace fallback ranks weight diff before codepoint coverage" {
-  let infos : Array[(Int, Bool, Int, Int, Int)] = [
+  let infos : Array[(Int32, Bool, Int32, Int32, Int32)] = [
     // better coverage but worse weight diff
     (10, false, 2, 0, 400),
     // worse coverage but exact weight
@@ -71,7 +71,7 @@ test "monospace fallback ranks weight diff before codepoint coverage" {
 
 ///|
 test "monospace fallback ranks lower non-matches when weight diff ties" {
-  let infos : Array[(Int, Bool, Int, Int, Int)] = [
+  let infos : Array[(Int32, Bool, Int32, Int32, Int32)] = [
     (10, false, 1, 3, 400),
     (11, false, 1, 1, 400),
     (12, false, 1, 2, 400),
@@ -125,7 +125,7 @@ test "shape_levels_require_new_run splits on any level change" {
 }
 
 ///|
-fn repeated_ascii_digit(n : Int) -> String {
+fn repeated_ascii_digit(n : Int32) -> String {
   let sb = StringBuilder(size_hint=n)
   for _ in 0..<n {
     sb.write_char('1')

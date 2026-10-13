@@ -1,16 +1,10 @@
 import {
   "moonbitlang/core/debug",
-  "moonbitlang/core/string",
   "moonbitlang/core/hashmap",
   "Milky2018/moon_swash/scale",
+  "Milky2018/moon_swash/shape",
   "Milky2018/moon_zeno",
   "Milky2018/moon_swash",
   "Milky2018/moon_cosmic/unicode_linebreak" @linebreak,
   "Milky2018/moon_cosmic/font_fallback",
-  "moonbit-community/harfbuzz/common",
-  "moonbit-community/harfbuzz/face",
-  "moonbit-community/harfbuzz/font",
-  "moonbit-community/harfbuzz/buffer",
-  "moonbit-community/harfbuzz/shape" @hb_shape,
-  "moonbit-community/harfbuzz/ot/var",
 }

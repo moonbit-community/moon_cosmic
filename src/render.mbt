@@ -21,7 +21,14 @@
 /// Custom renderer for buffers and editors.
 pub(open) trait Renderer {
   /// Render a rectangle at x, y with size w, h and the provided `Color`.
-  fn rectangle(Self, x : Int, y : Int, w : UInt, h : UInt, color : Color) -> Unit
+  fn rectangle(
+    Self,
+    x : Int32,
+    y : Int32,
+    w : UInt32,
+    h : UInt32,
+    color : Color,
+  ) -> Unit
 
   /// Render a `PhysicalGlyph` with the provided `Color`.
   ///
@@ -48,12 +55,12 @@ fn maxf(a : Float, b : Float) -> Float {
 }
 
 ///|
-fn render_int_from_float(v : Float) -> Int {
+fn render_int_from_float(v : Float) -> Int32 {
   v.to_double().to_int()
 }
 
 ///|
-fn render_uint_from_float(v : Float) -> UInt {
+fn render_uint_from_float(v : Float) -> UInt32 {
   if v <= 0.0F {
     0U
   } else {
@@ -237,14 +244,14 @@ pub fn[R : Renderer] render_decoration(
 pub struct LegacyRenderer {
   font_system : FontSystem
   cache : SwashCache
-  callback : (Int, Int, UInt, UInt, Color) -> Unit
+  callback : (Int32, Int32, UInt32, UInt32, Color) -> Unit
 }
 
 ///|
 pub fn LegacyRenderer::new(
   font_system : FontSystem,
   cache : SwashCache,
-  callback : (Int, Int, UInt, UInt, Color) -> Unit,
+  callback : (Int32, Int32, UInt32, UInt32, Color) -> Unit,
 ) -> LegacyRenderer {
   { font_system, cache, callback, }
 }

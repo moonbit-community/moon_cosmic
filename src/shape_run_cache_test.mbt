@@ -14,13 +14,16 @@
 
 ///|
 test "ShapeRunCache: get updates age and trim evicts old entries" {
-  fn mk_key() -> ShapeRunKey {
-    ShapeRunKey::new("abc", AttrsList::new(Attrs::new()))
+  fn mk_key() -> @moon_cosmic.ShapeRunKey {
+    @moon_cosmic.ShapeRunKey::new(
+      "abc",
+      @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new()),
+    )
   }
 
-  let cache = ShapeRunCache::new()
+  let cache = @moon_cosmic.ShapeRunCache::new()
   cache.insert(mk_key(), [
-    ShapeGlyph::new(0, 1, 1.0F, 0.0F, 0.0F, 0.0F, 0, 1, 0),
+    @moon_cosmic.ShapeGlyph::new(0, 1, 1.0F, 0.0F, 0.0F, 0.0F, 0, 1, 0),
   ])
 
   // First trim: nothing is older than age 0.
@@ -41,10 +44,14 @@ test "ShapeRunCache: get updates age and trim evicts old entries" {
 
 ///|
 test "ShapeRunKey::new ignores spans equal to defaults" {
-  let defaults = Attrs::new()
-  let plain = AttrsList::new(defaults)
-  let with_default_span = AttrsList::new(defaults).add_span(0, 2, defaults)
-  let key_plain = ShapeRunKey::new("ab", plain)
-  let key_with_default_span = ShapeRunKey::new("ab", with_default_span)
+  let defaults = @moon_cosmic.Attrs::new()
+  let plain = @moon_cosmic.AttrsList::new(defaults)
+  let with_default_span = @moon_cosmic.AttrsList::new(defaults).add_span(
+    0, 2, defaults,
+  )
+  let key_plain = @moon_cosmic.ShapeRunKey::new("ab", plain)
+  let key_with_default_span = @moon_cosmic.ShapeRunKey::new(
+    "ab", with_default_span,
+  )
   inspect(key_plain == key_with_default_span, content="true")
 }

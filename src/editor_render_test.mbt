@@ -14,8 +14,8 @@
 
 ///|
 pub struct TestRenderer {
-  rects : Array[(Int, Int, UInt, UInt, UInt)]
-  glyph_pos : Array[(Int, Int)]
+  rects : Array[(Int32, Int32, UInt32, UInt32, UInt32)]
+  glyph_pos : Array[(Int32, Int32)]
 }
 
 ///|
@@ -30,12 +30,14 @@ pub impl Renderer for TestRenderer with fn glyph(self, physical_glyph, _color) {
 
 ///|
 test "Editor.cursor_position + Editor.render (smoke)" {
-  let attrs = AttrsList::new(Attrs::new())
-  let buffer = Buffer::new(Metrics::new(12.0F, 12.0F))
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
+  let buffer = @moon_cosmic.Buffer::new(@moon_cosmic.Metrics::new(12.0F, 12.0F))
     .set_text("abc", attrs, Advanced)
     .set_size(Some(1000.0F), None)
     .layout_all()
-  let editor0 = Editor::new(buffer).set_cursor(Cursor::new(0, 2))
+  let editor0 = @moon_cosmic.Editor::new(buffer).set_cursor(
+    @moon_cosmic.Cursor::new(0, 2),
+  )
   match editor0.cursor_position() {
     None => abort("expected cursor position")
     Some((x, y)) => {
@@ -43,54 +45,54 @@ test "Editor.cursor_position + Editor.render (smoke)" {
       inspect(y, content="0")
     }
   }
-  let rects : Array[(Int, Int, UInt, UInt, UInt)] = []
-  let glyph_pos : Array[(Int, Int)] = []
+  let rects : Array[(Int32, Int32, UInt32, UInt32, UInt32)] = []
+  let glyph_pos : Array[(Int32, Int32)] = []
   let renderer = TestRenderer::{ rects, glyph_pos, }
   editor0.render(
     renderer,
-    Color::rgb(0, 0, 0),
-    Color::rgb(255, 0, 0),
-    Color::rgb(0, 0, 255),
-    Color::rgb(0, 255, 0),
+    @moon_cosmic.Color::rgb(0, 0, 0),
+    @moon_cosmic.Color::rgb(255, 0, 0),
+    @moon_cosmic.Color::rgb(0, 0, 255),
+    @moon_cosmic.Color::rgb(0, 255, 0),
   )
   // cursor rectangle only
   inspect(rects.length(), content="1")
 
   // selection + cursor
-  let rects2 : Array[(Int, Int, UInt, UInt, UInt)] = []
-  let glyph_pos2 : Array[(Int, Int)] = []
+  let rects2 : Array[(Int32, Int32, UInt32, UInt32, UInt32)] = []
+  let glyph_pos2 : Array[(Int32, Int32)] = []
   let renderer2 = TestRenderer::{ rects: rects2, glyph_pos: glyph_pos2, }
-  let editor1 = editor0.set_selection(Normal(Cursor::new(0, 0)))
+  let editor1 = editor0.set_selection(Normal(@moon_cosmic.Cursor::new(0, 0)))
   editor1.render(
     renderer2,
-    Color::rgb(0, 0, 0),
-    Color::rgb(255, 0, 0),
-    Color::rgb(0, 0, 255),
-    Color::rgb(0, 255, 0),
+    @moon_cosmic.Color::rgb(0, 0, 0),
+    @moon_cosmic.Color::rgb(255, 0, 0),
+    @moon_cosmic.Color::rgb(0, 0, 255),
+    @moon_cosmic.Color::rgb(0, 255, 0),
   )
   inspect(rects2.length() >= 2, content="true")
 }
 
 ///|
 test "Editor.render highlights internal empty lines in selection" {
-  let attrs = AttrsList::new(Attrs::new())
-  let buffer = Buffer::new(Metrics::new(12.0F, 12.0F))
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
+  let buffer = @moon_cosmic.Buffer::new(@moon_cosmic.Metrics::new(12.0F, 12.0F))
     .set_text("a\n\nb", attrs, Advanced)
     .set_size(Some(1000.0F), None)
     .layout_all()
-  let rects : Array[(Int, Int, UInt, UInt, UInt)] = []
-  let glyph_pos : Array[(Int, Int)] = []
+  let rects : Array[(Int32, Int32, UInt32, UInt32, UInt32)] = []
+  let glyph_pos : Array[(Int32, Int32)] = []
   let renderer = TestRenderer::{ rects, glyph_pos, }
-  let selection_color = Color::rgb(0, 0, 255)
-  let editor = Editor::new(buffer)
-    .set_cursor(Cursor::new(2, 1))
-    .set_selection(Normal(Cursor::new(0, 0)))
+  let selection_color = @moon_cosmic.Color::rgb(0, 0, 255)
+  let editor = @moon_cosmic.Editor::new(buffer)
+    .set_cursor(@moon_cosmic.Cursor::new(2, 1))
+    .set_selection(Normal(@moon_cosmic.Cursor::new(0, 0)))
   editor.render(
     renderer,
-    Color::rgb(0, 0, 0),
-    Color::rgb(255, 0, 0),
+    @moon_cosmic.Color::rgb(0, 0, 0),
+    @moon_cosmic.Color::rgb(255, 0, 0),
     selection_color,
-    Color::rgb(0, 255, 0),
+    @moon_cosmic.Color::rgb(0, 255, 0),
   )
   let mut has_empty_line_sel = false
   for r in rects {
@@ -107,13 +109,15 @@ test "Editor.render highlights internal empty lines in selection" {
 
 ///|
 test "Editor.cursor_position on RTL line" {
-  let attrs = AttrsList::new(Attrs::new())
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
   let s = "\u{05D0}\u{05D1}\u{05D2}"
-  let buffer = Buffer::new(Metrics::new(12.0F, 12.0F))
+  let buffer = @moon_cosmic.Buffer::new(@moon_cosmic.Metrics::new(12.0F, 12.0F))
     .set_text(s, attrs, Advanced)
     .set_size(Some(1000.0F), None)
     .layout_all()
-  let editor0 = Editor::new(buffer).set_cursor(Cursor::new(0, 0))
+  let editor0 = @moon_cosmic.Editor::new(buffer).set_cursor(
+    @moon_cosmic.Cursor::new(0, 0),
+  )
   match editor0.cursor_position() {
     None => abort("expected cursor position")
     Some((x, y)) => {
@@ -121,7 +125,9 @@ test "Editor.cursor_position on RTL line" {
       inspect(y, content="0")
     }
   }
-  let editor1 = Editor::new(buffer).set_cursor(Cursor::new(0, 3))
+  let editor1 = @moon_cosmic.Editor::new(buffer).set_cursor(
+    @moon_cosmic.Cursor::new(0, 3),
+  )
   match editor1.cursor_position() {
     None => abort("expected cursor position")
     Some((x, y)) => {

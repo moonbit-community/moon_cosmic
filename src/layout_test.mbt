@@ -15,7 +15,7 @@
 ///|
 test "layout_ascii: Wrap::Word splits on spaces" {
   let text = "hello world"
-  let lines = layout_ascii(text, 10.0F, Some(60.0F), Word)
+  let lines = @moon_cosmic.layout_ascii(text, 10.0F, Some(60.0F), Word)
   inspect(lines.length(), content="2")
   inspect(lines[0].start, content="0")
   inspect(lines[0].end, content="5")
@@ -28,7 +28,7 @@ test "layout_ascii: Wrap::Word splits on spaces" {
 ///|
 test "layout_ascii: Wrap::WordOrGlyph falls back for long words" {
   let text = "abcdefghij" // 10 glyphs
-  let lines = layout_ascii(text, 10.0F, Some(30.0F), WordOrGlyph)
+  let lines = @moon_cosmic.layout_ascii(text, 10.0F, Some(30.0F), WordOrGlyph)
   inspect(lines.length(), content="4")
   inspect(lines[0].start, content="0")
   inspect(lines[0].end, content="3")
@@ -43,10 +43,17 @@ test "layout_ascii: Wrap::WordOrGlyph falls back for long words" {
 ///|
 test "layout_from_shape: supports non-1:1 glyph coverage (ligature)" {
   let text = "fi"
-  let shape = ShapeLine::new(false, [
-    ShapeGlyph::new(0, 2, 2.0F, 0.0F, 0.0F, 0.0F, 0, 42, 0),
+  let shape = @moon_cosmic.ShapeLine::new(false, [
+    @moon_cosmic.ShapeGlyph::new(0, 2, 2.0F, 0.0F, 0.0F, 0.0F, 0, 42, 0),
   ])
-  let lines = layout_from_shape(text, shape, 10.0F, 10.0F, None, None)
+  let lines = @moon_cosmic.layout_from_shape(
+    text,
+    shape,
+    10.0F,
+    10.0F,
+    None,
+    None,
+  )
   inspect(lines.length(), content="1")
   inspect(lines[0].start, content="0")
   inspect(lines[0].end, content="2")
@@ -65,15 +72,22 @@ test "layout_from_shape: Wrap::None computes max_ascent/max_descent from glyph m
   }
 
   let text = "ab"
-  let shape = ShapeLine::new(false, [
-    ShapeGlyph::new(0, 1, 1.0F, 0.0F, 0.0F, 0.0F, 0, 1, 0).with_ascent_descent(
+  let shape = @moon_cosmic.ShapeLine::new(false, [
+    @moon_cosmic.ShapeGlyph::new(0, 1, 1.0F, 0.0F, 0.0F, 0.0F, 0, 1, 0).with_ascent_descent(
       0.4F, 0.1F,
     ),
-    ShapeGlyph::new(1, 2, 1.0F, 0.0F, 0.0F, 0.0F, 0, 2, 0).with_ascent_descent(
+    @moon_cosmic.ShapeGlyph::new(1, 2, 1.0F, 0.0F, 0.0F, 0.0F, 0, 2, 0).with_ascent_descent(
       0.7F, 0.3F,
     ),
   ])
-  let lines = layout_from_shape(text, shape, 10.0F, 10.0F, None, None)
+  let lines = @moon_cosmic.layout_from_shape(
+    text,
+    shape,
+    10.0F,
+    10.0F,
+    None,
+    None,
+  )
   inspect(lines.length(), content="1")
   inspect(absf(lines[0].max_ascent - 7.0F) < 0.001F, content="true")
   inspect(absf(lines[0].max_descent - 3.0F) < 0.001F, content="true")
@@ -90,18 +104,25 @@ test "layout_from_shape: Wrap::Word computes per-line max_ascent/max_descent" {
   }
 
   let text = "ab cd"
-  let shape = ShapeLine::new(false, [
-    ShapeGlyph::new(0, 2, 2.0F, 0.0F, 0.0F, 0.0F, 0, 1, 0).with_ascent_descent(
+  let shape = @moon_cosmic.ShapeLine::new(false, [
+    @moon_cosmic.ShapeGlyph::new(0, 2, 2.0F, 0.0F, 0.0F, 0.0F, 0, 1, 0).with_ascent_descent(
       0.6F, 0.2F,
     ),
-    ShapeGlyph::new(2, 3, 1.0F, 0.0F, 0.0F, 0.0F, 0, 2, 0).with_ascent_descent(
+    @moon_cosmic.ShapeGlyph::new(2, 3, 1.0F, 0.0F, 0.0F, 0.0F, 0, 2, 0).with_ascent_descent(
       0.1F, 0.1F,
     ),
-    ShapeGlyph::new(3, 5, 2.0F, 0.0F, 0.0F, 0.0F, 0, 3, 0).with_ascent_descent(
+    @moon_cosmic.ShapeGlyph::new(3, 5, 2.0F, 0.0F, 0.0F, 0.0F, 0, 3, 0).with_ascent_descent(
       0.8F, 0.3F,
     ),
   ])
-  let lines = layout_from_shape(text, shape, 10.0F, 10.0F, Some(25.0F), Word)
+  let lines = @moon_cosmic.layout_from_shape(
+    text,
+    shape,
+    10.0F,
+    10.0F,
+    Some(25.0F),
+    Word,
+  )
   inspect(lines.length(), content="2")
   inspect(absf(lines[0].max_ascent - 6.0F) < 0.001F, content="true")
   inspect(absf(lines[0].max_descent - 2.0F) < 0.001F, content="true")
@@ -112,15 +133,22 @@ test "layout_from_shape: Wrap::Word computes per-line max_ascent/max_descent" {
 ///|
 test "layout_from_shape: Wrap::Word breaks using text word boundaries" {
   let text = "ab cd"
-  let shape = ShapeLine::new(false, [
+  let shape = @moon_cosmic.ShapeLine::new(false, [
     // "ab" ligature
-    ShapeGlyph::new(0, 2, 2.0F, 0.0F, 0.0F, 0.0F, 0, 1, 0),
+    @moon_cosmic.ShapeGlyph::new(0, 2, 2.0F, 0.0F, 0.0F, 0.0F, 0, 1, 0),
     // space
-    ShapeGlyph::new(2, 3, 1.0F, 0.0F, 0.0F, 0.0F, 0, 2, 0),
+    @moon_cosmic.ShapeGlyph::new(2, 3, 1.0F, 0.0F, 0.0F, 0.0F, 0, 2, 0),
     // "cd" ligature
-    ShapeGlyph::new(3, 5, 2.0F, 0.0F, 0.0F, 0.0F, 0, 3, 0),
+    @moon_cosmic.ShapeGlyph::new(3, 5, 2.0F, 0.0F, 0.0F, 0.0F, 0, 3, 0),
   ])
-  let lines = layout_from_shape(text, shape, 10.0F, 10.0F, Some(25.0F), Word)
+  let lines = @moon_cosmic.layout_from_shape(
+    text,
+    shape,
+    10.0F,
+    10.0F,
+    Some(25.0F),
+    Word,
+  )
   inspect(lines.length(), content="2")
   inspect(lines[0].start, content="0")
   inspect(lines[0].end, content="2")
@@ -131,12 +159,12 @@ test "layout_from_shape: Wrap::Word breaks using text word boundaries" {
 ///|
 test "layout_from_shape: Wrap::WordOrGlyph falls back to glyph wrap inside a long word" {
   let text = "abcdef"
-  let shape = ShapeLine::new(false, [
-    ShapeGlyph::new(0, 2, 2.0F, 0.0F, 0.0F, 0.0F, 0, 1, 0),
-    ShapeGlyph::new(2, 4, 2.0F, 0.0F, 0.0F, 0.0F, 0, 2, 0),
-    ShapeGlyph::new(4, 6, 2.0F, 0.0F, 0.0F, 0.0F, 0, 3, 0),
+  let shape = @moon_cosmic.ShapeLine::new(false, [
+    @moon_cosmic.ShapeGlyph::new(0, 2, 2.0F, 0.0F, 0.0F, 0.0F, 0, 1, 0),
+    @moon_cosmic.ShapeGlyph::new(2, 4, 2.0F, 0.0F, 0.0F, 0.0F, 0, 2, 0),
+    @moon_cosmic.ShapeGlyph::new(4, 6, 2.0F, 0.0F, 0.0F, 0.0F, 0, 3, 0),
   ])
-  let lines = layout_from_shape(
+  let lines = @moon_cosmic.layout_from_shape(
     text,
     shape,
     10.0F,
@@ -161,11 +189,25 @@ test "layout_from_shape: match_mono_width snaps per-glyph advance" {
   }
 
   let text = "x"
-  let shape = ShapeLine::new(false, [
-    ShapeGlyph::new(0, 1, 1.3F, 0.0F, 0.0F, 0.0F, 0, 1, 0),
+  let shape = @moon_cosmic.ShapeLine::new(false, [
+    @moon_cosmic.ShapeGlyph::new(0, 1, 1.3F, 0.0F, 0.0F, 0.0F, 0, 1, 0),
   ])
-  let base = layout_from_shape(text, shape, 10.0F, 10.0F, None, None)
-  let snapped = layout_from_shape(text, shape, 10.0F, 8.0F, None, None)
+  let base = @moon_cosmic.layout_from_shape(
+    text,
+    shape,
+    10.0F,
+    10.0F,
+    None,
+    None,
+  )
+  let snapped = @moon_cosmic.layout_from_shape(
+    text,
+    shape,
+    10.0F,
+    8.0F,
+    None,
+    None,
+  )
   inspect(base.length(), content="1")
   inspect(snapped.length(), content="1")
   inspect(absf(base[0].w - 13.0F) < 0.001F, content="true")
@@ -175,14 +217,21 @@ test "layout_from_shape: match_mono_width snaps per-glyph advance" {
 ///|
 test "layout_from_shape: Wrap::Word keeps blanks when width is unbounded" {
   let text = "  a  "
-  let shape = ShapeLine::build(
-    ShapeLine::empty(),
+  let shape = @moon_cosmic.ShapeLine::build(
+    @moon_cosmic.ShapeLine::empty(),
     text,
-    AttrsList::new(Attrs::new()),
+    @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new()),
     Basic,
     8,
   )
-  let lines = layout_from_shape(text, shape, 10.0F, 10.0F, None, Word)
+  let lines = @moon_cosmic.layout_from_shape(
+    text,
+    shape,
+    10.0F,
+    10.0F,
+    None,
+    Word,
+  )
   inspect(lines.length(), content="1")
   debug_inspect((lines[0].start, lines[0].end), content="(0, 5)")
   inspect(lines[0].w, content="50")
@@ -191,14 +240,21 @@ test "layout_from_shape: Wrap::Word keeps blanks when width is unbounded" {
 ///|
 test "layout_from_shape: Wrap::Word keeps trailing blanks on final line" {
   let text = "a  "
-  let shape = ShapeLine::build(
-    ShapeLine::empty(),
+  let shape = @moon_cosmic.ShapeLine::build(
+    @moon_cosmic.ShapeLine::empty(),
     text,
-    AttrsList::new(Attrs::new()),
+    @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new()),
     Basic,
     8,
   )
-  let lines = layout_from_shape(text, shape, 10.0F, 10.0F, Some(20.0F), Word)
+  let lines = @moon_cosmic.layout_from_shape(
+    text,
+    shape,
+    10.0F,
+    10.0F,
+    Some(20.0F),
+    Word,
+  )
   inspect(lines.length(), content="1")
   debug_inspect((lines[0].start, lines[0].end), content="(0, 3)")
   inspect(lines[0].w, content="30")
@@ -206,17 +262,17 @@ test "layout_from_shape: Wrap::Word keeps trailing blanks on final line" {
 
 ///|
 test "layout_from_shape: stable wrap when feeding measured width back as limit" {
-  fn shape_basic(text : String) -> ShapeLine {
-    ShapeLine::build(
-      ShapeLine::empty(),
+  fn shape_basic(text : String) -> @moon_cosmic.ShapeLine {
+    @moon_cosmic.ShapeLine::build(
+      @moon_cosmic.ShapeLine::empty(),
       text,
-      AttrsList::new(Attrs::new()),
+      @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new()),
       Basic,
       8,
     )
   }
 
-  fn max_w(lines : Array[LayoutLine]) -> Float {
+  fn max_w(lines : Array[@moon_cosmic.LayoutLine]) -> Float {
     let mut m = 0.0F
     for l in lines {
       if l.w > m {
@@ -228,20 +284,20 @@ test "layout_from_shape: stable wrap when feeding measured width back as limit" 
 
   fn apply_align_opt(
     text : String,
-    lines : Array[LayoutLine],
+    lines : Array[@moon_cosmic.LayoutLine],
     width_opt : Float?,
-    align_opt : Align?,
-  ) -> Array[LayoutLine] {
+    align_opt : @moon_cosmic.Align?,
+  ) -> Array[@moon_cosmic.LayoutLine] {
     match (width_opt, align_opt) {
-      (Some(w), Some(a)) => apply_align(text, lines, w, a)
+      (Some(w), Some(a)) => @moon_cosmic.apply_align(text, lines, w, a)
       _ => lines
     }
   }
 
   fn check_wrap(
     text : String,
-    wrap : Wrap,
-    align_opt : Align?,
+    wrap : @moon_cosmic.Wrap,
+    align_opt : @moon_cosmic.Align?,
     start_width_opt : Float?,
   ) -> Bool {
     fn absf(v : Float) -> Float {
@@ -261,7 +317,9 @@ test "layout_from_shape: stable wrap when feeding measured width back as limit" 
     let shape = shape_basic(text)
     let lines0 = apply_align_opt(
       text,
-      layout_from_shape(text, shape, font_size, cell_w, start_width_opt, wrap),
+      @moon_cosmic.layout_from_shape(
+        text, shape, font_size, cell_w, start_width_opt, wrap,
+      ),
       start_width_opt,
       align_opt,
     )
@@ -273,7 +331,14 @@ test "layout_from_shape: stable wrap when feeding measured width back as limit" 
     let shape2 = shape_basic(text)
     let lines1 = apply_align_opt(
       text,
-      layout_from_shape(text, shape2, font_size, cell_w, Some(new_limit), wrap),
+      @moon_cosmic.layout_from_shape(
+        text,
+        shape2,
+        font_size,
+        cell_w,
+        Some(new_limit),
+        wrap,
+      ),
       Some(new_limit),
       align_opt,
     )
@@ -311,11 +376,11 @@ test "layout_from_shape: stable wrap when feeding measured width back as limit" 
     "I like to render اللغة العربية in Rust!",
   ]
   for text in cases {
-    for wrap in [Wrap::None, Glyph, Word, WordOrGlyph] {
+    for wrap in [@moon_cosmic.Wrap::None, Glyph, Word, WordOrGlyph] {
       for
         align_opt in [
           None,
-          Some(Align::Left),
+          Some(@moon_cosmic.Align::Left),
           Some(Right),
           Some(Center),
           Some(Start),
@@ -330,7 +395,7 @@ test "layout_from_shape: stable wrap when feeding measured width back as limit" 
             Some(4.0F),
             Some(300.0F),
           ] {
-          fn wrap_str(w : Wrap) -> String {
+          fn wrap_str(w : @moon_cosmic.Wrap) -> String {
             match w {
               None => "None"
               Glyph => "Glyph"
@@ -339,7 +404,7 @@ test "layout_from_shape: stable wrap when feeding measured width back as limit" 
             }
           }
 
-          fn align_str(a_opt : Align?) -> String {
+          fn align_str(a_opt : @moon_cosmic.Align?) -> String {
             match a_opt {
               None => "None"
               Some(a) =>
@@ -427,16 +492,23 @@ test "layout_from_shape: stable wrap when feeding measured width back as limit" 
 ///|
 test "layout_from_shape: bidi visual order reorders RTL runs inside LTR lines" {
   let text = "abc \u{05D0}\u{05D1}"
-  let shape = ShapeLine::build(
-    ShapeLine::empty(),
+  let shape = @moon_cosmic.ShapeLine::build(
+    @moon_cosmic.ShapeLine::empty(),
     text,
-    AttrsList::new(Attrs::new()),
+    @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new()),
     Advanced,
     8,
   )
   // Base direction is LTR, but the Hebrew run should appear right-to-left visually.
   inspect(shape.rtl, content="false")
-  let lines = layout_from_shape(text, shape, 10.0F, 10.0F, None, None)
+  let lines = @moon_cosmic.layout_from_shape(
+    text,
+    shape,
+    10.0F,
+    10.0F,
+    None,
+    None,
+  )
   inspect(lines.length(), content="1")
   let gs = lines[0].glyphs
   inspect(gs.length(), content="6")
@@ -457,15 +529,22 @@ test "layout_from_shape: bidi visual order reorders RTL runs inside LTR lines" {
 ///|
 test "layout_from_shape: bidi visual order keeps embedded LTR runs LTR in RTL lines" {
   let text = "\u{05D0}\u{05D1} abc"
-  let shape = ShapeLine::build(
-    ShapeLine::empty(),
+  let shape = @moon_cosmic.ShapeLine::build(
+    @moon_cosmic.ShapeLine::empty(),
     text,
-    AttrsList::new(Attrs::new()),
+    @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new()),
     Advanced,
     8,
   )
   inspect(shape.rtl, content="true")
-  let lines = layout_from_shape(text, shape, 10.0F, 10.0F, None, None)
+  let lines = @moon_cosmic.layout_from_shape(
+    text,
+    shape,
+    10.0F,
+    10.0F,
+    None,
+    None,
+  )
   inspect(lines.length(), content="1")
   let gs = lines[0].glyphs
   inspect(gs.length(), content="6")

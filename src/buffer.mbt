@@ -24,7 +24,7 @@ pub struct Buffer {
   wrap : Wrap
   ellipsize : Ellipsize
   monospace_width : Float?
-  tab_width : Int
+  tab_width : Int32
   hinting : Hinting
   dirty_relayout : Bool
   dirty_tab_shape : Bool
@@ -204,14 +204,14 @@ fn layout_total_height(
 ///|
 fn ensure_line_layout_cached(
   lines : Array[BufferLine],
-  line_i : Int,
+  line_i : Int32,
   font_system : FontSystem,
   font_size : Float,
   width_opt : Float?,
   wrap : Wrap,
   ellipsize : Ellipsize,
   monospace_width : Float?,
-  tab_width : Int,
+  tab_width : Int32,
   hinting : Hinting,
 ) -> Array[LayoutLine]? {
   if line_i < 0 || line_i >= lines.length() {
@@ -324,7 +324,7 @@ pub fn Buffer::set_ellipsize(self : Buffer, ellipsize : Ellipsize) -> Buffer {
 }
 
 ///|
-pub fn Buffer::set_tab_width(self : Buffer, tab_width : Int) -> Buffer {
+pub fn Buffer::set_tab_width(self : Buffer, tab_width : Int32) -> Buffer {
   if tab_width <= 0 || self.tab_width == tab_width {
     self
   } else {
@@ -410,7 +410,7 @@ pub fn Buffer::size(self : Buffer) -> (Float?, Float?) {
 }
 
 ///|
-fn slice_string(s : String, start : Int, end : Int) -> String {
+fn slice_string(s : String, start : Int32, end : Int32) -> String {
   let sb = StringBuilder(size_hint=(end - start) * 2)
   sb.write_view(s[:].view(start_offset=start, end_offset=end))
   sb.to_string()
@@ -500,7 +500,7 @@ pub fn Buffer::set_rich_text(
   alignment : Align?,
 ) -> Buffer {
   let string_sb = StringBuilder(size_hint=256)
-  let span_data : Array[(Attrs, Int, Int)] = []
+  let span_data : Array[(Attrs, Int32, Int32)] = []
   let mut end = 0
   for sp in spans {
     let text = sp.0
@@ -656,7 +656,7 @@ pub fn Buffer::layout_all(self : Buffer) -> Buffer {
 pub fn Buffer::line_shape(
   self : Buffer,
   font_system : FontSystem,
-  line_i : Int,
+  line_i : Int32,
 ) -> ShapeLine? {
   if line_i < 0 || line_i >= self.lines.length() {
     return None
@@ -670,7 +670,7 @@ pub fn Buffer::line_shape(
 pub fn Buffer::line_layout(
   self : Buffer,
   font_system : FontSystem,
-  line_i : Int,
+  line_i : Int32,
 ) -> Array[LayoutLine]? {
   if line_i < 0 || line_i >= self.lines.length() {
     return None
@@ -980,7 +980,7 @@ pub fn Buffer::shape_until_cursor(
 ///|
 /// A line of visible text for rendering.
 pub struct LayoutRun {
-  line_i : Int
+  line_i : Int32
   line_y : Float
   line_top : Float
   line_height : Float
@@ -992,7 +992,7 @@ pub struct LayoutRun {
 }
 
 ///|
-fn affinity_rank(a : Affinity) -> Int {
+fn affinity_rank(a : Affinity) -> Int32 {
   match a {
     Before => 0
     After => 1
@@ -1000,7 +1000,7 @@ fn affinity_rank(a : Affinity) -> Int {
 }
 
 ///|
-fn cursor_compare(a : Cursor, b : Cursor) -> Int {
+fn cursor_compare(a : Cursor, b : Cursor) -> Int32 {
   if a.line != b.line {
     if a.line < b.line {
       -1
@@ -1222,9 +1222,9 @@ pub fn Buffer::hit(self : Buffer, x : Float, y : Float) -> Cursor? {
 pub fn Buffer::cursor_motion(
   self : Buffer,
   cursor : Cursor,
-  cursor_x_opt : Int?,
+  cursor_x_opt : Int32?,
   motion : Motion,
-) -> (Cursor, Int?)? {
+) -> (Cursor, Int32?)? {
   // Layout to get visual line runs.
   let laid_out = self.layout_all()
   let buffer = Buffer::{
@@ -1239,7 +1239,7 @@ pub fn Buffer::cursor_motion(
   if runs.length() == 0 {
     return None
   }
-  fn x_for_index(run : LayoutRun, index : Int) -> Float {
+  fn x_for_index(run : LayoutRun, index : Int32) -> Float {
     let glyphs = run.glyphs
     if glyphs.length() == 0 {
       return 0.0F
@@ -1292,7 +1292,7 @@ pub fn Buffer::cursor_motion(
     }
   }
 
-  fn index_for_x(run : LayoutRun, x : Float) -> Int {
+  fn index_for_x(run : LayoutRun, x : Float) -> Int32 {
     if run.glyphs.length() == 0 {
       return 0
     }
@@ -1334,12 +1334,12 @@ pub fn Buffer::cursor_motion(
     }
   }
 
-  fn int_from_float(v : Float) -> Int {
+  fn int_from_float(v : Float) -> Int32 {
     v.to_double().to_int()
   }
 
-  fn find_run_idx(cursor : Cursor) -> Int? {
-    let mut cur_run_idx : Int? = None
+  fn find_run_idx(cursor : Cursor) -> Int32? {
+    let mut cur_run_idx : Int32? = None
     for i in 0..<runs.length() {
       let run = runs[i]
       if run.line_i != cursor.line {
@@ -1390,7 +1390,7 @@ pub fn Buffer::cursor_motion(
 
   match motion {
     LayoutCursor(layout_cursor) => {
-      let line_run_idxs : Array[Int] = []
+      let line_run_idxs : Array[Int32] = []
       for i in 0..<runs.length() {
         if runs[i].line_i == layout_cursor.line {
           line_run_idxs.push(i)
@@ -1439,7 +1439,7 @@ pub fn Buffer::cursor_motion(
   }
 
   // Vertical movement uses visual runs.
-  let delta_opt : Int? = match motion {
+  let delta_opt : Int32? = match motion {
     Up => Some(-1)
     Down => Some(1)
     Vertical(px) => {
@@ -1778,7 +1778,7 @@ pub fn Buffer::draw_with_font_system(
   font_system : FontSystem,
   swash_cache : SwashCache,
   text_color : Color,
-  f : (Int, Int, UInt, UInt, Color) -> Unit,
+  f : (Int32, Int32, UInt32, UInt32, Color) -> Unit,
 ) -> (Buffer, SwashCache) {
   let buffer = self.layout_all_with_font_system(font_system)
   let renderer = LegacyRenderer::new(font_system, swash_cache, f)
@@ -1802,7 +1802,7 @@ pub fn Buffer::draw(
   font_system : FontSystem,
   swash_cache : SwashCache,
   text_color : Color,
-  f : (Int, Int, UInt, UInt, Color) -> Unit,
+  f : (Int32, Int32, UInt32, UInt32, Color) -> Unit,
 ) -> (Buffer, SwashCache) {
   self.draw_with_font_system(font_system, swash_cache, text_color, f)
 }

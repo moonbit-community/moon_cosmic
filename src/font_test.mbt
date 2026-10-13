@@ -81,7 +81,7 @@ fn mk_min_font_cmap4_single(cp_hi_byte : Byte, cp_lo_byte : Byte) -> Bytes {
 }
 
 ///|
-fn find_alt_family_name(entry : FontEntry) -> String? {
+fn find_alt_family_name(entry : @moon_cosmic.FontEntry) -> String? {
   let strings = entry.font().localized_strings()
   let base = entry.family_name()
   for s in strings.iter() {
@@ -106,7 +106,7 @@ fn script_needs_stage_for_test(script : @moon_swash.Script) -> Bool {
 
 ///|
 fn entry_supports_script_for_test(
-  entry : FontEntry,
+  entry : @moon_cosmic.FontEntry,
   script : @moon_swash.Script,
 ) -> Bool {
   let systems = entry.font().writing_systems()
@@ -134,8 +134,8 @@ fn script_in_array_for_test(
 
 ///|
 fn first_discriminating_script_for_test(
-  fs : FontSystem,
-  ids : Array[Int],
+  fs : @moon_cosmic.FontSystem,
+  ids : Array[Int32],
 ) -> @moon_swash.Script? {
   let scripts : Array[@moon_swash.Script] = []
   for id in ids {
@@ -178,7 +178,10 @@ fn first_discriminating_script_for_test(
 }
 
 ///|
-fn is_permutation_of_ids_for_test(lhs : Array[Int], rhs : Array[Int]) -> Bool {
+fn is_permutation_of_ids_for_test(
+  lhs : Array[Int32],
+  rhs : Array[Int32],
+) -> Bool {
   if lhs.length() != rhs.length() {
     return false
   }
@@ -201,8 +204,8 @@ test "FontSystem.resolve_for_codepoint prefers a font that supports the codepoin
   // Font0 supports U+0041 ('A'); Font1 supports U+0042 ('B').
   let a = mk_min_font_cmap4_single(b'\x00', b'\x41')
   let b = mk_min_font_cmap4_single(b'\x00', b'\x42')
-  let fs = FontSystem::new().load_font_data(a).load_font_data(b)
-  let attrs = Attrs::new()
+  let fs = @moon_cosmic.FontSystem::new().load_font_data(a).load_font_data(b)
+  let attrs = @moon_cosmic.Attrs::new()
   inspect(fs.resolve_for_codepoint(attrs, 0x41U) == Some(0), content="true")
   inspect(fs.resolve_for_codepoint(attrs, 0x42U) == Some(1), content="true")
 
@@ -217,7 +220,7 @@ test "FontSystem.resolve_for_codepoint prefers a font that supports the codepoin
 ///|
 test "FontSystem.select_family returns a generic-family fallback when fonts exist" {
   let a = mk_min_font_cmap4_single(b'\x00', b'\x41')
-  let fs = FontSystem::new().load_font_data(a)
+  let fs = @moon_cosmic.FontSystem::new().load_font_data(a)
   inspect(fs.select_family(SansSerif) == Some(0), content="true")
   inspect(fs.select_family(Serif) == Some(0), content="true")
   inspect(fs.select_family(SystemUi) == Some(0), content="true")
@@ -234,8 +237,8 @@ test "FontSystem.select_family returns a generic-family fallback when fonts exis
 test "FontSystem.font_matches is stable across cache hits" {
   let a = mk_min_font_cmap4_single(b'\x00', b'\x41')
   let b = mk_min_font_cmap4_single(b'\x00', b'\x42')
-  let fs = FontSystem::new().load_font_data(a).load_font_data(b)
-  let attrs = Attrs::new()
+  let fs = @moon_cosmic.FontSystem::new().load_font_data(a).load_font_data(b)
+  let attrs = @moon_cosmic.Attrs::new()
   debug_inspect(fs.font_matches(attrs), content="[0, 1]")
   debug_inspect(fs.font_matches(attrs), content="[0, 1]")
 }
@@ -244,8 +247,8 @@ test "FontSystem.font_matches is stable across cache hits" {
 test "FontSystem.font_matches cache is not externally mutable" {
   let a = mk_min_font_cmap4_single(b'\x00', b'\x41')
   let b = mk_min_font_cmap4_single(b'\x00', b'\x42')
-  let fs = FontSystem::new().load_font_data(a).load_font_data(b)
-  let attrs = Attrs::new()
+  let fs = @moon_cosmic.FontSystem::new().load_font_data(a).load_font_data(b)
+  let attrs = @moon_cosmic.Attrs::new()
   let first = fs.font_matches(attrs)
   first.set(0, 99)
   debug_inspect(fs.font_matches(attrs), content="[0, 1]")
@@ -255,16 +258,16 @@ test "FontSystem.font_matches cache is not externally mutable" {
 test "FontSystem.font_matches generic-family ordering does not enforce explicit-family promotion" {
   let a = mk_min_font_cmap4_single(b'\x00', b'\x41')
   let b = mk_min_font_cmap4_single(b'\x00', b'\x42')
-  let fs = FontSystem::new().load_font_data(a).load_font_data(b)
-  let sans = Attrs::new().family(SansSerif)
-  let serif = Attrs::new().family(Serif)
-  let system = Attrs::new().family(SystemUi)
-  let ui_serif = Attrs::new().family(UiSerif)
-  let ui_sans = Attrs::new().family(UiSansSerif)
-  let ui_rounded = Attrs::new().family(UiRounded)
-  let math = Attrs::new().family(Math)
-  let fangsong = Attrs::new().family(FangSong)
-  let mono = Attrs::new().family(Monospace)
+  let fs = @moon_cosmic.FontSystem::new().load_font_data(a).load_font_data(b)
+  let sans = @moon_cosmic.Attrs::new().family(SansSerif)
+  let serif = @moon_cosmic.Attrs::new().family(Serif)
+  let system = @moon_cosmic.Attrs::new().family(SystemUi)
+  let ui_serif = @moon_cosmic.Attrs::new().family(UiSerif)
+  let ui_sans = @moon_cosmic.Attrs::new().family(UiSansSerif)
+  let ui_rounded = @moon_cosmic.Attrs::new().family(UiRounded)
+  let math = @moon_cosmic.Attrs::new().family(Math)
+  let fangsong = @moon_cosmic.Attrs::new().family(FangSong)
+  let mono = @moon_cosmic.Attrs::new().family(Monospace)
   debug_inspect(fs.font_matches(sans), content="[0, 1]")
   debug_inspect(fs.font_matches(serif), content="[0, 1]")
   debug_inspect(fs.font_matches(system), content="[0, 1]")
@@ -280,8 +283,8 @@ test "FontSystem.font_matches generic-family ordering does not enforce explicit-
 test "FontSystem.resolve_for_codepoint remains stable across cache boundary clears" {
   let a = mk_min_font_cmap4_single(b'\x00', b'\x41')
   let b = mk_min_font_cmap4_single(b'\x00', b'\x42')
-  let fs = FontSystem::new().load_font_data(a).load_font_data(b)
-  let attrs = Attrs::new()
+  let fs = @moon_cosmic.FontSystem::new().load_font_data(a).load_font_data(b)
+  let attrs = @moon_cosmic.Attrs::new()
   for i in 0..<9000 {
     fs.resolve_for_codepoint(attrs, i.reinterpret_as_uint()) |> ignore
   }
@@ -293,7 +296,7 @@ test "FontSystem.resolve_for_codepoint remains stable across cache boundary clea
 test "FontSystem.count_supported_codepoints counts duplicates per run semantics" {
   let a = mk_min_font_cmap4_single(b'\x00', b'\x41')
   let b = mk_min_font_cmap4_single(b'\x00', b'\x42')
-  let fs = FontSystem::new().load_font_data(a).load_font_data(b)
+  let fs = @moon_cosmic.FontSystem::new().load_font_data(a).load_font_data(b)
   let cps = [0x41U, 0x42U, 0x41U]
   inspect(fs.count_supported_codepoints(0, cps), content="2")
   inspect(fs.count_supported_codepoints(1, cps), content="1")
@@ -301,7 +304,9 @@ test "FontSystem.count_supported_codepoints counts duplicates per run semantics"
 
 ///|
 test "FontSystem.select_family Name matches family aliases from name table" {
-  let fs = FontSystem::new().load_font_data(test_font_inter_regular_ttf())
+  let fs = @moon_cosmic.FontSystem::new().load_font_data(
+    test_font_inter_regular_ttf(),
+  )
   match fs.get_font_entry(0) {
     None => inspect(true, content="false")
     Some(entry) =>
@@ -323,10 +328,10 @@ test "FontSystem.select_family Name matches family aliases from name table" {
 ///|
 test "FontSystem.font_matches_for_script promotes script-supporting fonts" {
   let min_font = mk_min_font_cmap4_single(b'\x00', b'\x41')
-  let fs = FontSystem::new()
+  let fs = @moon_cosmic.FontSystem::new()
     .load_font_data(min_font)
     .load_font_data(test_font_inter_regular_ttf())
-  let attrs = Attrs::new()
+  let attrs = @moon_cosmic.Attrs::new()
   let base = fs.font_matches(attrs)
   match first_discriminating_script_for_test(fs, base) {
     None => inspect(true, content="true")
@@ -355,10 +360,10 @@ test "FontSystem.font_matches_for_script promotes script-supporting fonts" {
 ///|
 test "FontSystem.font_matches_for_script keeps candidate set unchanged" {
   let min_font = mk_min_font_cmap4_single(b'\x00', b'\x41')
-  let fs = FontSystem::new()
+  let fs = @moon_cosmic.FontSystem::new()
     .load_font_data(min_font)
     .load_font_data(test_font_inter_regular_ttf())
-  let attrs = Attrs::new()
+  let attrs = @moon_cosmic.Attrs::new()
   let base = fs.font_matches(attrs)
   let s1 = fs.font_matches_for_script(attrs, Arabic)
   let s2 = fs.font_matches_for_script(attrs, Han)
@@ -371,10 +376,10 @@ test "FontSystem.font_matches_for_script keeps candidate set unchanged" {
 ///|
 test "FontSystem.font_matches_for_script remains stable across repeated cache hits" {
   let min_font = mk_min_font_cmap4_single(b'\x00', b'\x41')
-  let fs = FontSystem::new()
+  let fs = @moon_cosmic.FontSystem::new()
     .load_font_data(min_font)
     .load_font_data(test_font_inter_regular_ttf())
-  let attrs = Attrs::new()
+  let attrs = @moon_cosmic.Attrs::new()
   let scripts = [@moon_swash.Script::Arabic, Han, Hebrew, Thai, Devanagari]
   for i in 0..<2000 {
     fs.font_matches_for_script(attrs, scripts[i % scripts.length()]) |> ignore
@@ -385,10 +390,10 @@ test "FontSystem.font_matches_for_script remains stable across repeated cache hi
 ///|
 test "FontSystem.font_matches_for_script respects weight-zero gate for script/common promotion" {
   let min_font = mk_min_font_cmap4_single(b'\x00', b'\x41')
-  let fs = FontSystem::new()
+  let fs = @moon_cosmic.FontSystem::new()
     .load_font_data(min_font)
     .load_font_data(test_font_inter_regular_ttf())
-  let attrs = Attrs::new().weight(Weight::bold())
+  let attrs = @moon_cosmic.Attrs::new().weight(@moon_cosmic.Weight::bold())
   let base = fs.font_matches(attrs)
   let arabic = fs.font_matches_for_script(attrs, Arabic)
   let han = fs.font_matches_for_script(attrs, Han)
@@ -399,10 +404,10 @@ test "FontSystem.font_matches_for_script respects weight-zero gate for script/co
 ///|
 test "FontSystem.font_matches_for_scripts matches singleton script behavior" {
   let min_font = mk_min_font_cmap4_single(b'\x00', b'\x41')
-  let fs = FontSystem::new()
+  let fs = @moon_cosmic.FontSystem::new()
     .load_font_data(min_font)
     .load_font_data(test_font_inter_regular_ttf())
-  let attrs = Attrs::new()
+  let attrs = @moon_cosmic.Attrs::new()
   let script = @moon_swash.Script::Arabic
   inspect(
     fs.font_matches_for_scripts(attrs, [script]) ==
@@ -414,10 +419,10 @@ test "FontSystem.font_matches_for_scripts matches singleton script behavior" {
 ///|
 test "FontSystem.font_matches_for_scripts ignores latin/common/inherited/unknown" {
   let min_font = mk_min_font_cmap4_single(b'\x00', b'\x41')
-  let fs = FontSystem::new()
+  let fs = @moon_cosmic.FontSystem::new()
     .load_font_data(min_font)
     .load_font_data(test_font_inter_regular_ttf())
-  let attrs = Attrs::new()
+  let attrs = @moon_cosmic.Attrs::new()
   let base = fs.font_matches(attrs)
   let staged = fs.font_matches_for_scripts(attrs, [
     Latin,
@@ -431,10 +436,10 @@ test "FontSystem.font_matches_for_scripts ignores latin/common/inherited/unknown
 ///|
 test "FontSystem.font_matches_for_scripts deduplicates repeated scripts" {
   let min_font = mk_min_font_cmap4_single(b'\x00', b'\x41')
-  let fs = FontSystem::new()
+  let fs = @moon_cosmic.FontSystem::new()
     .load_font_data(min_font)
     .load_font_data(test_font_inter_regular_ttf())
-  let attrs = Attrs::new()
+  let attrs = @moon_cosmic.Attrs::new()
   let repeated = fs.font_matches_for_scripts(attrs, [Arabic, Arabic, Han, Han])
   let unique = fs.font_matches_for_scripts(attrs, [Arabic, Han])
   inspect(repeated == unique, content="true")

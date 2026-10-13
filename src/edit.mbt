@@ -26,10 +26,10 @@ pub(all) enum Action {
   Delete
   Indent
   Unindent
-  Click(Int, Int)
-  DoubleClick(Int, Int)
-  TripleClick(Int, Int)
-  Drag(Int, Int)
+  Click(Int32, Int32)
+  DoubleClick(Int32, Int32)
+  TripleClick(Int32, Int32)
+  Drag(Int32, Int32)
   Scroll(Float)
 }
 

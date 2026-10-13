@@ -15,45 +15,66 @@
 ///|
 test "subpixel bins (ported from cosmic-text)" {
   // POSITIVE
-  debug_inspect(SubpixelBin::new(0.0F), content="(0, Zero)")
-  debug_inspect(SubpixelBin::new(0.124F), content="(0, Zero)")
-  debug_inspect(SubpixelBin::new(0.125F), content="(0, One)")
-  debug_inspect(SubpixelBin::new(0.25F), content="(0, One)")
-  debug_inspect(SubpixelBin::new(0.374F), content="(0, One)")
-  debug_inspect(SubpixelBin::new(0.375F), content="(0, Two)")
-  debug_inspect(SubpixelBin::new(0.5F), content="(0, Two)")
-  debug_inspect(SubpixelBin::new(0.624F), content="(0, Two)")
-  debug_inspect(SubpixelBin::new(0.625F), content="(0, Three)")
-  debug_inspect(SubpixelBin::new(0.75F), content="(0, Three)")
-  debug_inspect(SubpixelBin::new(0.874F), content="(0, Three)")
-  debug_inspect(SubpixelBin::new(0.875F), content="(1, Zero)")
-  debug_inspect(SubpixelBin::new(0.999F), content="(1, Zero)")
-  debug_inspect(SubpixelBin::new(1.0F), content="(1, Zero)")
-  debug_inspect(SubpixelBin::new(1.124F), content="(1, Zero)")
+  debug_inspect(@moon_cosmic.SubpixelBin::new(0.0F), content="(0, Zero)")
+  debug_inspect(@moon_cosmic.SubpixelBin::new(0.124F), content="(0, Zero)")
+  debug_inspect(@moon_cosmic.SubpixelBin::new(0.125F), content="(0, One)")
+  debug_inspect(@moon_cosmic.SubpixelBin::new(0.25F), content="(0, One)")
+  debug_inspect(@moon_cosmic.SubpixelBin::new(0.374F), content="(0, One)")
+  debug_inspect(@moon_cosmic.SubpixelBin::new(0.375F), content="(0, Two)")
+  debug_inspect(@moon_cosmic.SubpixelBin::new(0.5F), content="(0, Two)")
+  debug_inspect(@moon_cosmic.SubpixelBin::new(0.624F), content="(0, Two)")
+  debug_inspect(@moon_cosmic.SubpixelBin::new(0.625F), content="(0, Three)")
+  debug_inspect(@moon_cosmic.SubpixelBin::new(0.75F), content="(0, Three)")
+  debug_inspect(@moon_cosmic.SubpixelBin::new(0.874F), content="(0, Three)")
+  debug_inspect(@moon_cosmic.SubpixelBin::new(0.875F), content="(1, Zero)")
+  debug_inspect(@moon_cosmic.SubpixelBin::new(0.999F), content="(1, Zero)")
+  debug_inspect(@moon_cosmic.SubpixelBin::new(1.0F), content="(1, Zero)")
+  debug_inspect(@moon_cosmic.SubpixelBin::new(1.124F), content="(1, Zero)")
 
   // NEGATIVE
-  debug_inspect(SubpixelBin::new(-0.0F), content="(0, Zero)")
-  debug_inspect(SubpixelBin::new(-0.124F), content="(0, Zero)")
-  debug_inspect(SubpixelBin::new(-0.125F), content="(-1, Three)")
-  debug_inspect(SubpixelBin::new(-0.25F), content="(-1, Three)")
-  debug_inspect(SubpixelBin::new(-0.374F), content="(-1, Three)")
-  debug_inspect(SubpixelBin::new(-0.375F), content="(-1, Two)")
-  debug_inspect(SubpixelBin::new(-0.5F), content="(-1, Two)")
-  debug_inspect(SubpixelBin::new(-0.624F), content="(-1, Two)")
-  debug_inspect(SubpixelBin::new(-0.625F), content="(-1, One)")
-  debug_inspect(SubpixelBin::new(-0.75F), content="(-1, One)")
-  debug_inspect(SubpixelBin::new(-0.874F), content="(-1, One)")
-  debug_inspect(SubpixelBin::new(-0.875F), content="(-1, Zero)")
-  debug_inspect(SubpixelBin::new(-0.999F), content="(-1, Zero)")
-  debug_inspect(SubpixelBin::new(-1.0F), content="(-1, Zero)")
-  debug_inspect(SubpixelBin::new(-1.124F), content="(-1, Zero)")
+  debug_inspect(@moon_cosmic.SubpixelBin::new(-0.0F), content="(0, Zero)")
+  debug_inspect(@moon_cosmic.SubpixelBin::new(-0.124F), content="(0, Zero)")
+  debug_inspect(@moon_cosmic.SubpixelBin::new(-0.125F), content="(-1, Three)")
+  debug_inspect(@moon_cosmic.SubpixelBin::new(-0.25F), content="(-1, Three)")
+  debug_inspect(@moon_cosmic.SubpixelBin::new(-0.374F), content="(-1, Three)")
+  debug_inspect(@moon_cosmic.SubpixelBin::new(-0.375F), content="(-1, Two)")
+  debug_inspect(@moon_cosmic.SubpixelBin::new(-0.5F), content="(-1, Two)")
+  debug_inspect(@moon_cosmic.SubpixelBin::new(-0.624F), content="(-1, Two)")
+  debug_inspect(@moon_cosmic.SubpixelBin::new(-0.625F), content="(-1, One)")
+  debug_inspect(@moon_cosmic.SubpixelBin::new(-0.75F), content="(-1, One)")
+  debug_inspect(@moon_cosmic.SubpixelBin::new(-0.874F), content="(-1, One)")
+  debug_inspect(@moon_cosmic.SubpixelBin::new(-0.875F), content="(-1, Zero)")
+  debug_inspect(@moon_cosmic.SubpixelBin::new(-0.999F), content="(-1, Zero)")
+  debug_inspect(@moon_cosmic.SubpixelBin::new(-1.0F), content="(-1, Zero)")
+  debug_inspect(@moon_cosmic.SubpixelBin::new(-1.124F), content="(-1, Zero)")
 }
 
 ///|
 test "CacheKey::new normalizes glyph_id to UInt16 domain" {
-  let (k1, _, _) = CacheKey::new(1, 65, 12.0F, (0.0F, 0.0F), 400, 0U)
-  let (k2, _, _) = CacheKey::new(1, 65536 + 65, 12.0F, (0.0F, 0.0F), 400, 0U)
-  let (k3, _, _) = CacheKey::new(1, -65471, 12.0F, (0.0F, 0.0F), 400, 0U)
+  let (k1, _, _) = @moon_cosmic.CacheKey::new(
+    1,
+    65,
+    12.0F,
+    (0.0F, 0.0F),
+    400,
+    0U,
+  )
+  let (k2, _, _) = @moon_cosmic.CacheKey::new(
+    1,
+    65536 + 65,
+    12.0F,
+    (0.0F, 0.0F),
+    400,
+    0U,
+  )
+  let (k3, _, _) = @moon_cosmic.CacheKey::new(
+    1,
+    -65471,
+    12.0F,
+    (0.0F, 0.0F),
+    400,
+    0U,
+  )
   inspect(k1 == k2, content="true")
   inspect(k1 == k3, content="true")
   inspect(

@@ -13,19 +13,19 @@
 // limitations under the License.
 
 ///|
-fn mk_editor(text : String) -> Editor {
-  let attrs_list = AttrsList::new(Attrs::new())
-  let buffer = Buffer::new(Metrics::new(14.0, 20.0)).set_text(
+fn mk_editor(text : String) -> @moon_cosmic.Editor {
+  let attrs_list = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
+  let buffer = @moon_cosmic.Buffer::new(@moon_cosmic.Metrics::new(14.0, 20.0)).set_text(
     text,
     attrs_list,
     Advanced,
   )
-  Editor::new(buffer)
+  @moon_cosmic.Editor::new(buffer)
 }
 
 ///|
 test "SyntaxSystem resolves themes and file extensions" {
-  let syntax_system = SyntaxSystem::new()
+  let syntax_system = @moon_cosmic.SyntaxSystem::new()
   inspect(
     syntax_system.theme("base16-eighties.dark") is Some(_),
     content="true",
@@ -93,10 +93,12 @@ test "SyntaxSystem resolves themes and file extensions" {
 
 ///|
 test "SyntaxEditor highlights rust keyword and number spans" {
-  let syntax_system = SyntaxSystem::new()
+  let syntax_system = @moon_cosmic.SyntaxSystem::new()
   let editor = mk_editor("fn main() {\n  let x = 42\n}\n")
   let syntax_editor0 = match
-    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    @moon_cosmic.SyntaxEditor::new(
+      editor, syntax_system, "base16-eighties.dark",
+    ) {
     Some(s) => s
     None => abort("theme should exist")
   }
@@ -120,10 +122,12 @@ test "SyntaxEditor highlights rust keyword and number spans" {
 
 ///|
 test "SyntaxEditor update_theme retints defaults" {
-  let syntax_system = SyntaxSystem::new()
+  let syntax_system = @moon_cosmic.SyntaxSystem::new()
   let editor = mk_editor("let value = 1\n")
   let syntax_editor0 = match
-    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    @moon_cosmic.SyntaxEditor::new(
+      editor, syntax_system, "base16-eighties.dark",
+    ) {
     Some(s) => s
     None => abort("theme should exist")
   }
@@ -137,10 +141,12 @@ test "SyntaxEditor update_theme retints defaults" {
 
 ///|
 test "SyntaxEditor syntax switch is lazy until rehighlight" {
-  let syntax_system = SyntaxSystem::new()
+  let syntax_system = @moon_cosmic.SyntaxSystem::new()
   let editor = mk_editor("fn main() {}\n")
   let syntax_editor0 = match
-    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    @moon_cosmic.SyntaxEditor::new(
+      editor, syntax_system, "base16-eighties.dark",
+    ) {
     Some(s) => s
     None => abort("theme should exist")
   }
@@ -148,7 +154,10 @@ test "SyntaxEditor syntax switch is lazy until rehighlight" {
   let attrs_before = switched.editor().buffer().lines()[0]
     .attrs_list()
     .get_span(0)
-  inspect(attrs_before.weight_value() == Weight::bold(), content="false")
+  inspect(
+    attrs_before.weight_value() == @moon_cosmic.Weight::bold(),
+    content="false",
+  )
   let attrs_after = switched.rehighlight().editor().buffer().lines()[0]
     .attrs_list()
     .get_span(0)
@@ -157,10 +166,12 @@ test "SyntaxEditor syntax switch is lazy until rehighlight" {
 
 ///|
 test "SyntaxEditor handles nested Rust block comments across lines" {
-  let syntax_system = SyntaxSystem::new()
+  let syntax_system = @moon_cosmic.SyntaxSystem::new()
   let editor = mk_editor("/* a /* b */\nc */ let x = 1\n")
   let syntax_editor0 = match
-    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    @moon_cosmic.SyntaxEditor::new(
+      editor, syntax_system, "base16-eighties.dark",
+    ) {
     Some(s) => s
     None => abort("theme should exist")
   }
@@ -179,10 +190,12 @@ test "SyntaxEditor handles nested Rust block comments across lines" {
 
 ///|
 test "SyntaxEditor tracks Python triple-quoted strings across lines" {
-  let syntax_system = SyntaxSystem::new()
+  let syntax_system = @moon_cosmic.SyntaxSystem::new()
   let editor = mk_editor("\"\"\"hello\nworld\"\"\"\nx = 1\n")
   let syntax_editor0 = match
-    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    @moon_cosmic.SyntaxEditor::new(
+      editor, syntax_system, "base16-eighties.dark",
+    ) {
     Some(s) => s
     None => abort("theme should exist")
   }
@@ -202,10 +215,12 @@ test "SyntaxEditor tracks Python triple-quoted strings across lines" {
 
 ///|
 test "SyntaxEditor tracks Rust raw strings across lines" {
-  let syntax_system = SyntaxSystem::new()
+  let syntax_system = @moon_cosmic.SyntaxSystem::new()
   let editor = mk_editor("let s = r###\"a\nb\"###;\n")
   let syntax_editor0 = match
-    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    @moon_cosmic.SyntaxEditor::new(
+      editor, syntax_system, "base16-eighties.dark",
+    ) {
     Some(s) => s
     None => abort("theme should exist")
   }
@@ -229,10 +244,12 @@ test "SyntaxEditor tracks Rust raw strings across lines" {
 
 ///|
 test "SyntaxEditor keeps Rust unclosed plain strings line-local" {
-  let syntax_system = SyntaxSystem::new()
+  let syntax_system = @moon_cosmic.SyntaxSystem::new()
   let editor = mk_editor("\"abc\nlet x = 1\n")
   let syntax_editor0 = match
-    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    @moon_cosmic.SyntaxEditor::new(
+      editor, syntax_system, "base16-eighties.dark",
+    ) {
     Some(s) => s
     None => abort("theme should exist")
   }
@@ -247,10 +264,12 @@ test "SyntaxEditor keeps Rust unclosed plain strings line-local" {
 
 ///|
 test "SyntaxEditor highlights Python f-string prefix as string" {
-  let syntax_system = SyntaxSystem::new()
+  let syntax_system = @moon_cosmic.SyntaxSystem::new()
   let editor = mk_editor("f\"value {x}\"\n")
   let syntax_editor0 = match
-    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    @moon_cosmic.SyntaxEditor::new(
+      editor, syntax_system, "base16-eighties.dark",
+    ) {
     Some(s) => s
     None => abort("theme should exist")
   }
@@ -265,10 +284,12 @@ test "SyntaxEditor highlights Python f-string prefix as string" {
 
 ///|
 test "SyntaxEditor highlights Rust numeric prefixes and suffixes" {
-  let syntax_system = SyntaxSystem::new()
+  let syntax_system = @moon_cosmic.SyntaxSystem::new()
   let editor = mk_editor("let n = 0xffu8;\n")
   let syntax_editor0 = match
-    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    @moon_cosmic.SyntaxEditor::new(
+      editor, syntax_system, "base16-eighties.dark",
+    ) {
     Some(s) => s
     None => abort("theme should exist")
   }
@@ -287,10 +308,12 @@ test "SyntaxEditor highlights Rust numeric prefixes and suffixes" {
 
 ///|
 test "SyntaxEditor highlights Python scientific notation" {
-  let syntax_system = SyntaxSystem::new()
+  let syntax_system = @moon_cosmic.SyntaxSystem::new()
   let editor = mk_editor("x = 1e-6\n")
   let syntax_editor0 = match
-    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    @moon_cosmic.SyntaxEditor::new(
+      editor, syntax_system, "base16-eighties.dark",
+    ) {
     Some(s) => s
     None => abort("theme should exist")
   }
@@ -309,10 +332,12 @@ test "SyntaxEditor highlights Python scientific notation" {
 
 ///|
 test "SyntaxEditor updates token attrs lazily after edit actions" {
-  let syntax_system = SyntaxSystem::new()
+  let syntax_system = @moon_cosmic.SyntaxSystem::new()
   let editor = mk_editor("fn\n")
   let syntax_editor0 = match
-    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    @moon_cosmic.SyntaxEditor::new(
+      editor, syntax_system, "base16-eighties.dark",
+    ) {
     Some(s) => s
     None => abort("theme should exist")
   }
@@ -327,7 +352,7 @@ test "SyntaxEditor updates token attrs lazily after edit actions" {
     content="true",
   )
   let syntax_editor2 = syntax_editor1
-    .set_cursor(Cursor::new(0, 0))
+    .set_cursor(@moon_cosmic.Cursor::new(0, 0))
     .action(Insert('x'))
   inspect(
     syntax_editor2.editor().buffer().lines()[0]
@@ -349,10 +374,12 @@ test "SyntaxEditor updates token attrs lazily after edit actions" {
 
 ///|
 test "SyntaxEditor treats Rust lifetimes as non-string tokens" {
-  let syntax_system = SyntaxSystem::new()
+  let syntax_system = @moon_cosmic.SyntaxSystem::new()
   let editor = mk_editor("fn f<'a>(x: &'a str) {}\n")
   let syntax_editor0 = match
-    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    @moon_cosmic.SyntaxEditor::new(
+      editor, syntax_system, "base16-eighties.dark",
+    ) {
     Some(s) => s
     None => abort("theme should exist")
   }
@@ -371,10 +398,12 @@ test "SyntaxEditor treats Rust lifetimes as non-string tokens" {
 
 ///|
 test "SyntaxEditor treats Rust char literals as strings" {
-  let syntax_system = SyntaxSystem::new()
+  let syntax_system = @moon_cosmic.SyntaxSystem::new()
   let editor = mk_editor("let c = 'x';\n")
   let syntax_editor0 = match
-    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    @moon_cosmic.SyntaxEditor::new(
+      editor, syntax_system, "base16-eighties.dark",
+    ) {
     Some(s) => s
     None => abort("theme should exist")
   }
@@ -389,10 +418,12 @@ test "SyntaxEditor treats Rust char literals as strings" {
 
 ///|
 test "SyntaxEditor tracks markdown fenced code blocks and headings" {
-  let syntax_system = SyntaxSystem::new()
+  let syntax_system = @moon_cosmic.SyntaxSystem::new()
   let editor = mk_editor("```rust\nfn main() {}\n```\n# Title\n")
   let syntax_editor0 = match
-    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    @moon_cosmic.SyntaxEditor::new(
+      editor, syntax_system, "base16-eighties.dark",
+    ) {
     Some(s) => s
     None => abort("theme should exist")
   }
@@ -420,10 +451,12 @@ test "SyntaxEditor tracks markdown fenced code blocks and headings" {
 
 ///|
 test "SyntaxEditor computes markdown heading span offsets with multibyte leading space" {
-  let syntax_system = SyntaxSystem::new()
+  let syntax_system = @moon_cosmic.SyntaxSystem::new()
   let editor = mk_editor("　# heading\n")
   let syntax_editor0 = match
-    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    @moon_cosmic.SyntaxEditor::new(
+      editor, syntax_system, "base16-eighties.dark",
+    ) {
     Some(s) => s
     None => abort("theme should exist")
   }
@@ -443,10 +476,12 @@ test "SyntaxEditor computes markdown heading span offsets with multibyte leading
 
 ///|
 test "SyntaxEditor highlights markdown inline code spans" {
-  let syntax_system = SyntaxSystem::new()
+  let syntax_system = @moon_cosmic.SyntaxSystem::new()
   let editor = mk_editor("Use `code` here\n")
   let syntax_editor0 = match
-    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    @moon_cosmic.SyntaxEditor::new(
+      editor, syntax_system, "base16-eighties.dark",
+    ) {
     Some(s) => s
     None => abort("theme should exist")
   }
@@ -461,10 +496,12 @@ test "SyntaxEditor highlights markdown inline code spans" {
 
 ///|
 test "SyntaxEditor highlights clike preprocessor directives" {
-  let syntax_system = SyntaxSystem::new()
+  let syntax_system = @moon_cosmic.SyntaxSystem::new()
   let editor = mk_editor("#include <stdio.h>\nint x = 1;\n")
   let syntax_editor0 = match
-    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    @moon_cosmic.SyntaxEditor::new(
+      editor, syntax_system, "base16-eighties.dark",
+    ) {
     Some(s) => s
     None => abort("theme should exist")
   }
@@ -483,12 +520,14 @@ test "SyntaxEditor highlights clike preprocessor directives" {
 
 ///|
 test "SyntaxEditor keeps clike preprocessor continuation lines as keywords" {
-  let syntax_system = SyntaxSystem::new()
+  let syntax_system = @moon_cosmic.SyntaxSystem::new()
   let editor = mk_editor(
     "#define A(x) " + "\\" + "\n  ((x) + 1)\nint y = A(1);\n",
   )
   let syntax_editor0 = match
-    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    @moon_cosmic.SyntaxEditor::new(
+      editor, syntax_system, "base16-eighties.dark",
+    ) {
     Some(s) => s
     None => abort("theme should exist")
   }
@@ -511,10 +550,12 @@ test "SyntaxEditor keeps clike preprocessor continuation lines as keywords" {
 
 ///|
 test "SyntaxEditor highlights jsonc comments and json keywords" {
-  let syntax_system = SyntaxSystem::new()
+  let syntax_system = @moon_cosmic.SyntaxSystem::new()
   let editor = mk_editor("// note\ntrue\n/* block */\n")
   let syntax_editor0 = match
-    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    @moon_cosmic.SyntaxEditor::new(
+      editor, syntax_system, "base16-eighties.dark",
+    ) {
     Some(s) => s
     None => abort("theme should exist")
   }
@@ -537,10 +578,12 @@ test "SyntaxEditor highlights jsonc comments and json keywords" {
 
 ///|
 test "SyntaxEditor highlights yaml hash comments and booleans" {
-  let syntax_system = SyntaxSystem::new()
+  let syntax_system = @moon_cosmic.SyntaxSystem::new()
   let editor = mk_editor("# note\ntrue\n")
   let syntax_editor0 = match
-    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    @moon_cosmic.SyntaxEditor::new(
+      editor, syntax_system, "base16-eighties.dark",
+    ) {
     Some(s) => s
     None => abort("theme should exist")
   }
@@ -559,10 +602,12 @@ test "SyntaxEditor highlights yaml hash comments and booleans" {
 
 ///|
 test "SyntaxEditor highlights toml hash comments and booleans" {
-  let syntax_system = SyntaxSystem::new()
+  let syntax_system = @moon_cosmic.SyntaxSystem::new()
   let editor = mk_editor("# note\nfalse\n")
   let syntax_editor0 = match
-    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    @moon_cosmic.SyntaxEditor::new(
+      editor, syntax_system, "base16-eighties.dark",
+    ) {
     Some(s) => s
     None => abort("theme should exist")
   }
@@ -581,10 +626,12 @@ test "SyntaxEditor highlights toml hash comments and booleans" {
 
 ///|
 test "SyntaxEditor tracks toml triple-quoted basic strings across lines" {
-  let syntax_system = SyntaxSystem::new()
+  let syntax_system = @moon_cosmic.SyntaxSystem::new()
   let editor = mk_editor("key = \"\"\"a\nb\"\"\"\nok = true\n")
   let syntax_editor0 = match
-    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    @moon_cosmic.SyntaxEditor::new(
+      editor, syntax_system, "base16-eighties.dark",
+    ) {
     Some(s) => s
     None => abort("theme should exist")
   }
@@ -610,10 +657,12 @@ test "SyntaxEditor tracks toml triple-quoted basic strings across lines" {
 
 ///|
 test "SyntaxEditor tracks toml triple-quoted literal strings across lines" {
-  let syntax_system = SyntaxSystem::new()
+  let syntax_system = @moon_cosmic.SyntaxSystem::new()
   let editor = mk_editor("key = '''a\nb'''\nflag = false\n")
   let syntax_editor0 = match
-    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    @moon_cosmic.SyntaxEditor::new(
+      editor, syntax_system, "base16-eighties.dark",
+    ) {
     Some(s) => s
     None => abort("theme should exist")
   }
@@ -639,10 +688,12 @@ test "SyntaxEditor tracks toml triple-quoted literal strings across lines" {
 
 ///|
 test "SyntaxEditor highlights markup comments across lines" {
-  let syntax_system = SyntaxSystem::new()
+  let syntax_system = @moon_cosmic.SyntaxSystem::new()
   let editor = mk_editor("<!-- open\nstill comment -->\n<div>\n")
   let syntax_editor0 = match
-    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    @moon_cosmic.SyntaxEditor::new(
+      editor, syntax_system, "base16-eighties.dark",
+    ) {
     Some(s) => s
     None => abort("theme should exist")
   }
@@ -665,10 +716,12 @@ test "SyntaxEditor highlights markup comments across lines" {
 
 ///|
 test "SyntaxEditor highlights markup tags as keywords" {
-  let syntax_system = SyntaxSystem::new()
+  let syntax_system = @moon_cosmic.SyntaxSystem::new()
   let editor = mk_editor("<div class=\"a\">x</div>\n")
   let syntax_editor0 = match
-    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    @moon_cosmic.SyntaxEditor::new(
+      editor, syntax_system, "base16-eighties.dark",
+    ) {
     Some(s) => s
     None => abort("theme should exist")
   }
@@ -693,10 +746,12 @@ test "SyntaxEditor highlights markup tags as keywords" {
 
 ///|
 test "SyntaxEditor keeps markup tag state across lines" {
-  let syntax_system = SyntaxSystem::new()
+  let syntax_system = @moon_cosmic.SyntaxSystem::new()
   let editor = mk_editor("<div\n class=\"a\">\ntext\n")
   let syntax_editor0 = match
-    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    @moon_cosmic.SyntaxEditor::new(
+      editor, syntax_system, "base16-eighties.dark",
+    ) {
     Some(s) => s
     None => abort("theme should exist")
   }
@@ -719,10 +774,12 @@ test "SyntaxEditor keeps markup tag state across lines" {
 
 ///|
 test "SyntaxEditor highlights shell hash comments" {
-  let syntax_system = SyntaxSystem::new()
+  let syntax_system = @moon_cosmic.SyntaxSystem::new()
   let editor = mk_editor("# comment\necho hi\n")
   let syntax_editor0 = match
-    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    @moon_cosmic.SyntaxEditor::new(
+      editor, syntax_system, "base16-eighties.dark",
+    ) {
     Some(s) => s
     None => abort("theme should exist")
   }
@@ -741,10 +798,12 @@ test "SyntaxEditor highlights shell hash comments" {
 
 ///|
 test "SyntaxEditor tracks shell heredoc bodies across lines" {
-  let syntax_system = SyntaxSystem::new()
+  let syntax_system = @moon_cosmic.SyntaxSystem::new()
   let editor = mk_editor("cat <<EOF\nline one\nEOF\necho done\n")
   let syntax_editor0 = match
-    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    @moon_cosmic.SyntaxEditor::new(
+      editor, syntax_system, "base16-eighties.dark",
+    ) {
     Some(s) => s
     None => abort("theme should exist")
   }
@@ -774,10 +833,12 @@ test "SyntaxEditor tracks shell heredoc bodies across lines" {
 
 ///|
 test "SyntaxEditor highlights sql comments and keywords" {
-  let syntax_system = SyntaxSystem::new()
+  let syntax_system = @moon_cosmic.SyntaxSystem::new()
   let editor = mk_editor("-- comment\nSELECT col FROM t;\n/* block */\n")
   let syntax_editor0 = match
-    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    @moon_cosmic.SyntaxEditor::new(
+      editor, syntax_system, "base16-eighties.dark",
+    ) {
     Some(s) => s
     None => abort("theme should exist")
   }
@@ -800,10 +861,12 @@ test "SyntaxEditor highlights sql comments and keywords" {
 
 ///|
 test "SyntaxEditor tracks lua long comments across lines" {
-  let syntax_system = SyntaxSystem::new()
+  let syntax_system = @moon_cosmic.SyntaxSystem::new()
   let editor = mk_editor("--[=[ comment\nstill ]=]\nlocal x = 1\n")
   let syntax_editor0 = match
-    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    @moon_cosmic.SyntaxEditor::new(
+      editor, syntax_system, "base16-eighties.dark",
+    ) {
     Some(s) => s
     None => abort("theme should exist")
   }
@@ -826,10 +889,12 @@ test "SyntaxEditor tracks lua long comments across lines" {
 
 ///|
 test "SyntaxEditor tracks lua long strings across lines" {
-  let syntax_system = SyntaxSystem::new()
+  let syntax_system = @moon_cosmic.SyntaxSystem::new()
   let editor = mk_editor("local s = [=[hello\nworld]=]\nlocal t = 1\n")
   let syntax_editor0 = match
-    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    @moon_cosmic.SyntaxEditor::new(
+      editor, syntax_system, "base16-eighties.dark",
+    ) {
     Some(s) => s
     None => abort("theme should exist")
   }
@@ -854,10 +919,12 @@ test "SyntaxEditor tracks lua long strings across lines" {
 
 ///|
 test "SyntaxEditor tracks ruby begin-end comments across lines" {
-  let syntax_system = SyntaxSystem::new()
+  let syntax_system = @moon_cosmic.SyntaxSystem::new()
   let editor = mk_editor("=begin\ncomment line\n=end\nputs 1\n")
   let syntax_editor0 = match
-    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    @moon_cosmic.SyntaxEditor::new(
+      editor, syntax_system, "base16-eighties.dark",
+    ) {
     Some(s) => s
     None => abort("theme should exist")
   }
@@ -884,10 +951,12 @@ test "SyntaxEditor tracks ruby begin-end comments across lines" {
 
 ///|
 test "SyntaxEditor highlights Rust outer attributes as keywords" {
-  let syntax_system = SyntaxSystem::new()
+  let syntax_system = @moon_cosmic.SyntaxSystem::new()
   let editor = mk_editor("#[derive(Debug)]\nstruct X;\n")
   let syntax_editor0 = match
-    SyntaxEditor::new(editor, syntax_system, "base16-eighties.dark") {
+    @moon_cosmic.SyntaxEditor::new(
+      editor, syntax_system, "base16-eighties.dark",
+    ) {
     Some(s) => s
     None => abort("theme should exist")
   }

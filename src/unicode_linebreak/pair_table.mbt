@@ -14,7 +14,7 @@
 
 ///|
 /// Pair transition table ported from upstream unicode-linebreak tables.
-let pair_table : Array[Array[Int]] = [
+let pair_table : Array[Array[Int32]] = [
   [
     192, 193, 194, 221, 196, 221, 198, 199, 200, 201, 221, 203, 204, 205, 206, 207,
     208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 221, 221, 212, 223,
@@ -283,6 +283,6 @@ let pair_table : Array[Array[Int]] = [
 ]
 
 ///|
-fn pair_table_value(state : Int, cls : Int) -> Int {
+fn pair_table_value(state : Int32, cls : Int32) -> Int32 {
   pair_table[state][cls]
 }

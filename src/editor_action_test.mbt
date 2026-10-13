@@ -14,16 +14,18 @@
 
 ///|
 test "Editor change tracking: insert and delete" {
-  let attrs = AttrsList::new(Attrs::new())
-  let buffer = Buffer::new(Metrics::new(12.0F, 14.0F)).set_text(
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
+  let buffer = @moon_cosmic.Buffer::new(@moon_cosmic.Metrics::new(12.0F, 14.0F)).set_text(
     "abc\ndef",
     attrs,
     Advanced,
   )
-  let editor0 = Editor::new(buffer).start_change()
+  let editor0 = @moon_cosmic.Editor::new(buffer).start_change()
 
   // Insert
-  let editor1 = editor0.set_cursor(Cursor::new(0, 1)).action(Insert('X'))
+  let editor1 = editor0
+    .set_cursor(@moon_cosmic.Cursor::new(0, 1))
+    .action(Insert('X'))
   let (editor2, change_opt) = editor1.finish_change()
   ignore(editor2)
   match change_opt {
@@ -36,9 +38,12 @@ test "Editor change tracking: insert and delete" {
   }
 
   // Delete across lines
-  let editor3 = Editor::new(buffer)
+  let editor3 = @moon_cosmic.Editor::new(buffer)
     .start_change()
-    .delete_range(Cursor::new(0, 2), Cursor::new(1, 1))
+    .delete_range(
+      @moon_cosmic.Cursor::new(0, 2),
+      @moon_cosmic.Cursor::new(1, 1),
+    )
   let (_editor4, change_opt2) = editor3.finish_change()
   match change_opt2 {
     None => abort("expected change")
@@ -53,13 +58,15 @@ test "Editor change tracking: insert and delete" {
 
 ///|
 test "Editor.action: backspace/delete/enter and motion" {
-  let attrs = AttrsList::new(Attrs::new())
-  let buffer = Buffer::new(Metrics::new(12.0F, 14.0F)).set_text(
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
+  let buffer = @moon_cosmic.Buffer::new(@moon_cosmic.Metrics::new(12.0F, 14.0F)).set_text(
     "ab\ncd",
     attrs,
     Advanced,
   )
-  let editor0 = Editor::new(buffer).set_cursor(Cursor::new(0, 2))
+  let editor0 = @moon_cosmic.Editor::new(buffer).set_cursor(
+    @moon_cosmic.Cursor::new(0, 2),
+  )
 
   // Enter inserts newline.
   let editor1 = editor0.action(Enter)
@@ -67,20 +74,22 @@ test "Editor.action: backspace/delete/enter and motion" {
   inspect(editor1.buffer().lines()[0].text(), content="ab")
 
   // Backspace deletes previous code unit.
-  let editor2 = Editor::new(buffer)
-    .set_cursor(Cursor::new(0, 2))
+  let editor2 = @moon_cosmic.Editor::new(buffer)
+    .set_cursor(@moon_cosmic.Cursor::new(0, 2))
     .action(Backspace)
   inspect(editor2.buffer().lines()[0].text(), content="a")
   inspect(editor2.cursor().index, content="1")
 
   // Delete deletes forward.
-  let editor3 = Editor::new(buffer).set_cursor(Cursor::new(0, 1)).action(Delete)
+  let editor3 = @moon_cosmic.Editor::new(buffer)
+    .set_cursor(@moon_cosmic.Cursor::new(0, 1))
+    .action(Delete)
   inspect(editor3.buffer().lines()[0].text(), content="a")
   inspect(editor3.cursor().index, content="1")
 
   // Motion right then down.
-  let editor4 = Editor::new(buffer)
-    .set_cursor(Cursor::new(0, 0))
+  let editor4 = @moon_cosmic.Editor::new(buffer)
+    .set_cursor(@moon_cosmic.Cursor::new(0, 0))
     .action(Motion(Right))
     .action(Motion(Down))
   inspect(editor4.cursor().line, content="1")
@@ -89,8 +98,8 @@ test "Editor.action: backspace/delete/enter and motion" {
 
 ///|
 test "Buffer.hit + Editor.action click/drag" {
-  let attrs = AttrsList::new(Attrs::new())
-  let buffer = Buffer::new(Metrics::new(12.0F, 12.0F))
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
+  let buffer = @moon_cosmic.Buffer::new(@moon_cosmic.Metrics::new(12.0F, 12.0F))
     .set_text("abc", attrs, Advanced)
     .set_size(Some(1000.0F), None)
   match buffer.hit(1.0F, 0.0F) {
@@ -101,7 +110,9 @@ test "Buffer.hit + Editor.action click/drag" {
     None => abort("expected hit")
     Some(c) => inspect(c.index, content="1")
   }
-  let editor0 = Editor::new(buffer).set_cursor(Cursor::new(0, 0))
+  let editor0 = @moon_cosmic.Editor::new(buffer).set_cursor(
+    @moon_cosmic.Cursor::new(0, 0),
+  )
   let editor1 = editor0.action(Click(7, 0))
   inspect(editor1.cursor().index, content="1")
   let editor2 = editor0.action(Drag(7, 0))
@@ -117,9 +128,9 @@ test "Buffer.hit + Editor.action click/drag" {
 
 ///|
 test "Buffer.hit respects RTL line direction (clamps + half-glyph)" {
-  let attrs = AttrsList::new(Attrs::new())
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
   let s = "\u{05D0}\u{05D1}\u{05D2}"
-  let buffer = Buffer::new(Metrics::new(12.0F, 12.0F))
+  let buffer = @moon_cosmic.Buffer::new(@moon_cosmic.Metrics::new(12.0F, 12.0F))
     .set_text(s, attrs, Advanced)
     .set_size(Some(1000.0F), None)
     .layout_all()
@@ -153,31 +164,35 @@ test "Buffer.hit respects RTL line direction (clamps + half-glyph)" {
 
 ///|
 test "Editor.action Backspace/Delete are grapheme-aware (combining mark)" {
-  let attrs = AttrsList::new(Attrs::new())
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
   // "e" + COMBINING ACUTE ACCENT (U+0301) => one grapheme cluster, two UTF-16 code units.
   let s = "e\u{0301}"
-  let buffer = Buffer::new(Metrics::new(12.0F, 12.0F)).set_text(
+  let buffer = @moon_cosmic.Buffer::new(@moon_cosmic.Metrics::new(12.0F, 12.0F)).set_text(
     s,
     attrs,
     Advanced,
   )
-  let editor0 = Editor::new(buffer).set_cursor(Cursor::new(0, 2))
+  let editor0 = @moon_cosmic.Editor::new(buffer).set_cursor(
+    @moon_cosmic.Cursor::new(0, 2),
+  )
   let editor1 = editor0.action(Backspace)
   inspect(editor1.buffer().lines()[0].text(), content="")
-  let editor2 = Editor::new(buffer).set_cursor(Cursor::new(0, 0))
+  let editor2 = @moon_cosmic.Editor::new(buffer).set_cursor(
+    @moon_cosmic.Cursor::new(0, 0),
+  )
   let editor3 = editor2.action(Delete)
   inspect(editor3.buffer().lines()[0].text(), content="")
 }
 
 ///|
 test "Buffer.cursor_motion Previous/Next are grapheme-aware (combining mark)" {
-  let attrs = AttrsList::new(Attrs::new())
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
   // "e" + COMBINING ACUTE ACCENT (U+0301) => one grapheme cluster, two UTF-16 code units.
   let s = "e\u{0301}"
-  let buffer = Buffer::new(Metrics::new(12.0F, 12.0F))
+  let buffer = @moon_cosmic.Buffer::new(@moon_cosmic.Metrics::new(12.0F, 12.0F))
     .set_text(s, attrs, Advanced)
     .set_size(Some(1000.0F), None)
-  match buffer.cursor_motion(Cursor::new(0, 2), None, Previous) {
+  match buffer.cursor_motion(@moon_cosmic.Cursor::new(0, 2), None, Previous) {
     None => abort("expected motion")
     Some((c, _x)) => {
       inspect(c.index, content="0")
@@ -190,7 +205,7 @@ test "Buffer.cursor_motion Previous/Next are grapheme-aware (combining mark)" {
       )
     }
   }
-  match buffer.cursor_motion(Cursor::new(0, 0), None, Next) {
+  match buffer.cursor_motion(@moon_cosmic.Cursor::new(0, 0), None, Next) {
     None => abort("expected motion")
     Some((c, _x)) => {
       inspect(c.index, content="2")
@@ -207,15 +222,15 @@ test "Buffer.cursor_motion Previous/Next are grapheme-aware (combining mark)" {
 
 ///|
 test "Buffer.cursor_motion SoftHome jumps to first non-whitespace" {
-  let attrs = AttrsList::new(Attrs::new())
-  let buffer = Buffer::new(Metrics::new(12.0F, 12.0F))
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
+  let buffer = @moon_cosmic.Buffer::new(@moon_cosmic.Metrics::new(12.0F, 12.0F))
     .set_text("  foo", attrs, Advanced)
     .set_size(Some(1000.0F), None)
-  match buffer.cursor_motion(Cursor::new(0, 0), None, SoftHome) {
+  match buffer.cursor_motion(@moon_cosmic.Cursor::new(0, 0), None, SoftHome) {
     None => abort("expected motion")
     Some((c, _x)) => inspect(c.index, content="2")
   }
-  match buffer.cursor_motion(Cursor::new(0, 2), None, SoftHome) {
+  match buffer.cursor_motion(@moon_cosmic.Cursor::new(0, 2), None, SoftHome) {
     None => abort("expected motion")
     Some((c, _x)) => inspect(c.index, content="2")
   }
@@ -223,11 +238,11 @@ test "Buffer.cursor_motion SoftHome jumps to first non-whitespace" {
 
 ///|
 test "Buffer.cursor_motion SoftHome on all-whitespace line returns 0" {
-  let attrs = AttrsList::new(Attrs::new())
-  let buffer = Buffer::new(Metrics::new(12.0F, 12.0F))
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
+  let buffer = @moon_cosmic.Buffer::new(@moon_cosmic.Metrics::new(12.0F, 12.0F))
     .set_text("   ", attrs, Advanced)
     .set_size(Some(1000.0F), None)
-  match buffer.cursor_motion(Cursor::new(0, 1), None, SoftHome) {
+  match buffer.cursor_motion(@moon_cosmic.Cursor::new(0, 1), None, SoftHome) {
     None => abort("expected motion")
     Some((c, _x)) => inspect(c.index, content="0")
   }
@@ -235,13 +250,13 @@ test "Buffer.cursor_motion SoftHome on all-whitespace line returns 0" {
 
 ///|
 test "Buffer.cursor_motion Home/End operate on visual line when wrapped" {
-  let attrs = AttrsList::new(Attrs::new())
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
   let text = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-  let buffer = Buffer::new(Metrics::new(12.0F, 12.0F))
+  let buffer = @moon_cosmic.Buffer::new(@moon_cosmic.Metrics::new(12.0F, 12.0F))
     .set_text(text, attrs, Advanced)
     .set_size(Some(40.0F), None)
     .layout_all()
-  let runs : Array[LayoutRun] = []
+  let runs : Array[@moon_cosmic.LayoutRun] = []
   for r in buffer.layout_runs() {
     runs.push(r)
   }
@@ -255,7 +270,7 @@ test "Buffer.cursor_motion Home/End operate on visual line when wrapped" {
   let home_expected = run1.glyphs[0].start
   let end_expected = run1.glyphs[run1.glyphs.length() - 1].end
   let mid_idx = run1.glyphs[0].end
-  match buffer.cursor_motion(Cursor::new(0, mid_idx), None, Home) {
+  match buffer.cursor_motion(@moon_cosmic.Cursor::new(0, mid_idx), None, Home) {
     None => abort("expected motion")
     Some((c, _x)) => {
       inspect(c.index == home_expected, content="true")
@@ -268,7 +283,8 @@ test "Buffer.cursor_motion Home/End operate on visual line when wrapped" {
       )
     }
   }
-  match buffer.cursor_motion(Cursor::new(0, home_expected), None, End) {
+  match
+    buffer.cursor_motion(@moon_cosmic.Cursor::new(0, home_expected), None, End) {
     None => abort("expected motion")
     Some((c, _x)) => {
       inspect(c.index == end_expected, content="true")
@@ -285,18 +301,19 @@ test "Buffer.cursor_motion Home/End operate on visual line when wrapped" {
 
 ///|
 test "Buffer.cursor_motion PreviousWord/NextWord cross lines" {
-  let attrs = AttrsList::new(Attrs::new())
-  let buffer = Buffer::new(Metrics::new(12.0F, 12.0F))
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
+  let buffer = @moon_cosmic.Buffer::new(@moon_cosmic.Metrics::new(12.0F, 12.0F))
     .set_text("foo\nbar", attrs, Advanced)
     .set_size(Some(1000.0F), None)
-  match buffer.cursor_motion(Cursor::new(1, 0), None, PreviousWord) {
+  match
+    buffer.cursor_motion(@moon_cosmic.Cursor::new(1, 0), None, PreviousWord) {
     None => abort("expected motion")
     Some((c, _x)) => {
       inspect(c.line, content="0")
       inspect(c.index, content="3")
     }
   }
-  match buffer.cursor_motion(Cursor::new(0, 3), None, NextWord) {
+  match buffer.cursor_motion(@moon_cosmic.Cursor::new(0, 3), None, NextWord) {
     None => abort("expected motion")
     Some((c, _x)) => {
       inspect(c.line, content="1")
@@ -307,15 +324,17 @@ test "Buffer.cursor_motion PreviousWord/NextWord cross lines" {
 
 ///|
 test "Buffer.cursor_motion ParagraphStart/ParagraphEnd" {
-  let attrs = AttrsList::new(Attrs::new())
-  let buffer = Buffer::new(Metrics::new(12.0F, 12.0F))
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
+  let buffer = @moon_cosmic.Buffer::new(@moon_cosmic.Metrics::new(12.0F, 12.0F))
     .set_text("foo", attrs, Advanced)
     .set_size(Some(1000.0F), None)
-  match buffer.cursor_motion(Cursor::new(0, 2), None, ParagraphStart) {
+  match
+    buffer.cursor_motion(@moon_cosmic.Cursor::new(0, 2), None, ParagraphStart) {
     None => abort("expected motion")
     Some((c, _x)) => inspect(c.index, content="0")
   }
-  match buffer.cursor_motion(Cursor::new(0, 1), None, ParagraphEnd) {
+  match
+    buffer.cursor_motion(@moon_cosmic.Cursor::new(0, 1), None, ParagraphEnd) {
     None => abort("expected motion")
     Some((c, _x)) => inspect(c.index, content="3")
   }
@@ -323,18 +342,20 @@ test "Buffer.cursor_motion ParagraphStart/ParagraphEnd" {
 
 ///|
 test "Buffer.cursor_motion GotoLine uses LayoutCursor mapping" {
-  let attrs = AttrsList::new(Attrs::new())
-  let buffer = Buffer::new(Metrics::new(12.0F, 12.0F))
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
+  let buffer = @moon_cosmic.Buffer::new(@moon_cosmic.Metrics::new(12.0F, 12.0F))
     .set_text("abc\ndefg\nhi", attrs, Advanced)
     .set_size(Some(1000.0F), None)
-  match buffer.cursor_motion(Cursor::new(0, 2), None, GotoLine(1)) {
+  match
+    buffer.cursor_motion(@moon_cosmic.Cursor::new(0, 2), None, GotoLine(1)) {
     None => abort("expected motion")
     Some((c, _x)) => {
       inspect(c.line, content="1")
       inspect(c.index, content="2")
     }
   }
-  match buffer.cursor_motion(Cursor::new(0, 0), None, GotoLine(99)) {
+  match
+    buffer.cursor_motion(@moon_cosmic.Cursor::new(0, 0), None, GotoLine(99)) {
     None => ()
     Some((_c, _x)) => abort("expected None for out-of-range")
   }
@@ -342,12 +363,12 @@ test "Buffer.cursor_motion GotoLine uses LayoutCursor mapping" {
 
 ///|
 test "Buffer.cursor_motion Left/Right respect base RTL lines" {
-  let attrs = AttrsList::new(Attrs::new())
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
   let s = "\u{05D0}\u{05D1}\u{05D2}"
-  let buffer = Buffer::new(Metrics::new(12.0F, 12.0F))
+  let buffer = @moon_cosmic.Buffer::new(@moon_cosmic.Metrics::new(12.0F, 12.0F))
     .set_text(s, attrs, Advanced)
     .set_size(Some(1000.0F), None)
-  match buffer.cursor_motion(Cursor::new(0, 0), None, Left) {
+  match buffer.cursor_motion(@moon_cosmic.Cursor::new(0, 0), None, Left) {
     None => abort("expected motion")
     Some((c, _x)) => {
       inspect(c.index, content="1")
@@ -360,7 +381,7 @@ test "Buffer.cursor_motion Left/Right respect base RTL lines" {
       )
     }
   }
-  match buffer.cursor_motion(Cursor::new(0, 1), None, Right) {
+  match buffer.cursor_motion(@moon_cosmic.Cursor::new(0, 1), None, Right) {
     None => abort("expected motion")
     Some((c, _x)) => {
       inspect(c.index, content="0")

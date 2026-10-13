@@ -19,7 +19,7 @@
 
 ///|
 /// Flags that change rendering.
-pub type CacheKeyFlags = UInt
+pub type CacheKeyFlags = UInt32
 
 ///|
 pub const CACHE_KEY_FLAG_FAKE_ITALIC : CacheKeyFlags = 1U
@@ -45,7 +45,7 @@ pub enum SubpixelBin {
 }
 
 ///|
-fn SubpixelBin::to_int(self : SubpixelBin) -> Int {
+fn SubpixelBin::to_int(self : SubpixelBin) -> Int32 {
   match self {
     Zero => 0
     One => 1
@@ -102,7 +102,7 @@ pub fn SubpixelBin::as_float(self : SubpixelBin) -> Float {
 /// Returns (integral pixel position, bin for fractional part).
 ///
 /// Matches upstream `cosmic-text` binning behavior, including negative positions.
-pub fn SubpixelBin::new(pos : Float) -> (Int, SubpixelBin) {
+pub fn SubpixelBin::new(pos : Float) -> (Int32, SubpixelBin) {
   let trunc = pos.to_int()
   let fract = pos - Float::from_double(trunc.to_double())
 
@@ -140,17 +140,17 @@ pub fn SubpixelBin::new(pos : Float) -> (Int, SubpixelBin) {
 /// conceptual model of `cosmic-text`.
 pub struct CacheKey {
   /// Font ID (implementation-defined; see FontSystem)
-  font_id : Int
+  font_id : Int32
   /// Glyph ID (normalized to UInt16 domain for swash behavior)
-  glyph_id : Int
+  glyph_id : Int32
   /// `f32` bits of font size
-  font_size_bits : UInt
+  font_size_bits : UInt32
   /// Binning of fractional X offset
   x_bin : SubpixelBin
   /// Binning of fractional Y offset
   y_bin : SubpixelBin
   /// Font weight (implementation-defined; see Weight)
-  font_weight : Int
+  font_weight : Int32
   /// CacheKeyFlags bitset
   flags : CacheKeyFlags
 }
@@ -198,7 +198,7 @@ pub impl Show for CacheKey with fn output(self, logger) {
 }
 
 ///|
-fn u32_from_be_bytes(b : Bytes) -> UInt {
+fn u32_from_be_bytes(b : Bytes) -> UInt32 {
   let b0 = if b.get(0) is Some(v) { v } else { 0x00 }
   let b1 = if b.get(1) is Some(v) { v } else { 0x00 }
   let b2 = if b.get(2) is Some(v) { v } else { 0x00 }
@@ -211,19 +211,19 @@ fn u32_from_be_bytes(b : Bytes) -> UInt {
 }
 
 ///|
-fn normalize_glyph_id(glyph_id : Int) -> Int {
+fn normalize_glyph_id(glyph_id : Int32) -> Int32 {
   glyph_id.to_uint16().to_int()
 }
 
 ///|
 pub fn CacheKey::new(
-  font_id : Int,
-  glyph_id : Int,
+  font_id : Int32,
+  glyph_id : Int32,
   font_size : Float,
   pos : (Float, Float),
-  font_weight : Int,
+  font_weight : Int32,
   flags : CacheKeyFlags,
-) -> (CacheKey, Int, Int) {
+) -> (CacheKey, Int32, Int32) {
   let (x, x_bin) = SubpixelBin::new(pos.0)
   let (y, y_bin) = SubpixelBin::new(pos.1)
   let font_size_bits = u32_from_be_bytes(Float::to_be_bytes(font_size))

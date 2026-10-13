@@ -14,12 +14,12 @@
 
 ///|
 /// Rendering helpers for Editor (ported from `cosmic-text/src/edit/editor.rs`).
-fn int_from_float(v : Float) -> Int {
+fn int_from_float(v : Float) -> Int32 {
   v.to_double().to_int()
 }
 
 ///|
-fn uint_from_int(v : Int) -> UInt {
+fn uint_from_int(v : Int32) -> UInt32 {
   if v <= 0 {
     0U
   } else {
@@ -28,7 +28,7 @@ fn uint_from_int(v : Int) -> UInt {
 }
 
 ///|
-fn width_int(width_opt : Float?) -> Int {
+fn width_int(width_opt : Float?) -> Int32 {
   match width_opt {
     None => 0
     Some(w) => int_from_float(w)
@@ -36,7 +36,7 @@ fn width_int(width_opt : Float?) -> Int {
 }
 
 ///|
-fn x_for_index(run : LayoutRun, index : Int) -> Float {
+fn x_for_index(run : LayoutRun, index : Int32) -> Float {
   let glyphs = run.glyphs
   if glyphs.length() == 0 {
     return 0.0F
@@ -90,7 +90,7 @@ fn x_for_index(run : LayoutRun, index : Int) -> Float {
 }
 
 ///|
-fn cursor_position_in_run(cursor : Cursor, run : LayoutRun) -> (Int, Int)? {
+fn cursor_position_in_run(cursor : Cursor, run : LayoutRun) -> (Int32, Int32)? {
   if cursor.line != run.line_i {
     return None
   }
@@ -117,9 +117,9 @@ fn cursor_position_in_run(cursor : Cursor, run : LayoutRun) -> (Int, Int)? {
 
 ///|
 /// Get X and Y position of the top-left corner of the cursor.
-pub fn Editor::cursor_position(self : Editor) -> (Int, Int)? {
+pub fn Editor::cursor_position(self : Editor) -> (Int32, Int32)? {
   let buffer = self.buffer.layout_all()
-  let mut fallback : (Int, Int)? = None
+  let mut fallback : (Int32, Int32)? = None
   for run in buffer.layout_runs() {
     if run.line_i == self.cursor.line {
       // Keep last run on this line as a fallback (for wrapped lines).
@@ -154,7 +154,7 @@ pub fn[R : Renderer] Editor::render(
       None => ()
       Some((start, end)) =>
         if run.line_i >= start.line && run.line_i <= end.line {
-          let mut range_opt : (Int, Int)? = None
+          let mut range_opt : (Int32, Int32)? = None
           for glyph in run.glyphs {
             // Split the glyph's cluster into grapheme-sized subcells (upstream behavior).
             let cluster = slice_string(run.text, glyph.start, glyph.end)

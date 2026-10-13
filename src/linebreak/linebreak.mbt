@@ -14,12 +14,12 @@
 
 ///|
 /// Compatibility wrapper that forwards to `unicode_linebreak`.
-pub fn word_indices_whitespace(s : String) -> Array[(Int, Int)] {
+pub fn word_indices_whitespace(s : String) -> Array[(Int32, Int32)] {
   @unicode_linebreak.word_indices_whitespace(s)
 }
 
 ///|
-pub fn word_indices_uax29(s : String) -> Array[(Int, Int)] {
+pub fn word_indices_uax29(s : String) -> Array[(Int32, Int32)] {
   @unicode_linebreak.word_indices_uax29(s)
 }
 
@@ -47,8 +47,8 @@ pub fn is_ligature_guard_pair(left : Char, right : Char) -> Bool {
 }
 
 ///|
-pub fn linebreaks(s : String) -> Array[(Int, BreakOpportunity)] {
-  let out : Array[(Int, BreakOpportunity)] = []
+pub fn linebreaks(s : String) -> Array[(Int32, BreakOpportunity)] {
+  let out : Array[(Int32, BreakOpportunity)] = []
   for br in @unicode_linebreak.linebreaks(s) {
     let offset = br.0
     let op = br.1
@@ -58,11 +58,11 @@ pub fn linebreaks(s : String) -> Array[(Int, BreakOpportunity)] {
 }
 
 ///|
-pub fn wrap_word_segments(s : String) -> Array[(Int, Int, Bool)] {
+pub fn wrap_word_segments(s : String) -> Array[(Int32, Int32, Bool)] {
   @unicode_linebreak.wrap_word_segments(s)
 }
 
 ///|
-pub fn grapheme_indices_uax29(s : String) -> Array[(Int, Int)] {
+pub fn grapheme_indices_uax29(s : String) -> Array[(Int32, Int32)] {
   @unicode_linebreak.grapheme_indices_uax29(s)
 }

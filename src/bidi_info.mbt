@@ -17,23 +17,23 @@
 ///
 /// Indices are UTF-16 code-unit offsets in the source text.
 pub struct ParagraphInfo {
-  range_start : Int
-  range_end : Int
-  level : Int
+  range_start : Int32
+  range_end : Int32
+  level : Int32
 }
 
 ///|
-pub fn ParagraphInfo::range_start(self : ParagraphInfo) -> Int {
+pub fn ParagraphInfo::range_start(self : ParagraphInfo) -> Int32 {
   self.range_start
 }
 
 ///|
-pub fn ParagraphInfo::range_end(self : ParagraphInfo) -> Int {
+pub fn ParagraphInfo::range_end(self : ParagraphInfo) -> Int32 {
   self.range_end
 }
 
 ///|
-pub fn ParagraphInfo::level(self : ParagraphInfo) -> Int {
+pub fn ParagraphInfo::level(self : ParagraphInfo) -> Int32 {
   self.level
 }
 
@@ -49,7 +49,7 @@ pub fn ParagraphInfo::is_rtl(self : ParagraphInfo) -> Bool {
 pub struct BidiInfo {
   text : String
   original_classes : Array[@moon_swash.BidiClass]
-  levels : Array[Int]
+  levels : Array[Int32]
   paragraphs : Array[ParagraphInfo]
 }
 
@@ -61,8 +61,8 @@ priv struct BidiParagraphFlags {
 
 ///|
 priv struct BidiLevelRun {
-  start : Int
-  end : Int
+  start : Int32
+  end : Int32
 }
 
 ///|
@@ -74,15 +74,15 @@ priv struct BidiIsolatingRunSequence {
 
 ///|
 priv struct BidiBracketPair {
-  start : Int
-  end : Int
-  start_run : Int
-  end_run : Int
+  start : Int32
+  end : Int32
+  start_run : Int32
+  end_run : Int32
 }
 
 ///|
 priv struct BidiTextMeta {
-  char_len_at : Array[Int]
+  char_len_at : Array[Int32]
   char_at_start : Array[Char]
 }
 
@@ -96,18 +96,18 @@ priv enum BidiOverrideStatus {
 
 ///|
 priv struct BidiExplicitStatus {
-  level : Int
+  level : Int32
   status : BidiOverrideStatus
 }
 
 ///|
-const BIDI_MAX_EXPLICIT_LEVEL : Int = 125
+const BIDI_MAX_EXPLICIT_LEVEL : Int32 = 125
 
 ///|
-const BIDI_MAX_IMPLICIT_LEVEL : Int = 126
+const BIDI_MAX_IMPLICIT_LEVEL : Int32 = 126
 
 ///|
-fn bidi_utf16_len(ch : Char) -> Int {
+fn bidi_utf16_len(ch : Char) -> Int32 {
   if ch.to_int() <= 0xFFFF {
     1
   } else {
@@ -116,7 +116,7 @@ fn bidi_utf16_len(ch : Char) -> Int {
 }
 
 ///|
-fn bidi_clamp_para_level(level : Int) -> Int {
+fn bidi_clamp_para_level(level : Int32) -> Int32 {
   if level < 0 {
     0
   } else if level > BIDI_MAX_EXPLICIT_LEVEL {
@@ -127,12 +127,12 @@ fn bidi_clamp_para_level(level : Int) -> Int {
 }
 
 ///|
-fn bidi_level_is_rtl(level : Int) -> Bool {
+fn bidi_level_is_rtl(level : Int32) -> Bool {
   level % 2 != 0
 }
 
 ///|
-fn bidi_level_new_explicit_next_ltr(level : Int) -> Int? {
+fn bidi_level_new_explicit_next_ltr(level : Int32) -> Int32? {
   let mut next = level + 1
   if next % 2 != 0 {
     next = next + 1
@@ -145,7 +145,7 @@ fn bidi_level_new_explicit_next_ltr(level : Int) -> Int? {
 }
 
 ///|
-fn bidi_level_new_explicit_next_rtl(level : Int) -> Int? {
+fn bidi_level_new_explicit_next_rtl(level : Int32) -> Int32? {
   let mut next = level + 1
   if next % 2 == 0 {
     next = next + 1
@@ -158,7 +158,7 @@ fn bidi_level_new_explicit_next_rtl(level : Int) -> Int? {
 }
 
 ///|
-fn bidi_level_raise(level : Int, amount : Int, max_value : Int) -> Int? {
+fn bidi_level_raise(level : Int32, amount : Int32, max_value : Int32) -> Int32? {
   let next = level + amount
   if next <= max_value {
     Some(next)
@@ -168,7 +168,7 @@ fn bidi_level_raise(level : Int, amount : Int, max_value : Int) -> Int? {
 }
 
 ///|
-fn bidi_level_to_class(level : Int) -> @moon_swash.BidiClass {
+fn bidi_level_to_class(level : Int32) -> @moon_swash.BidiClass {
   if bidi_level_is_rtl(level) {
     R
   } else {
@@ -177,7 +177,7 @@ fn bidi_level_to_class(level : Int) -> @moon_swash.BidiClass {
 }
 
 ///|
-fn bidi_max_int(a : Int, b : Int) -> Int {
+fn bidi_max_int(a : Int32, b : Int32) -> Int32 {
   if a >= b {
     a
   } else {
@@ -221,7 +221,7 @@ fn bidi_is_isolate_initiator(class : @moon_swash.BidiClass) -> Bool {
 fn bidi_push_repeated_class(
   classes : Array[@moon_swash.BidiClass],
   class : @moon_swash.BidiClass,
-  n : Int,
+  n : Int32,
 ) -> Unit {
   let mut i = 0
   while i < n {
@@ -233,8 +233,8 @@ fn bidi_push_repeated_class(
 ///|
 fn bidi_set_repeated_class(
   classes : Array[@moon_swash.BidiClass],
-  start : Int,
-  n : Int,
+  start : Int32,
+  n : Int32,
   class : @moon_swash.BidiClass,
 ) -> Unit {
   let mut i = 0
@@ -250,7 +250,7 @@ fn bidi_set_repeated_class(
 ///|
 fn bidi_build_text_meta(text : String) -> BidiTextMeta {
   let len = text.length()
-  let char_len_at : Array[Int] = Array::makei(len, _ => 0)
+  let char_len_at : Array[Int32] = Array::makei(len, _ => 0)
   let char_at_start : Array[Char] = Array::makei(len, _ => '\u{0000}')
   for p in text.iter2() {
     let idx = p.0
@@ -262,7 +262,7 @@ fn bidi_build_text_meta(text : String) -> BidiTextMeta {
 }
 
 ///|
-fn bidi_char_len_at(meta : BidiTextMeta, index : Int) -> Int {
+fn bidi_char_len_at(meta : BidiTextMeta, index : Int32) -> Int32 {
   if index < 0 || index >= meta.char_len_at.length() {
     0
   } else {
@@ -273,9 +273,9 @@ fn bidi_char_len_at(meta : BidiTextMeta, index : Int) -> Int {
 ///|
 fn bidi_find_prev_non_removed_index(
   classes : Array[@moon_swash.BidiClass],
-  from : Int,
-  min_index : Int,
-) -> Int? {
+  from : Int32,
+  min_index : Int32,
+) -> Int32? {
   let mut i = from - 1
   while i >= min_index {
     if !bidi_is_removed_by_x9(classes[i]) {
@@ -289,9 +289,9 @@ fn bidi_find_prev_non_removed_index(
 ///|
 fn bidi_find_next_non_removed_index(
   classes : Array[@moon_swash.BidiClass],
-  from : Int,
-  max_index : Int,
-) -> Int? {
+  from : Int32,
+  max_index : Int32,
+) -> Int32? {
   let mut i = from
   while i < max_index {
     if !bidi_is_removed_by_x9(classes[i]) {
@@ -305,7 +305,7 @@ fn bidi_find_next_non_removed_index(
 ///|
 fn bidi_compute_initial_info(
   text : String,
-  default_para_level : Int?,
+  default_para_level : Int32?,
 ) -> (
   Array[@moon_swash.BidiClass],
   Array[ParagraphInfo],
@@ -315,7 +315,7 @@ fn bidi_compute_initial_info(
   let original_classes : Array[@moon_swash.BidiClass] = []
   let paragraphs : Array[ParagraphInfo] = []
   let paragraph_flags : Array[BidiParagraphFlags] = []
-  let isolate_stack : Array[Int] = []
+  let isolate_stack : Array[Int32] = []
 
   let mut para_start = 0
   let mut para_level = match default_para_level {
@@ -407,7 +407,7 @@ fn bidi_explicit_compute_for_para(
   meta : BidiTextMeta,
   para : ParagraphInfo,
   original_classes : Array[@moon_swash.BidiClass],
-  levels : Array[Int],
+  levels : Array[Int32],
   processing_classes : Array[@moon_swash.BidiClass],
   runs : Array[BidiLevelRun],
 ) -> Unit {
@@ -570,8 +570,8 @@ fn bidi_explicit_compute_for_para(
 fn bidi_run_first_non_removed_level(
   run : BidiLevelRun,
   classes : Array[@moon_swash.BidiClass],
-  levels : Array[Int],
-) -> Int {
+  levels : Array[Int32],
+) -> Int32 {
   let mut i = run.start
   while i < run.end {
     if !bidi_is_removed_by_x9(classes[i]) {
@@ -586,8 +586,8 @@ fn bidi_run_first_non_removed_level(
 fn bidi_run_last_non_removed_level(
   run : BidiLevelRun,
   classes : Array[@moon_swash.BidiClass],
-  levels : Array[Int],
-) -> Int {
+  levels : Array[Int32],
+) -> Int32 {
   let mut i = run.end - 1
   while i >= run.start {
     if !bidi_is_removed_by_x9(classes[i]) {
@@ -601,10 +601,10 @@ fn bidi_run_last_non_removed_level(
 ///|
 fn bidi_sequence_find_forward_from(
   sequence : BidiIsolatingRunSequence,
-  pos : Int,
-  level_run_index : Int,
-  pred : (Int) -> Bool,
-) -> Int? {
+  pos : Int32,
+  level_run_index : Int32,
+  pred : (Int32) -> Bool,
+) -> Int32? {
   let mut ri = level_run_index
   while ri < sequence.runs.length() {
     let run = sequence.runs[ri]
@@ -626,10 +626,10 @@ fn bidi_sequence_find_forward_from(
 ///|
 fn bidi_sequence_find_backward_from(
   sequence : BidiIsolatingRunSequence,
-  pos : Int,
-  level_run_index : Int,
-  pred : (Int) -> Bool,
-) -> Int? {
+  pos : Int32,
+  level_run_index : Int32,
+  pred : (Int32) -> Bool,
+) -> Int32? {
   let mut ri = level_run_index
   while ri >= 0 {
     let run = sequence.runs[ri]
@@ -654,8 +654,8 @@ fn bidi_sequence_find_backward_from(
 ///|
 fn bidi_sequence_set_contiguous_bn_backward(
   sequence : BidiIsolatingRunSequence,
-  pos : Int,
-  level_run_index : Int,
+  pos : Int32,
+  level_run_index : Int32,
   processing_classes : Array[@moon_swash.BidiClass],
   class_to_set : @moon_swash.BidiClass,
 ) -> Unit {
@@ -683,8 +683,8 @@ fn bidi_sequence_set_contiguous_bn_backward(
 ///|
 fn bidi_sequence_set_contiguous_bn_forward(
   sequence : BidiIsolatingRunSequence,
-  pos : Int,
-  level_run_index : Int,
+  pos : Int32,
+  level_run_index : Int32,
   processing_classes : Array[@moon_swash.BidiClass],
   class_to_set : @moon_swash.BidiClass,
 ) -> Unit {
@@ -709,8 +709,8 @@ fn bidi_sequence_set_contiguous_bn_forward(
 ///|
 fn bidi_sequence_set_nsm_or_bn_forward(
   sequence : BidiIsolatingRunSequence,
-  pos : Int,
-  level_run_index : Int,
+  pos : Int32,
+  level_run_index : Int32,
   original_classes : Array[@moon_swash.BidiClass],
   processing_classes : Array[@moon_swash.BidiClass],
   class_to_set : @moon_swash.BidiClass,
@@ -738,7 +738,7 @@ fn bidi_sequence_set_nsm_or_bn_forward(
 fn bidi_prepare_isolating_run_sequences_for_para(
   para : ParagraphInfo,
   original_classes : Array[@moon_swash.BidiClass],
-  levels : Array[Int],
+  levels : Array[Int32],
   runs : Array[BidiLevelRun],
   has_isolate_controls : Bool,
   out_sequences : Array[BidiIsolatingRunSequence],
@@ -748,7 +748,7 @@ fn bidi_prepare_isolating_run_sequences_for_para(
   }
 
   if !has_isolate_controls {
-    let non_removed : Array[Int] = []
+    let non_removed : Array[Int32] = []
     let mut i = para.range_start
     while i < para.range_end {
       if !bidi_is_removed_by_x9(original_classes[i]) {
@@ -911,8 +911,8 @@ fn bidi_resolve_weak_for_sequence(
   let mut prev_class_before_w1 = sequence.sos
   let mut last_strong_is_al = false
 
-  let et_run_indices : Array[Int] = []
-  let bn_run_indices : Array[Int] = []
+  let et_run_indices : Array[Int32] = []
+  let bn_run_indices : Array[Int32] = []
 
   for run_index in 0..<sequence.runs.length() {
     let level_run = sequence.runs[run_index]
@@ -1088,7 +1088,7 @@ fn bidi_identify_bracket_pairs(
   classes : Array[@moon_swash.BidiClass],
   out_pairs : Array[BidiBracketPair],
 ) -> Unit {
-  let stack : Array[(Char, Int, Int)] = []
+  let stack : Array[(Char, Int32, Int32)] = []
   for run_index in 0..<sequence.runs.length() {
     let level_run = sequence.runs[run_index]
     let mut i = level_run.start
@@ -1160,7 +1160,7 @@ fn bidi_resolve_neutral_run_class(
 fn bidi_resolve_neutral_for_sequence(
   meta : BidiTextMeta,
   sequence : BidiIsolatingRunSequence,
-  levels : Array[Int],
+  levels : Array[Int32],
   original_classes : Array[@moon_swash.BidiClass],
   processing_classes : Array[@moon_swash.BidiClass],
 ) -> Unit {
@@ -1286,7 +1286,7 @@ fn bidi_resolve_neutral_for_sequence(
   }
 
   let mut prev_class = sequence.sos
-  let ni_run : Array[Int] = []
+  let ni_run : Array[Int32] = []
   let runs = sequence.runs
   if runs.length() == 0 {
     return
@@ -1361,8 +1361,8 @@ fn bidi_resolve_neutral_for_sequence(
 fn bidi_resolve_levels_for_para(
   para : ParagraphInfo,
   processing_classes : Array[@moon_swash.BidiClass],
-  levels : Array[Int],
-) -> Int {
+  levels : Array[Int32],
+) -> Int32 {
   let mut max_level = para.level
   let mut i = para.range_start
   while i < para.range_end {
@@ -1395,7 +1395,7 @@ fn bidi_resolve_levels_for_para(
 fn bidi_assign_levels_to_removed_chars_for_para(
   para : ParagraphInfo,
   classes : Array[@moon_swash.BidiClass],
-  levels : Array[Int],
+  levels : Array[Int32],
 ) -> Unit {
   let mut i = para.range_start
   while i < para.range_end {
@@ -1422,7 +1422,7 @@ fn bidi_compute_info_for_para(
   has_isolate_controls : Bool,
   original_classes : Array[@moon_swash.BidiClass],
   processing_classes : Array[@moon_swash.BidiClass],
-  levels : Array[Int],
+  levels : Array[Int32],
 ) -> Unit {
   let mut i = para.range_start
   while i < para.range_end {
@@ -1462,14 +1462,14 @@ fn bidi_adjust_levels_l1_for_para(
   meta : BidiTextMeta,
   classes : Array[@moon_swash.BidiClass],
   para : ParagraphInfo,
-  levels : Array[Int],
+  levels : Array[Int32],
 ) -> Unit {
   if para.range_start >= para.range_end {
     return
   }
 
-  let mut reset_from : Int? = Some(para.range_start)
-  let mut reset_to : Int? = None
+  let mut reset_from : Int32? = Some(para.range_start)
+  let mut reset_to : Int32? = None
   let mut prev_level = para.level
 
   for p in text.iter2() {
@@ -1544,7 +1544,7 @@ pub fn BidiInfo::new(text : String) -> BidiInfo {
 ///|
 pub fn BidiInfo::new_with_para_level(
   text : String,
-  default_para_level : Int?,
+  default_para_level : Int32?,
 ) -> BidiInfo {
   let normalized_default = match default_para_level {
     Some(v) => Some(bidi_clamp_para_level(v))
@@ -1556,7 +1556,7 @@ pub fn BidiInfo::new_with_para_level(
   )
 
   let meta = bidi_build_text_meta(text)
-  let levels : Array[Int] = Array::makei(text.length(), _ => 0)
+  let levels : Array[Int32] = Array::makei(text.length(), _ => 0)
   let processing_classes : Array[@moon_swash.BidiClass] = Array::makei(
     original_classes.length(),
     i => original_classes[i],
@@ -1591,7 +1591,7 @@ pub fn BidiInfo::paragraphs(self : BidiInfo) -> Array[ParagraphInfo] {
 }
 
 ///|
-pub fn BidiInfo::levels(self : BidiInfo) -> Array[Int] {
+pub fn BidiInfo::levels(self : BidiInfo) -> Array[Int32] {
   self.levels
 }
 
@@ -1605,8 +1605,8 @@ pub fn BidiInfo::rtl(self : BidiInfo) -> Bool {
 }
 
 ///|
-pub fn BidiInfo::adjusted_levels(self : BidiInfo) -> Array[Int] {
-  let adjusted : Array[Int] = Array::makei(self.levels.length(), i => {
+pub fn BidiInfo::adjusted_levels(self : BidiInfo) -> Array[Int32] {
+  let adjusted : Array[Int32] = Array::makei(self.levels.length(), i => {
     self.levels[i]
   })
   let meta = bidi_build_text_meta(self.text)

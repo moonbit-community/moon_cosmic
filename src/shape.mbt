@@ -20,12 +20,12 @@ pub(all) enum Shaping {
 }
 
 ///|
-const SHAPE_WEIGHT_AXIS_TAG : UInt = 0x77676874U // "wght"
+const SHAPE_WEIGHT_AXIS_TAG : UInt32 = 0x77676874U // "wght"
 
 ///|
 pub struct ShapeGlyph {
-  start : Int
-  end : Int
+  start : Int32
+  end : Int32
   x_advance : Float
   y_advance : Float
   x_offset : Float
@@ -34,32 +34,32 @@ pub struct ShapeGlyph {
   ascent : Float
   /// Normalized descent in em units.
   descent : Float
-  font_id : Int
-  font_weight : Int
-  glyph_id : Int
+  font_id : Int32
+  font_weight : Int32
+  glyph_id : Int32
   color_opt : Color?
-  metadata : Int
+  metadata : Int32
   cache_key_flags : CacheKeyFlags
   text_decoration : TextDecoration
   underline_metrics : DecorationMetrics
   strikethrough_metrics : DecorationMetrics
   /// BiDi embedding level (LTR if divisible by 2).
-  level : Int
+  level : Int32
   /// Optional Metrics override (font size / line height) for this glyph's span.
   metrics_opt : Metrics?
 }
 
 ///|
 pub fn ShapeGlyph::new(
-  start : Int,
-  end : Int,
+  start : Int32,
+  end : Int32,
   x_advance : Float,
   y_advance : Float,
   x_offset : Float,
   y_offset : Float,
-  font_id : Int,
-  glyph_id : Int,
-  metadata : Int,
+  font_id : Int32,
+  glyph_id : Int32,
+  metadata : Int32,
 ) -> ShapeGlyph {
   {
     start,
@@ -111,12 +111,12 @@ pub fn ShapeLine::empty() -> ShapeLine {
 }
 
 ///|
-fn is_tab(code : Int) -> Bool {
+fn is_tab(code : Int32) -> Bool {
   code == 9
 }
 
 ///|
-fn utf16_len_of_char(ch : Char) -> Int {
+fn utf16_len_of_char(ch : Char) -> Int32 {
   // UTF-16: codepoints outside BMP take 2 code units.
   if ch.to_int() <= 0xFFFF {
     1
@@ -177,15 +177,15 @@ fn shape_primary_script_seed(
 }
 
 ///|
-fn shape_levels_require_new_run(prev_level : Int, new_level : Int) -> Bool {
+fn shape_levels_require_new_run(prev_level : Int32, new_level : Int32) -> Bool {
   prev_level != new_level
 }
 
 ///|
 fn attrs_for_position(
   attrs_list : AttrsList,
-  pos : Int,
-  text_len : Int,
+  pos : Int32,
+  text_len : Int32,
 ) -> Attrs {
   if text_len <= 0 {
     attrs_list.defaults()
@@ -202,7 +202,7 @@ fn attrs_for_position(
 }
 
 ///|
-fn clamp_text_index(v : Int, text_len : Int) -> Int {
+fn clamp_text_index(v : Int32, text_len : Int32) -> Int32 {
   if v < 0 {
     0
   } else if v > text_len {
@@ -213,7 +213,7 @@ fn clamp_text_index(v : Int, text_len : Int) -> Int {
 }
 
 ///|
-fn slice_text_utf16(text : String, start : Int, end : Int) -> String {
+fn slice_text_utf16(text : String, start : Int32, end : Int32) -> String {
   let text_len = text.length()
   let s = clamp_text_index(start, text_len)
   let e = clamp_text_index(end, text_len)
@@ -226,9 +226,9 @@ fn slice_text_utf16(text : String, start : Int, end : Int) -> String {
 ///|
 fn attrs_list_for_utf16_range(
   attrs_list : AttrsList,
-  start : Int,
-  end : Int,
-  text_len : Int,
+  start : Int32,
+  end : Int32,
+  text_len : Int32,
 ) -> AttrsList {
   let s = clamp_text_index(start, text_len)
   let e0 = clamp_text_index(end, text_len)
@@ -421,7 +421,7 @@ fn reorder_run_glyphs_for_bidi(
 }
 
 ///|
-fn missing_contains(missing : Array[Int], start : Int) -> Bool {
+fn missing_contains(missing : Array[Int32], start : Int32) -> Bool {
   for m in missing {
     if m == start {
       return true
@@ -431,8 +431,12 @@ fn missing_contains(missing : Array[Int], start : Int) -> Bool {
 }
 
 ///|
-fn remove_missing_range(missing : Array[Int], start : Int, end : Int) -> Unit {
-  let keep : Array[Int] = []
+fn remove_missing_range(
+  missing : Array[Int32],
+  start : Int32,
+  end : Int32,
+) -> Unit {
+  let keep : Array[Int32] = []
   for m in missing {
     if m < start || m >= end {
       keep.push(m)
@@ -447,8 +451,8 @@ fn remove_missing_range(missing : Array[Int], start : Int, end : Int) -> Unit {
 ///|
 fn replace_cluster_glyphs(
   run_glyphs : Array[ShapeGlyph],
-  start : Int,
-  end : Int,
+  start : Int32,
+  end : Int32,
   replacement : Array[ShapeGlyph],
 ) -> Array[ShapeGlyph] {
   let out : Array[ShapeGlyph] = []
@@ -476,9 +480,9 @@ fn replace_cluster_glyphs(
 ///|
 fn merge_fallback_glyphs(
   run_glyphs : Array[ShapeGlyph],
-  missing : Array[Int],
+  missing : Array[Int32],
   fallback_glyphs : Array[ShapeGlyph],
-  fallback_missing : Array[Int],
+  fallback_missing : Array[Int32],
 ) -> Array[ShapeGlyph] {
   let mut merged = run_glyphs
   let mut fb_i = 0
@@ -537,204 +541,6 @@ fn shape_variation_settings_for_font(
 }
 
 ///|
-fn hb_tag_from_swash_tag(tag : UInt) -> @common.Tag {
-  @common.Tag::from_bytes(
-    ((tag >> 24) & 0xFFU).to_byte(),
-    ((tag >> 16) & 0xFFU).to_byte(),
-    ((tag >> 8) & 0xFFU).to_byte(),
-    (tag & 0xFFU).to_byte(),
-  )
-}
-
-///|
-fn hb_script_from_swash_script(script : @moon_swash.Script) -> @common.Script {
-  @common.Script::from_iso15924_tag(hb_tag_from_swash_tag(script.to_opentype()))
-}
-
-///|
-fn hb_direction_from_run_rtl(run_rtl : Bool) -> @common.Direction {
-  if run_rtl {
-    @common.direction_rtl
-  } else {
-    @common.direction_ltr
-  }
-}
-
-///|
-fn shape_harfbuzz_variations(
-  font : @moon_swash.FontRef,
-  attrs : Attrs,
-) -> Array[@var.AxisCoord] {
-  let axis_coords : Array[@var.AxisCoord] = []
-  let settings = shape_variation_settings_for_font(font, attrs)
-  for setting in settings {
-    axis_coords.push(
-      @var.AxisCoord::new(hb_tag_from_swash_tag(setting.tag), setting.value),
-    )
-  }
-  axis_coords
-}
-
-///|
-fn shape_run_with_harfbuzz(
-  font_system : FontSystem,
-  entry : FontEntry,
-  attrs_list : AttrsList,
-  levels : Array[Int],
-  text_len : Int,
-  line_rtl : Bool,
-  run_rtl : Bool,
-  script : @moon_swash.Script,
-  run_tokens : Array[@moon_swash.Token],
-  run_attrs : Attrs,
-  font_id : Int,
-  font_ascent : Float,
-  font_descent : Float,
-  underline_metrics : DecorationMetrics,
-  strikethrough_metrics : DecorationMetrics,
-) -> (Array[ShapeGlyph], Array[Int])? {
-  if run_tokens.length() == 0 {
-    return Some(([], []))
-  }
-  let mut source_start = run_tokens[0].offset().reinterpret_as_int()
-  let mut source_end = source_start + run_tokens[0].len().reinterpret_as_int()
-  for t in run_tokens {
-    let s = t.offset().reinterpret_as_int()
-    let e = s + t.len().reinterpret_as_int()
-    if s < source_start {
-      source_start = s
-    }
-    if e > source_end {
-      source_end = e
-    }
-  }
-  if source_end < source_start {
-    source_end = source_start
-  }
-  let upem = entry.font.metrics([]).units_per_em.to_int()
-  if upem <= 0 {
-    return None
-  }
-  let hb_font = font_system.hb_font_for_entry(entry)
-  hb_font.set_scale(upem, upem)
-  let axis_coords = shape_harfbuzz_variations(entry.font, run_attrs)
-  match hb_font.set_variations(axis_coords) {
-    Err(_) => ()
-    Ok(_) => ()
-  }
-
-  let hb_buffer = font_system.shape_hb_buffer()
-  hb_buffer.clear()
-  hb_buffer.set_direction(hb_direction_from_run_rtl(run_rtl))
-  hb_buffer.set_script(hb_script_from_swash_script(script))
-  hb_buffer.set_language(@common.Language::from_string("und"))
-  for t in run_tokens {
-    let ch = if t.ch() == '\t' { ' ' } else { t.ch() }
-    hb_buffer.add_codepoint(
-      ch.to_uint(),
-      cluster=t.offset().reinterpret_as_int() - source_start,
-    )
-  }
-  match @hb_shape.shape(hb_font, hb_buffer, shapers=["ot"]) {
-    Err(_) => return None
-    Ok(_) => ()
-  }
-  let infos = hb_buffer.infos()
-  let positions = hb_buffer.positions()
-  if infos.length() != positions.length() {
-    return None
-  }
-
-  let upem_d = upem.to_double()
-  let out : Array[ShapeGlyph] = []
-  let missing : Array[Int] = []
-  for i in 0..<infos.length() {
-    let info = infos[i]
-    let pos = positions[i]
-    let start0 = source_start + info.cluster
-    let start = if start0 < source_start {
-      source_start
-    } else if start0 > source_end {
-      source_end
-    } else {
-      start0
-    }
-    let attrs = attrs_for_position(attrs_list, start, text_len)
-    let lev = if levels.get(start) is Some(v) {
-      v
-    } else if line_rtl {
-      1
-    } else {
-      0
-    }
-    if info.codepoint == 0U {
-      missing.push(start)
-    }
-    let letter_spacing = attrs_letter_spacing(attrs)
-    out.push({
-      start,
-      end: source_end,
-      x_advance: Float::from_double(pos.x_advance.to_double() / upem_d) +
-      letter_spacing,
-      y_advance: Float::from_double(pos.y_advance.to_double() / upem_d),
-      x_offset: Float::from_double(pos.x_offset.to_double() / upem_d),
-      y_offset: Float::from_double(pos.y_offset.to_double() / upem_d),
-      ascent: font_ascent,
-      descent: font_descent,
-      font_id,
-      font_weight: attrs.weight_value().value(),
-      glyph_id: info.codepoint.reinterpret_as_int(),
-      color_opt: attrs.color_opt_value(),
-      metadata: attrs.metadata(),
-      cache_key_flags: attrs.cache_key_flags_value(),
-      text_decoration: attrs.text_decoration_value(),
-      underline_metrics,
-      strikethrough_metrics,
-      level: lev,
-      metrics_opt: attrs.metrics_opt(),
-    })
-  }
-
-  let use_rtl_end_adjust = if out.length() > 1 {
-    out[0].start > out[out.length() - 1].start
-  } else {
-    run_rtl
-  }
-  if use_rtl_end_adjust {
-    for i in 1..<out.length() {
-      let next_start = out[i - 1].start
-      let next_end = out[i - 1].end
-      let g = out[i]
-      out.set(i, {
-        ..g,
-        end: if g.start == next_start {
-          next_end
-        } else {
-          next_start
-        },
-      })
-    }
-  } else if out.length() > 1 {
-    let mut i = out.length() - 1
-    while i > 0 {
-      let next_start = out[i].start
-      let next_end = out[i].end
-      let g = out[i - 1]
-      out.set(i - 1, {
-        ..g,
-        end: if g.start == next_start {
-          next_end
-        } else {
-          next_start
-        },
-      })
-      i = i - 1
-    }
-  }
-  Some((out, missing))
-}
-
-///|
 fn attrs_letter_spacing(attrs : Attrs) -> Float {
   match attrs.letter_spacing_opt() {
     None => 0.0F
@@ -745,8 +551,8 @@ fn attrs_letter_spacing(attrs : Attrs) -> Float {
 ///|
 fn shape_run_missing_tokens(
   run_tokens : Array[@moon_swash.Token],
-) -> Array[Int] {
-  let missing : Array[Int] = []
+) -> Array[Int32] {
+  let missing : Array[Int32] = []
   for t in run_tokens {
     let s = t.offset().reinterpret_as_int()
     if !missing_contains(missing, s) {
@@ -760,14 +566,14 @@ fn shape_run_missing_tokens(
 fn shape_run_with_font(
   font_system : FontSystem,
   attrs_list : AttrsList,
-  levels : Array[Int],
-  text_len : Int,
+  levels : Array[Int32],
+  text_len : Int32,
   line_rtl : Bool,
   run_rtl : Bool,
   script : @moon_swash.Script,
   run_tokens : Array[@moon_swash.Token],
-  font_id : Int,
-) -> (Array[ShapeGlyph], Array[Int]) {
+  font_id : Int32,
+) -> (Array[ShapeGlyph], Array[Int32]) {
   let entry = match font_system.get_font_entry(font_id) {
     None => return ([], shape_run_missing_tokens(run_tokens))
     Some(v) => v
@@ -813,15 +619,106 @@ fn shape_run_with_font(
       text_len,
     )
   }
-  match
-    shape_run_with_harfbuzz(
-      font_system, entry, attrs_list, levels, text_len, line_rtl, run_rtl, script,
-      run_tokens, run_attrs, font_id, font_ascent, font_descent, underline_metrics,
-      strikethrough_metrics,
-    ) {
-    None => ([], shape_run_missing_tokens(run_tokens))
-    Some(ret) => ret
+  let font = entry.font
+  let cmap = @moon_swash.Charmap::from_font(font)
+  let feature_settings = attrs_feature_settings(run_attrs)
+  let variation_settings = shape_variation_settings_for_font(font, run_attrs)
+  let shaper = font_system.shape_context
+    .builder(font)
+    .script(script)
+    .direction(if run_rtl { RightToLeft } else { LeftToRight })
+    .language(None)
+    .size(1.0)
+    .features(feature_settings.iter())
+    .variations(variation_settings.iter())
+    .build()
+
+  let parser = @moon_swash.Parser(script, run_tokens.iter())
+  let cluster = @moon_swash.CharCluster()
+  while parser.next(cluster) {
+    cluster.map(fn(ch) { cmap.map(ch.to_int().reinterpret_as_uint()) })
+    |> ignore
+    shaper.add_cluster(cluster)
   }
+
+  let out : Array[ShapeGlyph] = []
+  let missing : Array[Int32] = []
+  shaper.shape_with(fn(gc) {
+    let source = gc.source()
+    let source_start = source_start_index(source)
+    let source_end = source_end_index(source)
+    let shaped = gc.glyphs()
+    let shaped_count = shaped.length()
+    if shaped_count != 0 {
+      let starts_fallback = build_cluster_starts(
+        source,
+        gc.components(),
+        shaped_count,
+        run_rtl,
+      )
+      let starts : Array[Int32] = []
+      // Reference alignment:
+      // use per-glyph source marker first (analogous to HarfBuzz cluster index),
+      // and fall back to component-based starts only when marker is out of range.
+      for i in 0..<shaped_count {
+        let data_start = shaped[i].data().reinterpret_as_int()
+        if data_start >= source_start && data_start <= source_end {
+          let fallback_start = starts_fallback[i]
+          if data_start < fallback_start {
+            starts.push(data_start)
+          } else {
+            starts.push(fallback_start)
+          }
+        } else {
+          starts.push(starts_fallback[i])
+        }
+      }
+      let ends = build_cluster_ends(starts, source_end, run_rtl)
+      for i in 0..<shaped_count {
+        let g = shaped[i]
+        let (start, end) = clamp_range_to_source(
+          starts[i],
+          ends[i],
+          source_start,
+          source_end,
+        )
+        let attrs = attrs_for_position(attrs_list, start, text_len)
+        let lev = if levels.get(start) is Some(v) {
+          v
+        } else if line_rtl {
+          1
+        } else {
+          0
+        }
+        if g.id().to_int() == 0 {
+          missing.push(start)
+        }
+        let letter_spacing = attrs_letter_spacing(attrs)
+        out.push({
+          start,
+          end,
+          x_advance: Float::from_double(g.advance()) + letter_spacing,
+          y_advance: 0.0F,
+          x_offset: Float::from_double(g.x()),
+          y_offset: Float::from_double(g.y()),
+          ascent: font_ascent,
+          descent: font_descent,
+          font_id,
+          font_weight: attrs.weight_value().value(),
+          glyph_id: g.id().to_int(),
+          color_opt: attrs.color_opt_value(),
+          metadata: attrs.metadata(),
+          cache_key_flags: attrs.cache_key_flags_value(),
+          text_decoration: attrs.text_decoration_value(),
+          underline_metrics,
+          strikethrough_metrics,
+          level: lev,
+          metrics_opt: attrs.metrics_opt(),
+        })
+      }
+    }
+  })
+  (out, missing)
 }
 
 ///|
@@ -831,7 +728,7 @@ pub fn ShapeLine::build(
   text : String,
   attrs_list : AttrsList,
   shaping : Shaping,
-  tab_width : Int,
+  tab_width : Int32,
 ) -> ShapeLine {
   let bidi_info = if shaping is Advanced {
     BidiInfo::new(text)
@@ -892,7 +789,7 @@ pub fn ShapeLine::build_with_font_system(
   text : String,
   attrs_list : AttrsList,
   shaping : Shaping,
-  tab_width : Int,
+  tab_width : Int32,
 ) -> ShapeLine {
   if shaping is Basic {
     return ShapeLine::build(
@@ -1019,7 +916,7 @@ pub fn ShapeLine::build_with_font_system(
     }
 
     let run_attrs = attrs_for_position(attrs_list, run_start, text.length())
-    let run_codepoints : Array[UInt] = []
+    let run_codepoints : Array[UInt32] = []
     for t in run_tokens {
       run_codepoints.push(t.ch().to_int().reinterpret_as_uint())
     }
@@ -1260,4 +1157,136 @@ pub fn ShapeLine::layout_to_buffer(
     ) {
     layout_lines.push(line)
   }
+}
+
+///|
+fn source_start_index(source : @moon_swash.SourceRange) -> Int32 {
+  source.start().reinterpret_as_int()
+}
+
+///|
+fn source_end_index(source : @moon_swash.SourceRange) -> Int32 {
+  source.end().reinterpret_as_int()
+}
+
+///|
+fn clamp_range_to_source(
+  start0 : Int32,
+  end0 : Int32,
+  source_start : Int32,
+  source_end : Int32,
+) -> (Int32, Int32) {
+  let start1 = if start0 < source_start {
+    source_start
+  } else if start0 > source_end {
+    source_end
+  } else {
+    start0
+  }
+  let end1 = if end0 < start1 {
+    start1
+  } else if end0 > source_end {
+    source_end
+  } else {
+    end0
+  }
+  (start1, end1)
+}
+
+///|
+fn build_cluster_starts(
+  source : @moon_swash.SourceRange,
+  components : ArrayView[@moon_swash.SourceRange],
+  glyph_count : Int32,
+  rtl : Bool,
+) -> Array[Int32] {
+  let starts : Array[Int32] = []
+  if glyph_count <= 0 {
+    return starts
+  }
+  if components.length() == 0 {
+    let source_start = source_start_index(source)
+    for _ in 0..<glyph_count {
+      starts.push(source_start)
+    }
+    return starts
+  }
+
+  let component_starts : Array[Int32] = []
+  for comp in components {
+    component_starts.push(source_start_index(comp))
+  }
+  let m = component_starts.length()
+  for i in 0..<glyph_count {
+    let bucket = if glyph_count <= m {
+      i * m / glyph_count
+    } else if i < m {
+      i
+    } else {
+      m - 1
+    }
+    let k = if rtl { m - 1 - bucket } else { bucket }
+    starts.push(component_starts[k])
+  }
+  starts
+}
+
+///|
+fn build_cluster_ends(
+  starts : Array[Int32],
+  source_end : Int32,
+  rtl : Bool,
+) -> Array[Int32] {
+  let n = starts.length()
+  let ends : Array[Int32] = []
+  for _ in 0..<n {
+    ends.push(source_end)
+  }
+  if n < 2 {
+    return ends
+  }
+  if rtl {
+    for i in 1..<n {
+      let next_start = starts[i - 1]
+      let next_end = ends[i - 1]
+      if starts[i] == next_start {
+        ends.set(i, next_end)
+      } else {
+        ends.set(i, next_start)
+      }
+    }
+  } else {
+    let mut i = n - 1
+    while i > 0 {
+      let next_start = starts[i]
+      let next_end = ends[i]
+      if starts[i - 1] == next_start {
+        ends.set(i - 1, next_end)
+      } else {
+        ends.set(i - 1, next_start)
+      }
+      i = i - 1
+    }
+  }
+  ends
+}
+
+///|
+fn clamp_feature_value(value : UInt32) -> UInt16 {
+  if value > 0xFFFFU {
+    0xFFFF
+  } else {
+    value.to_uint16()
+  }
+}
+
+///|
+fn attrs_feature_settings(attrs : Attrs) -> Array[@moon_swash.FeatureSetting] {
+  let settings : Array[@moon_swash.FeatureSetting] = []
+  for feature in attrs.font_features_value().features() {
+    settings.push(
+      Setting(feature.tag().as_tag(), clamp_feature_value(feature.value())),
+    )
+  }
+  settings
 }

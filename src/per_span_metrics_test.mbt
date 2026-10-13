@@ -14,12 +14,12 @@
 
 ///|
 test "per-span metrics override affects glyph font_size, widths, and line_height" {
-  let default_metrics = Metrics::new(10.0F, 12.0F)
-  let big_metrics = Metrics::new(20.0F, 30.0F)
-  let a0 = Attrs::new()
-  let a1 = Attrs::new().metrics(big_metrics)
-  let attrs_list = AttrsList::new(a0).add_span(1, 2, a1)
-  let line0 = BufferLine::new("ab", None, attrs_list, Basic)
+  let default_metrics = @moon_cosmic.Metrics::new(10.0F, 12.0F)
+  let big_metrics = @moon_cosmic.Metrics::new(20.0F, 30.0F)
+  let a0 = @moon_cosmic.Attrs::new()
+  let a1 = @moon_cosmic.Attrs::new().metrics(big_metrics)
+  let attrs_list = @moon_cosmic.AttrsList::new(a0).add_span(1, 2, a1)
+  let line0 = @moon_cosmic.BufferLine::new("ab", None, attrs_list, Basic)
   let line1 = line0.layout(
     default_metrics.font_size,
     None,

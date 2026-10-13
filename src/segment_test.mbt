@@ -14,7 +14,7 @@
 
 ///|
 test "word_indices_whitespace basic" {
-  let ranges = word_indices_whitespace("  hello\tworld\nmoon  ")
+  let ranges = @moon_cosmic.word_indices_whitespace("  hello\tworld\nmoon  ")
   inspect(ranges.length(), content="3")
   debug_inspect(ranges[0], content="(2, 7)")
   debug_inspect(ranges[1], content="(8, 13)")
@@ -24,7 +24,7 @@ test "word_indices_whitespace basic" {
 ///|
 test "wrap_word_segments basic ASCII" {
   debug_inspect(
-    wrap_word_segments("hello world"),
+    @moon_cosmic.wrap_word_segments("hello world"),
     content="[(0, 5, false), (5, 6, true), (6, 11, false)]",
   )
 }
@@ -33,43 +33,67 @@ test "wrap_word_segments basic ASCII" {
 test "wrap_word_segments uses UAX#14 opportunities (hyphen)" {
   // UAX#14 generally allows a break opportunity after '-'.
   debug_inspect(
-    wrap_word_segments("a-b"),
+    @moon_cosmic.wrap_word_segments("a-b"),
     content="[(0, 2, false), (2, 3, false)]",
   )
 }
 
 ///|
 test "word_indices_uax29 basic ASCII" {
-  debug_inspect(word_indices_uax29("hello world"), content="[(0, 5), (6, 11)]")
+  debug_inspect(
+    @moon_cosmic.word_indices_uax29("hello world"),
+    content="[(0, 5), (6, 11)]",
+  )
 }
 
 ///|
 test "word_indices_uax29 ignores punctuation-only segments" {
-  debug_inspect(word_indices_uax29("a-b"), content="[(0, 1), (2, 3)]")
-  debug_inspect(word_indices_uax29("..."), content="[]")
+  debug_inspect(
+    @moon_cosmic.word_indices_uax29("a-b"),
+    content="[(0, 1), (2, 3)]",
+  )
+  debug_inspect(@moon_cosmic.word_indices_uax29("..."), content="[]")
 }
 
 ///|
 test "word_indices_uax29 follows unicode_word_indices-style alnum filtering" {
-  debug_inspect(word_indices_uax29("_"), content="[]")
-  debug_inspect(word_indices_uax29("a_b"), content="[(0, 3)]")
-  debug_inspect(word_indices_uax29("don't"), content="[(0, 5)]")
-  debug_inspect(word_indices_uax29("x!=y"), content="[(0, 1), (3, 4)]")
-  debug_inspect(word_indices_uax29("a\u{00A0}b"), content="[(0, 1), (2, 3)]")
+  debug_inspect(@moon_cosmic.word_indices_uax29("_"), content="[]")
+  debug_inspect(@moon_cosmic.word_indices_uax29("a_b"), content="[(0, 3)]")
+  debug_inspect(@moon_cosmic.word_indices_uax29("don't"), content="[(0, 5)]")
+  debug_inspect(
+    @moon_cosmic.word_indices_uax29("x!=y"),
+    content="[(0, 1), (3, 4)]",
+  )
+  debug_inspect(
+    @moon_cosmic.word_indices_uax29("a\u{00A0}b"),
+    content="[(0, 1), (2, 3)]",
+  )
 }
 
 ///|
 test "wrap_word_segments honors non-breaking space behavior" {
-  debug_inspect(wrap_word_segments("a\u{00A0}b"), content="[(0, 3, false)]")
+  debug_inspect(
+    @moon_cosmic.wrap_word_segments("a\u{00A0}b"),
+    content="[(0, 3, false)]",
+  )
 }
 
 ///|
 test "word_indices_uax29 matches unicode-segmentation for mixed punctuation and emoji cases" {
-  debug_inspect(word_indices_uax29("foo->bar"), content="[(0, 3), (5, 8)]")
-  debug_inspect(word_indices_uax29("a  b"), content="[(0, 1), (3, 4)]")
-  debug_inspect(word_indices_uax29("中 文"), content="[(0, 1), (2, 3)]")
   debug_inspect(
-    word_indices_uax29("👨‍👩‍👧 family"),
+    @moon_cosmic.word_indices_uax29("foo->bar"),
+    content="[(0, 3), (5, 8)]",
+  )
+  debug_inspect(
+    @moon_cosmic.word_indices_uax29("a  b"),
+    content="[(0, 1), (3, 4)]",
+  )
+  debug_inspect(
+    @moon_cosmic.word_indices_uax29("中 文"),
+    content="[(0, 1), (2, 3)]",
+  )
+  debug_inspect(
+    @moon_cosmic.word_indices_uax29("👨‍👩‍👧 family"),
     content="[(9, 15)]",
   )
 }
@@ -77,59 +101,95 @@ test "word_indices_uax29 matches unicode-segmentation for mixed punctuation and 
 ///|
 test "word_indices_uax29 follows unicode-segmentation thai boundary behavior" {
   debug_inspect(
-    word_indices_uax29("ไทยภาษา"),
+    @moon_cosmic.word_indices_uax29("ไทยภาษา"),
     content="[(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 6), (6, 7)]",
   )
 }
 
 ///|
 test "wrap_word_segments matches unicode-linebreak boundary samples" {
-  debug_inspect(wrap_word_segments("x!=y"), content="[(0, 4, false)]")
-  debug_inspect(wrap_word_segments("foo->bar"), content="[(0, 8, false)]")
   debug_inspect(
-    wrap_word_segments("中 文"),
+    @moon_cosmic.wrap_word_segments("x!=y"),
+    content="[(0, 4, false)]",
+  )
+  debug_inspect(
+    @moon_cosmic.wrap_word_segments("foo->bar"),
+    content="[(0, 8, false)]",
+  )
+  debug_inspect(
+    @moon_cosmic.wrap_word_segments("中 文"),
     content="[(0, 1, false), (1, 2, true), (2, 3, false)]",
   )
   debug_inspect(
-    wrap_word_segments("👨‍👩‍👧 family"),
+    @moon_cosmic.wrap_word_segments("👨‍👩‍👧 family"),
     content="[(0, 8, false), (8, 9, true), (9, 15, false)]",
   )
 }
 
 ///|
 test "segment behavior tracks additional unicode segmentation samples" {
-  debug_inspect(word_indices_uax29("--"), content="[]")
-  debug_inspect(word_indices_uax29("a--b"), content="[(0, 1), (3, 4)]")
-  debug_inspect(word_indices_uax29("123,456"), content="[(0, 7)]")
-  debug_inspect(word_indices_uax29("e-mail"), content="[(0, 1), (2, 6)]")
-  debug_inspect(word_indices_uax29("co_op"), content="[(0, 5)]")
-  debug_inspect(word_indices_uax29("a…b"), content="[(0, 1), (2, 3)]")
-  debug_inspect(word_indices_uax29("a\u{2009}b"), content="[(0, 1), (2, 3)]")
-  debug_inspect(word_indices_uax29("a\u{202F}b"), content="[(0, 3)]")
-  debug_inspect(word_indices_uax29("कक\u{94D}षा"), content="[(0, 5)]")
-
-  debug_inspect(wrap_word_segments("--"), content="[(0, 2, false)]")
+  debug_inspect(@moon_cosmic.word_indices_uax29("--"), content="[]")
   debug_inspect(
-    wrap_word_segments("a--b"),
+    @moon_cosmic.word_indices_uax29("a--b"),
+    content="[(0, 1), (3, 4)]",
+  )
+  debug_inspect(@moon_cosmic.word_indices_uax29("123,456"), content="[(0, 7)]")
+  debug_inspect(
+    @moon_cosmic.word_indices_uax29("e-mail"),
+    content="[(0, 1), (2, 6)]",
+  )
+  debug_inspect(@moon_cosmic.word_indices_uax29("co_op"), content="[(0, 5)]")
+  debug_inspect(
+    @moon_cosmic.word_indices_uax29("a…b"),
+    content="[(0, 1), (2, 3)]",
+  )
+  debug_inspect(
+    @moon_cosmic.word_indices_uax29("a\u{2009}b"),
+    content="[(0, 1), (2, 3)]",
+  )
+  debug_inspect(
+    @moon_cosmic.word_indices_uax29("a\u{202F}b"),
+    content="[(0, 3)]",
+  )
+  debug_inspect(
+    @moon_cosmic.word_indices_uax29("कक\u{94D}षा"),
+    content="[(0, 5)]",
+  )
+
+  debug_inspect(
+    @moon_cosmic.wrap_word_segments("--"),
+    content="[(0, 2, false)]",
+  )
+  debug_inspect(
+    @moon_cosmic.wrap_word_segments("a--b"),
     content="[(0, 3, false), (3, 4, false)]",
   )
-  debug_inspect(wrap_word_segments("123,456"), content="[(0, 7, false)]")
   debug_inspect(
-    wrap_word_segments("e-mail"),
+    @moon_cosmic.wrap_word_segments("123,456"),
+    content="[(0, 7, false)]",
+  )
+  debug_inspect(
+    @moon_cosmic.wrap_word_segments("e-mail"),
     content="[(0, 2, false), (2, 6, false)]",
   )
-  debug_inspect(wrap_word_segments("co_op"), content="[(0, 5, false)]")
   debug_inspect(
-    wrap_word_segments("a…b"),
+    @moon_cosmic.wrap_word_segments("co_op"),
+    content="[(0, 5, false)]",
+  )
+  debug_inspect(
+    @moon_cosmic.wrap_word_segments("a…b"),
     content="[(0, 2, false), (2, 3, false)]",
   )
   debug_inspect(
-    wrap_word_segments("a\u{2009}b"),
+    @moon_cosmic.wrap_word_segments("a\u{2009}b"),
     content="[(0, 1, false), (1, 2, true), (2, 3, false)]",
   )
-  debug_inspect(wrap_word_segments("a\u{202F}b"), content="[(0, 3, false)]")
   debug_inspect(
-    wrap_word_segments("कक\u{94D}षा"),
+    @moon_cosmic.wrap_word_segments("a\u{202F}b"),
+    content="[(0, 3, false)]",
+  )
+  debug_inspect(
+    @moon_cosmic.wrap_word_segments("कक\u{94D}षा"),
     content="[(0, 5, false)]",
   )
 }

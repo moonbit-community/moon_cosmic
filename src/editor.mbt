@@ -30,7 +30,7 @@ fn order_cursors(a : Cursor, b : Cursor) -> (Cursor, Cursor) {
 }
 
 ///|
-fn clamp(v : Int, lo : Int, hi : Int) -> Int {
+fn clamp(v : Int32, lo : Int32, hi : Int32) -> Int32 {
   if v < lo {
     lo
   } else if v > hi {
@@ -54,7 +54,7 @@ fn leading_whitespace(s : String) -> String {
 }
 
 ///|
-fn indent_scan(text : String, tab_width : Int) -> (Int, Int, Int) {
+fn indent_scan(text : String, tab_width : Int32) -> (Int32, Int32, Int32) {
   // Returns (last_indent_index, after_whitespace_index, whitespace_char_count).
   let mut last_indent = 0
   let mut after_ws = text.length()
@@ -77,9 +77,9 @@ fn indent_scan(text : String, tab_width : Int) -> (Int, Int, Int) {
 ///|
 fn selection_shift_ge(
   sel : Selection,
-  line_i : Int,
-  threshold : Int,
-  delta : Int,
+  line_i : Int32,
+  threshold : Int32,
+  delta : Int32,
 ) -> Selection {
   match sel {
     None => None
@@ -107,11 +107,11 @@ fn selection_shift_ge(
 ///|
 fn selection_shift_gt_clamp(
   sel : Selection,
-  line_i : Int,
-  threshold : Int,
-  delta : Int,
+  line_i : Int32,
+  threshold : Int32,
+  delta : Int32,
 ) -> Selection {
-  fn clamp_ge(v : Int, min : Int) -> Int {
+  fn clamp_ge(v : Int32, min : Int32) -> Int32 {
     if v < min {
       min
     } else {
@@ -161,8 +161,8 @@ fn selection_shift_gt_clamp(
 }
 
 ///|
-fn line_items_for_insert(data : String) -> Array[(Int, Int, LineEnding)] {
-  let items : Array[(Int, Int, LineEnding)] = []
+fn line_items_for_insert(data : String) -> Array[(Int32, Int32, LineEnding)] {
+  let items : Array[(Int32, Int32, LineEnding)] = []
   let mut iter = LineIter::new(data)
   while true {
     let (next_iter, item_opt) = iter.next()
@@ -225,7 +225,7 @@ fn deleted_text(buffer : Buffer, start : Cursor, end : Cursor) -> String {
 pub struct Editor {
   buffer : Buffer
   cursor : Cursor
-  cursor_x_opt : Int?
+  cursor_x_opt : Int32?
   selection : Selection
   cursor_moved : Bool
   auto_indent : Bool
@@ -365,13 +365,13 @@ pub fn Editor::selection_bounds(self : Editor) -> (Cursor, Cursor)? {
 }
 
 ///|
-pub fn Editor::tab_width(self : Editor) -> Int {
+pub fn Editor::tab_width(self : Editor) -> Int32 {
   self.buffer.tab_width
 }
 
 ///|
 /// Set tab width in spaces. A value of 0 is ignored (matches upstream).
-pub fn Editor::set_tab_width(self : Editor, tab_width : Int) -> Editor {
+pub fn Editor::set_tab_width(self : Editor, tab_width : Int32) -> Editor {
   if tab_width <= 0 {
     self
   } else {

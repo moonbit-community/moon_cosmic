@@ -1,4 +1,3 @@
 import {
-  "moonbitlang/core/string",
   "Milky2018/moon_cosmic" @cosmic,
 }

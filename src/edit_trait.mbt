@@ -23,8 +23,8 @@ pub(open) trait Edit {
   fn set_selection(Self, Selection) -> Self
   fn auto_indent(Self) -> Bool
   fn set_auto_indent(Self, Bool) -> Self
-  fn tab_width(Self) -> Int
-  fn set_tab_width(Self, Int) -> Self
+  fn tab_width(Self) -> Int32
+  fn set_tab_width(Self, Int32) -> Self
   fn start_change(Self) -> Self
   fn finish_change(Self) -> (Self, Change?)
   fn copy_selection(Self) -> String?
@@ -32,7 +32,7 @@ pub(open) trait Edit {
   fn delete_range(Self, Cursor, Cursor) -> Self
   fn insert_string(Self, String, AttrsList?) -> Self
   fn apply_change(Self, Change) -> (Self, Bool)
-  fn cursor_position(Self) -> (Int, Int)?
+  fn cursor_position(Self) -> (Int32, Int32)?
   fn action(Self, Action) -> Self
 }
 

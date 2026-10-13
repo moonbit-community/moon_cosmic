@@ -14,19 +14,19 @@
 
 ///|
 test "Change.reverse reverses items and flips insert/delete" {
-  let a = ChangeItem::{
-    start: Cursor::new(0, 0),
-    end: Cursor::new(0, 1),
+  let a = @moon_cosmic.ChangeItem::{
+    start: @moon_cosmic.Cursor::new(0, 0),
+    end: @moon_cosmic.Cursor::new(0, 1),
     text: "x",
     insert: true,
   }
-  let b = ChangeItem::{
-    start: Cursor::new(1, 0),
-    end: Cursor::new(1, 2),
+  let b = @moon_cosmic.ChangeItem::{
+    start: @moon_cosmic.Cursor::new(1, 0),
+    end: @moon_cosmic.Cursor::new(1, 2),
     text: "yy",
     insert: false,
   }
-  let change = Change::{ items: [a, b], }
+  let change = @moon_cosmic.Change::{ items: [a, b], }
   let rev = change.reverse()
   inspect(rev.items.length(), content="2")
   inspect(rev.items[0].text, content="yy")

@@ -4,9 +4,8 @@ package "Milky2018/moon_cosmic"
 import {
   "Milky2018/moon_swash",
   "Milky2018/moon_swash/scale",
+  "Milky2018/moon_swash/shape",
   "Milky2018/moon_zeno",
-  "moonbit-community/harfbuzz/buffer",
-  "moonbit-community/harfbuzz/font",
   "moonbitlang/core/debug",
   "moonbitlang/core/hashmap",
 }
@@ -579,8 +578,7 @@ pub struct FontSystem {
   fonts : Array[FontEntry]
   font_matches_cache : @hashmap.HashMap[FontMatchAttrs, Array[Int]]
   codepoint_support_cache : @hashmap.HashMap[Int, FontCachedCodepointSupportInfo]
-  hb_font_cache : @hashmap.HashMap[Int, @font.Font]
-  hb_shape_buffer : @buffer.Buffer
+  shape_context : @shape.ShapeContext
   shape_run_cache : ShapeRunCache
   // private fields
 }

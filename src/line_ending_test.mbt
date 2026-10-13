@@ -15,7 +15,7 @@
 ///|
 test "LineIter (upstream test vector)" {
   let string = "LF\nCRLF\r\nCR\rLFCR\n\rNONE"
-  let iter0 = LineIter::new(string)
+  let iter0 = @moon_cosmic.LineIter::new(string)
   let (iter1, r1) = iter0.next()
   inspect(r1.map(v => v.0) == Some(0), content="true")
   inspect(r1.map(v => v.1) == Some(2), content="true")

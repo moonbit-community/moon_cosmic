@@ -18,11 +18,11 @@
 /// Upstream `cosmic-text` uses `fontdb` for font discovery. In this MoonBit port
 /// we start with an in-memory font list backed by `moon_swash`.
 pub struct FontEntry {
-  id : Int
+  id : Int32
   family_name : String
   postscript_name : String
   source_data : Bytes
-  source_index : Int
+  source_index : Int32
   font : @moon_swash.FontRef
   charmap_proxy : @moon_swash.CharmapProxy
   attributes : @moon_swash.Attributes
@@ -31,7 +31,7 @@ pub struct FontEntry {
 }
 
 ///|
-pub fn FontEntry::id(self : FontEntry) -> Int {
+pub fn FontEntry::id(self : FontEntry) -> Int32 {
   self.id
 }
 
@@ -51,7 +51,7 @@ pub fn FontEntry::source_data(self : FontEntry) -> Bytes {
 }
 
 ///|
-pub fn FontEntry::source_index(self : FontEntry) -> Int {
+pub fn FontEntry::source_index(self : FontEntry) -> Int32 {
   self.source_index
 }
 
@@ -86,13 +86,12 @@ pub struct FontSystem {
   fonts : Array[FontEntry]
   priv mut fallback_profile_opt : FallbackProfile?
   priv fallback_warning_handler_opt : ((String) -> Unit)?
-  font_matches_cache : @hashmap.HashMap[FontMatchAttrs, Array[Int]]
+  font_matches_cache : @hashmap.HashMap[FontMatchAttrs, Array[Int32]]
   codepoint_support_cache : @hashmap.HashMap[
-    Int,
+    Int32,
     FontCachedCodepointSupportInfo,
   ]
-  hb_font_cache : @hashmap.HashMap[Int, @font.Font]
-  hb_shape_buffer : @buffer.Buffer
+  shape_context : @shape.ShapeContext
   shape_run_cache : ShapeRunCache
 }
 
@@ -132,16 +131,16 @@ priv struct FontFallbackMissingInfo {
 }
 
 ///|
-const FONT_MATCHES_CACHE_SIZE_LIMIT : Int = 256
+const FONT_MATCHES_CACHE_SIZE_LIMIT : Int32 = 256
 
 ///|
-const CODEPOINT_SUPPORTED_PER_FONT_LIMIT : Int = 512
+const CODEPOINT_SUPPORTED_PER_FONT_LIMIT : Int32 = 512
 
 ///|
-const CODEPOINT_NOT_SUPPORTED_PER_FONT_LIMIT : Int = 1024
+const CODEPOINT_NOT_SUPPORTED_PER_FONT_LIMIT : Int32 = 1024
 
 ///|
-const WEIGHT_AXIS_TAG : UInt = 0x77676874U // "wght"
+const WEIGHT_AXIS_TAG : UInt32 = 0x77676874U // "wght"
 
 ///|
 pub fn FontSystem::new() -> FontSystem {
@@ -157,8 +156,7 @@ pub fn FontSystem::new_with_locale(locale : String) -> FontSystem {
     fallback_warning_handler_opt: None,
     font_matches_cache: Default::default(),
     codepoint_support_cache: Default::default(),
-    hb_font_cache: Default::default(),
-    hb_shape_buffer: @buffer.Buffer::new(),
+    shape_context: ShapeContext(),
     shape_run_cache: ShapeRunCache::new(),
   }
 }
@@ -171,28 +169,6 @@ pub fn FontSystem::locale(self : FontSystem) -> String {
 ///|
 pub fn FontSystem::fonts(self : FontSystem) -> Array[FontEntry] {
   self.fonts
-}
-
-///|
-fn FontSystem::hb_font_for_entry(
-  self : FontSystem,
-  entry : FontEntry,
-) -> @font.Font {
-  match self.hb_font_cache.get(entry.id) {
-    Some(font) => font
-    None => {
-      let font = @font.Font::new(
-        @face.Face::from_bytes(entry.source_data, index=entry.source_index),
-      )
-      self.hb_font_cache.set(entry.id, font)
-      font
-    }
-  }
-}
-
-///|
-fn FontSystem::shape_hb_buffer(self : FontSystem) -> @buffer.Buffer {
-  self.hb_shape_buffer
 }
 
 ///|
@@ -322,12 +298,12 @@ pub fn FontSystem::load_font_data(
 
 ///|
 /// Find a font ID that matches the family selector (best-effort).
-pub fn FontSystem::select_family(self : FontSystem, family : Family) -> Int? {
+pub fn FontSystem::select_family(self : FontSystem, family : Family) -> Int32? {
   select_family_with_weight(self, family, Weight::normal())
 }
 
 ///|
-fn abs_int(v : Int) -> Int {
+fn abs_int(v : Int32) -> Int32 {
   if v < 0 {
     0 - v
   } else {
@@ -337,8 +313,8 @@ fn abs_int(v : Int) -> Int {
 
 ///|
 struct FontCachedCodepointSupportInfo {
-  supported : Array[UInt]
-  not_supported : Array[UInt]
+  supported : Array[UInt32]
+  not_supported : Array[UInt32]
   mut charmap_opt : @moon_swash.Charmap?
 }
 
@@ -478,9 +454,9 @@ fn split_default_stage_candidates(
   fs : FontSystem,
   family : Family,
   req_weight : Weight,
-  ids : Array[Int],
-) -> Array[Int] {
-  let defaults : Array[Int] = []
+  ids : Array[Int32],
+) -> Array[Int32] {
+  let defaults : Array[Int32] = []
   let mut default_set = false
   for id in ids {
     if id < 0 || id >= fs.fonts.length() {
@@ -504,9 +480,9 @@ fn split_default_stage_candidates(
 fn first_named_fallback_candidate(
   fs : FontSystem,
   req_weight : Weight,
-  ids : Array[Int],
+  ids : Array[Int32],
   family_name : String,
-) -> Int? {
+) -> Int32? {
   for id in ids {
     if id < 0 || id >= fs.fonts.length() {
       continue
@@ -579,8 +555,8 @@ fn entry_supports_any_script(
 
 ///|
 fn better_monospace_fallback_candidate(
-  cand : (Int, Bool, Int, Int, Int),
-  best : (Int, Bool, Int, Int, Int),
+  cand : (Int32, Bool, Int32, Int32, Int32),
+  best : (Int32, Bool, Int32, Int32, Int32),
 ) -> Bool {
   let cand_id = cand.0
   let cand_is_primary_default = cand.1
@@ -612,9 +588,9 @@ fn reorder_monospace_fallback_candidates(
   fs : FontSystem,
   attrs : Attrs,
   scripts : Array[@moon_swash.Script],
-  ordered : Array[Int],
-  codepoints : Array[UInt],
-) -> Array[Int] {
+  ordered : Array[Int32],
+  codepoints : Array[UInt32],
+) -> Array[Int32] {
   if !(attrs.family_value() is Monospace) {
     return ordered
   }
@@ -623,7 +599,7 @@ fn reorder_monospace_fallback_candidates(
   }
 
   let req_weight = attrs.weight_value()
-  let mut primary_default_mono_id : Int? = None
+  let mut primary_default_mono_id : Int32? = None
   for id in ordered {
     match fs.get_font_entry(id) {
       None => ()
@@ -647,8 +623,8 @@ fn reorder_monospace_fallback_candidates(
     }
   }
 
-  let mono_candidates : Array[(Int, Bool, Int, Int, Int)] = []
-  let non_mono_candidates : Array[Int] = []
+  let mono_candidates : Array[(Int32, Bool, Int32, Int32, Int32)] = []
+  let non_mono_candidates : Array[Int32] = []
   for id in ordered {
     match fs.get_font_entry(id) {
       None => non_mono_candidates.push(id)
@@ -685,7 +661,7 @@ fn reorder_monospace_fallback_candidates(
 
   let n = mono_candidates.length()
   let used : Array[Bool] = Array::makei(n, _ => false)
-  let reordered_mono : Array[Int] = []
+  let reordered_mono : Array[Int32] = []
   for _ in 0..<n {
     let mut best = -1
     for i in 0..<n {
@@ -706,7 +682,7 @@ fn reorder_monospace_fallback_candidates(
     }
   }
 
-  let reordered : Array[Int] = []
+  let reordered : Array[Int32] = []
   for id in reordered_mono {
     reordered.push(id)
   }
@@ -718,26 +694,26 @@ fn reorder_monospace_fallback_candidates(
 
 ///|
 priv struct FontFallbackIterState {
-  ids : Array[Int]
-  defaults : Array[Int]
+  ids : Array[Int32]
+  defaults : Array[Int32]
   scripts : Array[@moon_swash.Script]
   common_families : Array[String]
   forbidden_families : Array[String]
   req_weight : Weight
   locale : String
   profile : FallbackProfile
-  mut default_i : Int
-  mut script_i : Int
-  mut script_family_i : Int
-  mut common_i : Int
-  mut other_i : Int
+  mut default_i : Int32
+  mut script_i : Int32
+  mut script_family_i : Int32
+  mut common_i : Int32
+  mut other_i : Int32
   mut end : Bool
 }
 
 ///|
 fn FontFallbackIterState::new(
-  ids : Array[Int],
-  defaults : Array[Int],
+  ids : Array[Int32],
+  defaults : Array[Int32],
   scripts : Array[@moon_swash.Script],
   common_families : Array[String],
   forbidden_families : Array[String],
@@ -764,7 +740,7 @@ fn FontFallbackIterState::new(
 }
 
 ///|
-fn font_fallback_next(fs : FontSystem, state : FontFallbackIterState) -> Int? {
+fn font_fallback_next(fs : FontSystem, state : FontFallbackIterState) -> Int32? {
   if state.default_i < state.defaults.length() {
     let next = state.defaults[state.default_i]
     state.default_i = state.default_i + 1
@@ -832,7 +808,7 @@ fn font_fallback_iter_init(
   fs : FontSystem,
   attrs : Attrs,
   scripts : Array[@moon_swash.Script],
-  codepoints : Array[UInt],
+  codepoints : Array[UInt32],
 ) -> FontFallbackIterState {
   let req_weight = attrs.weight_value()
   let profile = fallback_profile(fs)
@@ -868,7 +844,7 @@ fn font_fallback_iter_init(
 }
 
 ///|
-fn font_face_name(fs : FontSystem, id : Int) -> String {
+fn font_face_name(fs : FontSystem, id : Int32) -> String {
   if id < 0 || id >= fs.fonts.length() {
     return "invalid font id"
   }
@@ -976,7 +952,7 @@ fn font_fallback_emit_missing_warning(
 fn font_maps_codepoint(
   fs : FontSystem,
   entry : FontEntry,
-  codepoint : UInt,
+  codepoint : UInt32,
 ) -> Bool {
   match fs.codepoint_support_cache.get(entry.id) {
     Some(info) => {
@@ -994,7 +970,7 @@ fn font_maps_codepoint(
 }
 
 ///|
-fn sorted_search_uint(arr : Array[UInt], value : UInt) -> (Bool, Int) {
+fn sorted_search_uint(arr : Array[UInt32], value : UInt32) -> (Bool, Int32) {
   let mut low = 0
   let mut high = arr.length()
   while low < high {
@@ -1016,7 +992,7 @@ fn sorted_search_uint(arr : Array[UInt], value : UInt) -> (Bool, Int) {
 fn cached_codepoint_has_support(
   info : FontCachedCodepointSupportInfo,
   entry : FontEntry,
-  codepoint : UInt,
+  codepoint : UInt32,
 ) -> Bool {
   let (supported_hit, supported_insert_pos) = sorted_search_uint(
     info.supported,
@@ -1055,18 +1031,18 @@ fn cached_codepoint_has_support(
 }
 
 ///|
-fn entry_weight_diff(entry : FontEntry, req_weight : Weight) -> Int {
+fn entry_weight_diff(entry : FontEntry, req_weight : Weight) -> Int32 {
   let a = entry.attributes.weight().value.to_int()
   abs_int(a - req_weight.value)
 }
 
 ///|
-fn entry_weight_raw(entry : FontEntry) -> Int {
+fn entry_weight_raw(entry : FontEntry) -> Int32 {
   entry.attributes.weight().value.to_int()
 }
 
 ///|
-fn entry_stretch_raw(entry : FontEntry) -> Int {
+fn entry_stretch_raw(entry : FontEntry) -> Int32 {
   entry.attributes.stretch().raw().to_int()
 }
 
@@ -1074,12 +1050,12 @@ fn entry_stretch_raw(entry : FontEntry) -> Int {
 fn entry_stretch_diff(
   entry : FontEntry,
   req_stretch : @moon_swash.Stretch,
-) -> Int {
+) -> Int32 {
   abs_int(entry_stretch_raw(entry) - req_stretch.raw().to_int())
 }
 
 ///|
-fn style_bucket(style : @moon_swash.Style) -> Int {
+fn style_bucket(style : @moon_swash.Style) -> Int32 {
   match style {
     Normal => 0
     Italic => 1
@@ -1088,7 +1064,7 @@ fn style_bucket(style : @moon_swash.Style) -> Int {
 }
 
 ///|
-fn style_diff(lhs : @moon_swash.Style, rhs : @moon_swash.Style) -> Int {
+fn style_diff(lhs : @moon_swash.Style, rhs : @moon_swash.Style) -> Int32 {
   let a = style_bucket(lhs)
   let b = style_bucket(rhs)
   if a == b {
@@ -1101,7 +1077,7 @@ fn style_diff(lhs : @moon_swash.Style, rhs : @moon_swash.Style) -> Int {
 }
 
 ///|
-fn entry_style_diff(entry : FontEntry, req_style : @moon_swash.Style) -> Int {
+fn entry_style_diff(entry : FontEntry, req_style : @moon_swash.Style) -> Int32 {
   style_diff(entry.attributes.style(), req_style)
 }
 
@@ -1124,8 +1100,8 @@ fn entry_variable_weight_match(entry : FontEntry, req_weight : Weight) -> Bool {
 
 ///|
 fn better_font_match(
-  cand : (Int, Bool, Int, Int, Int, Int, Int, Bool),
-  best : (Int, Bool, Int, Int, Int, Int, Int, Bool),
+  cand : (Int32, Bool, Int32, Int32, Int32, Int32, Int32, Bool),
+  best : (Int32, Bool, Int32, Int32, Int32, Int32, Int32, Bool),
 ) -> Bool {
   let cand_id = cand.0
   let cand_not_emoji = cand.1
@@ -1164,12 +1140,12 @@ fn better_font_match(
 }
 
 ///|
-fn build_font_matches(fs : FontSystem, attrs : Attrs) -> Array[Int] {
+fn build_font_matches(fs : FontSystem, attrs : Attrs) -> Array[Int32] {
   let family = attrs.family_value()
   let req_weight = attrs.weight_value()
   let req_stretch = attrs.stretch_value()
   let req_style = attrs.style_value()
-  let candidates : Array[(Int, Bool, Int, Int, Int, Int, Int, Bool)] = []
+  let candidates : Array[(Int32, Bool, Int32, Int32, Int32, Int32, Int32, Bool)] = []
   for e in fs.fonts {
     candidates.push(
       (
@@ -1186,7 +1162,7 @@ fn build_font_matches(fs : FontSystem, attrs : Attrs) -> Array[Int] {
   }
   let n = candidates.length()
   let used : Array[Bool] = Array::makei(n, _ => false)
-  let ids : Array[Int] = []
+  let ids : Array[Int32] = []
   for _ in 0..<n {
     let mut best_i = -1
     for i in 0..<n {
@@ -1205,7 +1181,7 @@ fn build_font_matches(fs : FontSystem, attrs : Attrs) -> Array[Int] {
 
   // Keep candidate ordering close to upstream:
   // sort globally by match score, then move query best family match to front.
-  let mut preferred : (Int, Bool, Int, Int, Int, Int, Int, Bool)? = None
+  let mut preferred : (Int32, Bool, Int32, Int32, Int32, Int32, Int32, Bool)? = None
   for e in fs.fonts {
     if !explicit_family_matches(e, family) {
       continue
@@ -1233,7 +1209,7 @@ fn build_font_matches(fs : FontSystem, attrs : Attrs) -> Array[Int] {
       if ids.length() == 0 || ids[0] == pid {
         return ids
       }
-      let reordered : Array[Int] = [pid]
+      let reordered : Array[Int32] = [pid]
       for id in ids {
         if id != pid {
           reordered.push(id)
@@ -1245,7 +1221,7 @@ fn build_font_matches(fs : FontSystem, attrs : Attrs) -> Array[Int] {
 }
 
 ///|
-fn get_font_matches(fs : FontSystem, attrs : Attrs) -> Array[Int] {
+fn get_font_matches(fs : FontSystem, attrs : Attrs) -> Array[Int32] {
   if fs.font_matches_cache.length() >= FONT_MATCHES_CACHE_SIZE_LIMIT {
     fs.font_matches_cache.clear()
   }
@@ -1266,7 +1242,7 @@ fn get_font_matches(fs : FontSystem, attrs : Attrs) -> Array[Int] {
 }
 
 ///|
-fn codepoint_to_char(codepoint : UInt) -> Char? {
+fn codepoint_to_char(codepoint : UInt32) -> Char? {
   if codepoint > 0x10FFFF {
     None
   } else {
@@ -1280,7 +1256,10 @@ fn codepoint_to_char(codepoint : UInt) -> Char? {
 
 ///|
 /// Get ordered font match candidates for attrs (cached).
-pub fn FontSystem::font_matches(self : FontSystem, attrs : Attrs) -> Array[Int] {
+pub fn FontSystem::font_matches(
+  self : FontSystem,
+  attrs : Attrs,
+) -> Array[Int32] {
   get_font_matches(self, attrs)
 }
 
@@ -1289,7 +1268,7 @@ pub fn FontSystem::font_matches_for_script(
   self : FontSystem,
   attrs : Attrs,
   script : @moon_swash.Script,
-) -> Array[Int] {
+) -> Array[Int32] {
   self.font_matches_for_scripts_with_codepoints(attrs, [script], [])
 }
 
@@ -1298,7 +1277,7 @@ pub fn FontSystem::font_matches_for_scripts(
   self : FontSystem,
   attrs : Attrs,
   scripts : Array[@moon_swash.Script],
-) -> Array[Int] {
+) -> Array[Int32] {
   self.font_matches_for_scripts_with_codepoints(attrs, scripts, [])
 }
 
@@ -1307,10 +1286,10 @@ pub fn FontSystem::font_matches_for_scripts_with_codepoints(
   self : FontSystem,
   attrs : Attrs,
   scripts : Array[@moon_swash.Script],
-  codepoints : Array[UInt],
-) -> Array[Int] {
+  codepoints : Array[UInt32],
+) -> Array[Int32] {
   let iter = font_fallback_iter_init(self, attrs, scripts, codepoints)
-  let staged : Array[Int] = []
+  let staged : Array[Int32] = []
   while true {
     match font_fallback_next(self, iter) {
       None => break
@@ -1323,9 +1302,9 @@ pub fn FontSystem::font_matches_for_scripts_with_codepoints(
 ///|
 pub fn FontSystem::count_supported_codepoints(
   self : FontSystem,
-  font_id : Int,
-  codepoints : Array[UInt],
-) -> Int {
+  font_id : Int32,
+  codepoints : Array[UInt32],
+) -> Int32 {
   if font_id < 0 || font_id >= self.fonts.length() {
     return 0
   }
@@ -1344,7 +1323,7 @@ fn select_family_with_weight(
   fs : FontSystem,
   family : Family,
   req_weight : Weight,
-) -> Int? {
+) -> Int32? {
   let attrs = Attrs::new().family(family).weight(req_weight)
   let ids = get_font_matches(fs, attrs)
   for id in ids {
@@ -1363,8 +1342,8 @@ fn select_family_with_weight(
 pub fn FontSystem::resolve_for_codepoint(
   self : FontSystem,
   attrs : Attrs,
-  codepoint : UInt,
-) -> Int? {
+  codepoint : UInt32,
+) -> Int32? {
   let scripts : Array[@moon_swash.Script] = []
   match codepoint_to_char(codepoint) {
     None => ()
@@ -1390,7 +1369,7 @@ pub fn FontSystem::resolve_for_codepoint(
 
 ///|
 /// Resolve a font ID for the given attrs (best-effort).
-pub fn FontSystem::resolve(self : FontSystem, attrs : Attrs) -> Int? {
+pub fn FontSystem::resolve(self : FontSystem, attrs : Attrs) -> Int32? {
   let matches = get_font_matches(self, attrs)
   if matches.length() > 0 {
     Some(matches[0])
@@ -1404,7 +1383,7 @@ pub fn FontSystem::resolve(self : FontSystem, attrs : Attrs) -> Int? {
 ///|
 pub fn FontSystem::get_font(
   self : FontSystem,
-  font_id : Int,
+  font_id : Int32,
 ) -> @moon_swash.FontRef? {
   if font_id < 0 || font_id >= self.fonts.length() {
     return None
@@ -1416,7 +1395,7 @@ pub fn FontSystem::get_font(
 /// Get the full FontEntry for a font_id (useful for downstream rasterization with TTC collections).
 pub fn FontSystem::get_font_entry(
   self : FontSystem,
-  font_id : Int,
+  font_id : Int32,
 ) -> FontEntry? {
   if font_id < 0 || font_id >= self.fonts.length() {
     return None

@@ -69,9 +69,9 @@ pub fn Affinity::from_after(after : Bool) -> Affinity {
 /// Current cursor location
 pub struct Cursor {
   /// Index of BufferLine in Buffer::lines
-  line : Int
+  line : Int32
   /// First-byte-index of glyph at cursor (represented as UTF-16 code-unit index).
-  index : Int
+  index : Int32
   affinity : Affinity
 }
 
@@ -83,14 +83,14 @@ pub impl Eq for Cursor with fn equal(self, other) {
 }
 
 ///|
-pub fn Cursor::new(line : Int, index : Int) -> Cursor {
+pub fn Cursor::new(line : Int32, index : Int32) -> Cursor {
   Cursor::new_with_affinity(line, index, Before)
 }
 
 ///|
 pub fn Cursor::new_with_affinity(
-  line : Int,
-  index : Int,
+  line : Int32,
+  index : Int32,
   affinity : Affinity,
 ) -> Cursor {
   { line, index, affinity, }
@@ -99,9 +99,9 @@ pub fn Cursor::new_with_affinity(
 ///|
 /// The position of a cursor within a Buffer.
 pub struct LayoutCursor {
-  line : Int
-  layout : Int
-  glyph : Int
+  line : Int32
+  layout : Int32
+  glyph : Int32
 }
 
 ///|
@@ -112,7 +112,11 @@ pub impl Eq for LayoutCursor with fn equal(self, other) {
 }
 
 ///|
-pub fn LayoutCursor::new(line : Int, layout : Int, glyph : Int) -> LayoutCursor {
+pub fn LayoutCursor::new(
+  line : Int32,
+  layout : Int32,
+  glyph : Int32,
+) -> LayoutCursor {
   { line, layout, glyph, }
 }
 
@@ -133,14 +137,14 @@ pub(all) enum Motion {
   ParagraphEnd
   PageUp
   PageDown
-  Vertical(Int)
+  Vertical(Int32)
   PreviousWord
   NextWord
   LeftWord
   RightWord
   BufferStart
   BufferEnd
-  GotoLine(Int)
+  GotoLine(Int32)
 }
 
 ///|
@@ -175,7 +179,7 @@ pub impl Eq for Motion with fn equal(self, other) {
 ///|
 /// Scroll position in Buffer
 pub struct Scroll {
-  line : Int
+  line : Int32
   vertical : Float
   horizontal : Float
 }
@@ -186,7 +190,11 @@ pub fn Scroll::default() -> Scroll {
 }
 
 ///|
-pub fn Scroll::new(line : Int, vertical : Float, horizontal : Float) -> Scroll {
+pub fn Scroll::new(
+  line : Int32,
+  vertical : Float,
+  horizontal : Float,
+) -> Scroll {
   { line, vertical, horizontal, }
 }
 

@@ -15,10 +15,10 @@
 ///|
 test "ShapeLine.build assigns heuristic bidi levels (LTR base)" {
   let text = "abc \u{05D0}\u{05D1}"
-  let shape = ShapeLine::build(
-    ShapeLine::empty(),
+  let shape = @moon_cosmic.ShapeLine::build(
+    @moon_cosmic.ShapeLine::empty(),
     text,
-    AttrsList::new(Attrs::new()),
+    @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new()),
     Advanced,
     8,
   )
@@ -34,10 +34,10 @@ test "ShapeLine.build assigns heuristic bidi levels (LTR base)" {
 ///|
 test "ShapeLine.build assigns heuristic bidi levels (RTL base)" {
   let text = "\u{05D0}\u{05D1} abc"
-  let shape = ShapeLine::build(
-    ShapeLine::empty(),
+  let shape = @moon_cosmic.ShapeLine::build(
+    @moon_cosmic.ShapeLine::empty(),
     text,
-    AttrsList::new(Attrs::new()),
+    @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new()),
     Advanced,
     8,
   )

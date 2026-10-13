@@ -13,7 +13,7 @@
 // limitations under the License.
 
 ///|
-fn f32_from_bits(bits : UInt) -> Float {
+fn f32_from_bits(bits : UInt32) -> Float {
   Float::reinterpret_from_uint(bits)
 }
 
@@ -215,22 +215,22 @@ pub fn SwashCache::with_pixels(
   font_system : FontSystem,
   cache_key : CacheKey,
   base : Color,
-  f : (Int, Int, Color) -> Unit,
+  f : (Int32, Int32, Color) -> Unit,
 ) -> Unit {
-  fn scale_byte_alpha(v : Byte, alpha : UInt) -> Byte {
+  fn scale_byte_alpha(v : Byte, alpha : UInt32) -> Byte {
     (v.to_int().reinterpret_as_uint() * alpha / 255U)
     .reinterpret_as_int()
     .to_byte()
   }
 
   fn emit_rgba_pixels(
-    x0 : Int,
-    y0 : Int,
-    width : Int,
-    height : Int,
+    x0 : Int32,
+    y0 : Int32,
+    width : Int32,
+    height : Int32,
     data : Bytes,
-    alpha_scale : UInt?,
-    f : (Int, Int, Color) -> Unit,
+    alpha_scale : UInt32?,
+    f : (Int32, Int32, Color) -> Unit,
   ) -> Unit {
     let mut i = 0
     for off_y in 0..<height {
@@ -268,7 +268,7 @@ pub fn SwashCache::with_pixels(
           }
         }
         Color => {
-          let alpha_scale : UInt? = {
+          let alpha_scale : UInt32? = {
             let a = base.a().to_int().reinterpret_as_uint()
             if a == 255U {
               None

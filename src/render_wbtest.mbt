@@ -14,8 +14,8 @@
 
 ///|
 pub struct DecorationTestRenderer {
-  rects : Array[(Int, Int, UInt, UInt, UInt)]
-  glyphs : Array[(Int, Int, UInt)]
+  rects : Array[(Int32, Int32, UInt32, UInt32, UInt32)]
+  glyphs : Array[(Int32, Int32, UInt32)]
 }
 
 ///|
@@ -67,8 +67,8 @@ test "render_decoration draws underline rectangles" {
     decorations: [deco],
     line_w: 10.0F,
   }
-  let rects : Array[(Int, Int, UInt, UInt, UInt)] = []
-  let glyphs : Array[(Int, Int, UInt)] = []
+  let rects : Array[(Int32, Int32, UInt32, UInt32, UInt32)] = []
+  let glyphs : Array[(Int32, Int32, UInt32)] = []
   let renderer = DecorationTestRenderer::{ rects, glyphs, }
   render_decoration(renderer, run, Color::rgb(255, 0, 0))
   inspect(rects.length() > 0, content="true")

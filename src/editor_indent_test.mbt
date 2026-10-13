@@ -14,11 +14,13 @@
 
 ///|
 test "Editor.action Indent aligns to next tab stop at after_whitespace" {
-  let attrs = AttrsList::new(Attrs::new())
-  let buffer = Buffer::new(Metrics::new(12.0F, 12.0F))
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
+  let buffer = @moon_cosmic.Buffer::new(@moon_cosmic.Metrics::new(12.0F, 12.0F))
     .set_text("  foo", attrs, Advanced)
     .set_tab_width(4)
-  let editor0 = Editor::new(buffer).set_cursor(Cursor::new(0, 3))
+  let editor0 = @moon_cosmic.Editor::new(buffer).set_cursor(
+    @moon_cosmic.Cursor::new(0, 3),
+  )
   let editor1 = editor0.action(Indent)
   inspect(editor1.buffer().lines()[0].text(), content="    foo")
   inspect(editor1.cursor().index, content="5")
@@ -26,11 +28,13 @@ test "Editor.action Indent aligns to next tab stop at after_whitespace" {
 
 ///|
 test "Editor.action Unindent removes one tab stop chunk" {
-  let attrs = AttrsList::new(Attrs::new())
-  let buffer = Buffer::new(Metrics::new(12.0F, 12.0F))
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
+  let buffer = @moon_cosmic.Buffer::new(@moon_cosmic.Metrics::new(12.0F, 12.0F))
     .set_text("      foo", attrs, Advanced) // 6 spaces
     .set_tab_width(4)
-  let editor0 = Editor::new(buffer).set_cursor(Cursor::new(0, 6))
+  let editor0 = @moon_cosmic.Editor::new(buffer).set_cursor(
+    @moon_cosmic.Cursor::new(0, 6),
+  )
   let editor1 = editor0.action(Unindent)
   inspect(editor1.buffer().lines()[0].text(), content="    foo")
   inspect(editor1.cursor().index, content="4")

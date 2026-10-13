@@ -14,8 +14,8 @@
 
 ///|
 test "Buffer.set_text splits lines using LineIter endings" {
-  let buf0 = Buffer::new(Metrics::new(12.0F, 14.0F))
-  let attrs = AttrsList::new(Attrs::new())
+  let buf0 = @moon_cosmic.Buffer::new(@moon_cosmic.Metrics::new(12.0F, 14.0F))
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
   let buf1 = buf0.set_text("A\nB\r\nC", attrs, Advanced)
   let lines = buf1.lines()
   inspect(lines.length(), content="3")
@@ -29,8 +29,8 @@ test "Buffer.set_text splits lines using LineIter endings" {
 
 ///|
 test "Buffer.set_text ensures a trailing LineEnding::None line (upstream behavior)" {
-  let buf0 = Buffer::new(Metrics::new(12.0F, 14.0F))
-  let attrs = AttrsList::new(Attrs::new())
+  let buf0 = @moon_cosmic.Buffer::new(@moon_cosmic.Metrics::new(12.0F, 14.0F))
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
   let buf1 = buf0.set_text("A\n", attrs, Advanced)
   let lines = buf1.lines()
   inspect(lines.length(), content="2")
@@ -42,8 +42,8 @@ test "Buffer.set_text ensures a trailing LineEnding::None line (upstream behavio
 
 ///|
 test "Buffer.set_text empty text produces one empty LineEnding::None line" {
-  let buf0 = Buffer::new(Metrics::new(12.0F, 14.0F))
-  let attrs = AttrsList::new(Attrs::new())
+  let buf0 = @moon_cosmic.Buffer::new(@moon_cosmic.Metrics::new(12.0F, 14.0F))
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
   let buf1 = buf0.set_text("", attrs, Advanced)
   let lines = buf1.lines()
   inspect(lines.length(), content="1")
@@ -53,10 +53,10 @@ test "Buffer.set_text empty text produces one empty LineEnding::None line" {
 
 ///|
 test "Buffer.set_text resets scroll to default" {
-  let attrs = AttrsList::new(Attrs::new())
-  let buf0 = Buffer::new(Metrics::new(12.0F, 14.0F))
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
+  let buf0 = @moon_cosmic.Buffer::new(@moon_cosmic.Metrics::new(12.0F, 14.0F))
     .set_text("A\nB", attrs, Advanced)
-    .set_scroll(Scroll::new(1, 2.0F, 3.0F))
+    .set_scroll(@moon_cosmic.Scroll::new(1, 2.0F, 3.0F))
   let buf1 = buf0.set_text("C", attrs, Advanced)
   inspect(buf1.scroll().line, content="0")
   inspect(buf1.scroll().vertical, content="0")
@@ -65,15 +65,15 @@ test "Buffer.set_text resets scroll to default" {
 
 ///|
 test "Buffer.set_rich_text builds per-line AttrsList spans and uses default line ending" {
-  let bold = Attrs::new().weight(Weight::bold())
-  let spans : Array[(String, Attrs)] = [
+  let bold = @moon_cosmic.Attrs::new().weight(@moon_cosmic.Weight::bold())
+  let spans : Array[(String, @moon_cosmic.Attrs)] = [
     ("a", bold),
-    ("b\nc", Attrs::new()),
+    ("b\nc", @moon_cosmic.Attrs::new()),
     ("d", bold),
   ]
-  let buf = Buffer::new(Metrics::new(12.0F, 14.0F)).set_rich_text(
+  let buf = @moon_cosmic.Buffer::new(@moon_cosmic.Metrics::new(12.0F, 14.0F)).set_rich_text(
     spans,
-    Attrs::new(),
+    @moon_cosmic.Attrs::new(),
     Advanced,
     Some(Center),
   )
@@ -96,21 +96,29 @@ test "Buffer.set_rich_text builds per-line AttrsList spans and uses default line
 
   // Attrs spans are relative to each line.
   inspect(lines[0].attrs_list().get_span(0) == bold, content="true")
-  inspect(lines[0].attrs_list().get_span(1) == Attrs::new(), content="true")
-  inspect(lines[1].attrs_list().get_span(0) == Attrs::new(), content="true")
+  inspect(
+    lines[0].attrs_list().get_span(1) == @moon_cosmic.Attrs::new(),
+    content="true",
+  )
+  inspect(
+    lines[1].attrs_list().get_span(0) == @moon_cosmic.Attrs::new(),
+    content="true",
+  )
   inspect(lines[1].attrs_list().get_span(1) == bold, content="true")
 }
 
 ///|
 test "Buffer.set_size marks redraw on change" {
-  let buf0 = Buffer::new(Metrics::new(12.0F, 14.0F))
+  let buf0 = @moon_cosmic.Buffer::new(@moon_cosmic.Metrics::new(12.0F, 14.0F))
   let buf1 = buf0.set_size(Some(100.0F), None)
   inspect(buf1.redraw(), content="true")
 }
 
 ///|
 test "Buffer defaults align with upstream new_empty" {
-  let buf0 = Buffer::new_empty(Metrics::new(12.0F, 14.0F))
+  let buf0 = @moon_cosmic.Buffer::new_empty(
+    @moon_cosmic.Metrics::new(12.0F, 14.0F),
+  )
   inspect(buf0.redraw(), content="false")
   inspect(
     match buf0.wrap() {
@@ -132,8 +140,8 @@ test "Buffer defaults align with upstream new_empty" {
 
 ///|
 test "Buffer.layout_runs returns no runs before layout cache is built" {
-  let attrs = AttrsList::new(Attrs::new())
-  let buf = Buffer::new(Metrics::new(12.0F, 14.0F)).set_text(
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
+  let buf = @moon_cosmic.Buffer::new(@moon_cosmic.Metrics::new(12.0F, 14.0F)).set_text(
     "A\nB",
     attrs,
     Advanced,
@@ -147,7 +155,9 @@ test "Buffer.layout_runs returns no runs before layout cache is built" {
 
 ///|
 test "Buffer setters mark redraw when value changes" {
-  let buf0 = Buffer::new_empty(Metrics::new(12.0F, 14.0F))
+  let buf0 = @moon_cosmic.Buffer::new_empty(
+    @moon_cosmic.Metrics::new(12.0F, 14.0F),
+  )
   let buf1 = buf0.set_wrap(Glyph)
   inspect(buf1.redraw(), content="true")
   let buf2 = buf1.set_tab_width(2)
@@ -156,14 +166,16 @@ test "Buffer setters mark redraw when value changes" {
   inspect(buf3.redraw(), content="true")
   let buf4 = buf3.set_monospace_width(Some(8.0F))
   inspect(buf4.redraw(), content="true")
-  let buf5 = buf4.set_metrics(Metrics::new(13.0F, 15.0F))
+  let buf5 = buf4.set_metrics(@moon_cosmic.Metrics::new(13.0F, 15.0F))
   inspect(buf5.redraw(), content="true")
 }
 
 ///|
 test "Buffer.set_wrap invalidates cached layout and relayout reflects new wrap mode" {
-  let attrs = AttrsList::new(Attrs::new())
-  let mut buf = Buffer::new(Metrics::new(12.0F, 14.0F))
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
+  let mut buf = @moon_cosmic.Buffer::new(
+    @moon_cosmic.Metrics::new(12.0F, 14.0F),
+  )
   buf = buf
     .set_text("a a a a a a", attrs, Advanced)
     .set_size(Some(24.0F), None)
@@ -186,7 +198,7 @@ test "Buffer.set_wrap invalidates cached layout and relayout reflects new wrap m
 
 ///|
 test "Buffer.set_size clamps negative width/height to zero" {
-  let buf = Buffer::new(Metrics::new(12.0F, 14.0F)).set_size(
+  let buf = @moon_cosmic.Buffer::new(@moon_cosmic.Metrics::new(12.0F, 14.0F)).set_size(
     Some(-5.0F),
     Some(-10.0F),
   )
@@ -208,21 +220,25 @@ test "Buffer.set_size clamps negative width/height to zero" {
 
 ///|
 test "Buffer.layout_runs follows scroll line and viewport height" {
-  let attrs = AttrsList::new(Attrs::new())
-  let mut buf = Buffer::new(Metrics::new(12.0F, 14.0F))
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
+  let mut buf = @moon_cosmic.Buffer::new(
+    @moon_cosmic.Metrics::new(12.0F, 14.0F),
+  )
   buf = buf
     .set_text("A\nB\nC", attrs, Advanced)
     .set_size(Some(200.0F), Some(14.0F))
     .layout_all()
 
-  let vis0 : Array[Int] = []
+  let vis0 : Array[Int32] = []
   for run in buf.layout_runs() {
     vis0.push(run.line_i)
   }
   debug_inspect(vis0, content="[0]")
 
-  let buf1 = buf.set_scroll(Scroll::new(1, 0.0F, 0.0F)).layout_all()
-  let vis1 : Array[Int] = []
+  let buf1 = buf
+    .set_scroll(@moon_cosmic.Scroll::new(1, 0.0F, 0.0F))
+    .layout_all()
+  let vis1 : Array[Int32] = []
   for run in buf1.layout_runs() {
     vis1.push(run.line_i)
   }
@@ -231,12 +247,12 @@ test "Buffer.layout_runs follows scroll line and viewport height" {
 
 ///|
 test "wrap_word_fallback: layout_runs never overflow width" {
-  let metrics = Metrics::new(14.0F, 20.0F)
-  let mut buffer = Buffer::new(metrics)
+  let metrics = @moon_cosmic.Metrics::new(14.0F, 20.0F)
+  let mut buffer = @moon_cosmic.Buffer::new(metrics)
   buffer = buffer.set_wrap(WordOrGlyph)
   buffer = buffer.set_text(
     "Lorem ipsum dolor sit amet, qui minim labore adipisicing minim sint cillum sint consectetur cupidatat.",
-    AttrsList::new(Attrs::new()),
+    @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new()),
     Advanced,
   )
   buffer = buffer.set_size(Some(50.0F), Some(1000.0F))
@@ -256,16 +272,16 @@ test "wrap_word_fallback: layout_runs never overflow width" {
 ///
 /// This requires real font metrics (Inter-Regular.ttf). We embed the font bytes.
 test "wrap_extra_line: matches upstream empty/overflow line counts" {
-  let metrics = Metrics::new(14.0F, 20.0F)
-  let mut buffer = Buffer::new(metrics)
+  let metrics = @moon_cosmic.Metrics::new(14.0F, 20.0F)
+  let mut buffer = @moon_cosmic.Buffer::new(metrics)
   buffer = buffer.set_wrap(Word)
   buffer = buffer.set_text(
     "Lorem ipsum dolor sit amet, qui minim labore adipisicing\n\nweeewoooo minim sint cillum sint consectetur cupidatat.",
-    AttrsList::new(Attrs::new().family(Name("Inter"))),
+    @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new().family(Name("Inter"))),
     Advanced,
   )
   buffer = buffer.set_size(Some(50.0F), Some(1000.0F))
-  let font_system = FontSystem::new().load_font_data(
+  let font_system = @moon_cosmic.FontSystem::new().load_font_data(
     test_font_inter_regular_ttf(),
   )
   buffer = buffer.layout_all_with_font_system(font_system)
@@ -285,17 +301,17 @@ test "wrap_extra_line: matches upstream empty/overflow line counts" {
 
 ///|
 test "Buffer.draw is a naming-aligned wrapper (smoke)" {
-  let metrics = Metrics::new(12.0F, 14.0F)
-  let attrs = AttrsList::new(Attrs::new())
-  let buffer0 = Buffer::new(metrics)
+  let metrics = @moon_cosmic.Metrics::new(12.0F, 14.0F)
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
+  let buffer0 = @moon_cosmic.Buffer::new(metrics)
     .set_text("A", attrs, Advanced)
     .set_size(Some(100.0F), None)
-  let font_system = FontSystem::new()
-  let cache = SwashCache::new()
+  let font_system = @moon_cosmic.FontSystem::new()
+  let cache = @moon_cosmic.SwashCache::new()
   let (buffer1, _cache) = buffer0.draw(
     font_system,
     cache,
-    Color::rgb(0, 0, 0),
+    @moon_cosmic.Color::rgb(0, 0, 0),
     fn(_, _, _, _, _) { () },
   )
   let has_layout = if buffer1.lines()[0].layout_opt() is Some(_) {
@@ -308,32 +324,38 @@ test "Buffer.draw is a naming-aligned wrapper (smoke)" {
 
 ///|
 test "Buffer line helpers: line_shape/line_layout/layout_cursor/shape_until_scroll" {
-  let attrs = AttrsList::new(Attrs::new())
-  let buf0 = Buffer::new(Metrics::new(12.0F, 14.0F))
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
+  let buf0 = @moon_cosmic.Buffer::new(@moon_cosmic.Metrics::new(12.0F, 14.0F))
     .set_text("ab", attrs, Basic)
     .set_size(Some(100.0F), Some(100.0F))
-  inspect(buf0.line_shape(FontSystem::new(), 0) is Some(_), content="true")
-  inspect(buf0.line_layout(FontSystem::new(), 0) is Some(_), content="true")
+  inspect(
+    buf0.line_shape(@moon_cosmic.FontSystem::new(), 0) is Some(_),
+    content="true",
+  )
+  inspect(
+    buf0.line_layout(@moon_cosmic.FontSystem::new(), 0) is Some(_),
+    content="true",
+  )
   inspect(
     buf0.layout_cursor(
-      FontSystem::new(),
-      Cursor::new_with_affinity(0, 0, After),
+      @moon_cosmic.FontSystem::new(),
+      @moon_cosmic.Cursor::new_with_affinity(0, 0, After),
     )
     is Some(_),
     content="true",
   )
-  let buf1 = buf0.shape_until_scroll(FontSystem::new(), false)
+  let buf1 = buf0.shape_until_scroll(@moon_cosmic.FontSystem::new(), false)
   inspect(buf1.lines()[0].layout_opt() is Some(_), content="true")
 }
 
 ///|
 test "Buffer.shape_until_scroll normalizes vertical offset and prunes offscreen lines" {
-  let attrs = AttrsList::new(Attrs::new())
-  let buf0 = Buffer::new(Metrics::new(10.0F, 10.0F))
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
+  let buf0 = @moon_cosmic.Buffer::new(@moon_cosmic.Metrics::new(10.0F, 10.0F))
     .set_text("a\nb\nc\nd", attrs, Basic)
     .set_size(Some(100.0F), Some(15.0F))
-    .set_scroll(Scroll::new(1, -5.0F, 0.0F))
-  let buf1 = buf0.shape_until_scroll(FontSystem::new(), true)
+    .set_scroll(@moon_cosmic.Scroll::new(1, -5.0F, 0.0F))
+  let buf1 = buf0.shape_until_scroll(@moon_cosmic.FontSystem::new(), true)
   inspect(buf1.scroll().line, content="0")
   inspect(buf1.scroll().vertical, content="5")
   inspect(buf1.lines()[0].shape_opt() is Some(_), content="true")
@@ -342,23 +364,23 @@ test "Buffer.shape_until_scroll normalizes vertical offset and prunes offscreen 
 
 ///|
 test "Buffer.shape_until_scroll clamps bottom overflow inside available content" {
-  let attrs = AttrsList::new(Attrs::new())
-  let buf0 = Buffer::new(Metrics::new(10.0F, 10.0F))
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
+  let buf0 = @moon_cosmic.Buffer::new(@moon_cosmic.Metrics::new(10.0F, 10.0F))
     .set_text("a\nb\nc\nd", attrs, Basic)
     .set_size(Some(100.0F), Some(20.0F))
-    .set_scroll(Scroll::new(3, 8.0F, 0.0F))
-  let buf1 = buf0.shape_until_scroll(FontSystem::new(), false)
+    .set_scroll(@moon_cosmic.Scroll::new(3, 8.0F, 0.0F))
+  let buf1 = buf0.shape_until_scroll(@moon_cosmic.FontSystem::new(), false)
   inspect(buf1.scroll().line, content="2")
   inspect(buf1.scroll().vertical, content="0")
 }
 
 ///|
 test "Buffer.shape_until_scroll lazily shapes only lines needed for viewport" {
-  let attrs = AttrsList::new(Attrs::new())
-  let buf0 = Buffer::new(Metrics::new(10.0F, 10.0F))
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
+  let buf0 = @moon_cosmic.Buffer::new(@moon_cosmic.Metrics::new(10.0F, 10.0F))
     .set_text("a\nb\nc\nd", attrs, Basic)
     .set_size(Some(100.0F), Some(15.0F))
-  let buf1 = buf0.shape_until_scroll(FontSystem::new(), false)
+  let buf1 = buf0.shape_until_scroll(@moon_cosmic.FontSystem::new(), false)
   inspect(buf1.lines()[0].shape_opt() is Some(_), content="true")
   inspect(buf1.lines()[1].shape_opt() is Some(_), content="true")
   inspect(buf1.lines()[2].shape_opt() is None, content="true")
@@ -366,14 +388,14 @@ test "Buffer.shape_until_scroll lazily shapes only lines needed for viewport" {
 
 ///|
 test "Buffer.shape_until_scroll prune clears previously cached offscreen shaping" {
-  let attrs = AttrsList::new(Attrs::new())
-  let font_system = FontSystem::new()
-  let buf0 = Buffer::new(Metrics::new(10.0F, 10.0F))
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
+  let font_system = @moon_cosmic.FontSystem::new()
+  let buf0 = @moon_cosmic.Buffer::new(@moon_cosmic.Metrics::new(10.0F, 10.0F))
     .set_text("a\nb\nc\nd", attrs, Basic)
     .set_size(Some(100.0F), Some(15.0F))
     .shape_all_with_font_system(font_system)
     .layout_all_with_font_system(font_system)
-    .set_scroll(Scroll::new(1, 0.0F, 0.0F))
+    .set_scroll(@moon_cosmic.Scroll::new(1, 0.0F, 0.0F))
   inspect(buf0.lines()[0].shape_opt() is Some(_), content="true")
   let buf1 = buf0.shape_until_scroll(font_system, true)
   inspect(buf1.lines()[0].shape_opt() is None, content="true")
@@ -381,14 +403,16 @@ test "Buffer.shape_until_scroll prune clears previously cached offscreen shaping
 
 ///|
 test "Buffer.shape_until_cursor scrolls to include target line and keeps x in view" {
-  let attrs = AttrsList::new(Attrs::new())
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
 
-  let vertical_buf0 = Buffer::new(Metrics::new(10.0F, 10.0F))
+  let vertical_buf0 = @moon_cosmic.Buffer::new(
+      @moon_cosmic.Metrics::new(10.0F, 10.0F),
+    )
     .set_text("a\nb\nc\nd", attrs, Basic)
     .set_size(Some(100.0F), Some(15.0F))
   let vertical_buf1 = vertical_buf0.shape_until_cursor(
-    FontSystem::new(),
-    Cursor::new_with_affinity(3, 0, After),
+    @moon_cosmic.FontSystem::new(),
+    @moon_cosmic.Cursor::new_with_affinity(3, 0, After),
     false,
   )
   inspect(vertical_buf1.scroll().line, content="2")
@@ -398,13 +422,15 @@ test "Buffer.shape_until_cursor scrolls to include target line and keeps x in vi
     content="true",
   )
 
-  let horizontal_buf0 = Buffer::new(Metrics::new(10.0F, 10.0F))
+  let horizontal_buf0 = @moon_cosmic.Buffer::new(
+      @moon_cosmic.Metrics::new(10.0F, 10.0F),
+    )
     .set_text("abcdefghij", attrs, Basic)
     .set_wrap(None)
     .set_size(Some(20.0F), Some(20.0F))
   let horizontal_buf1 = horizontal_buf0.shape_until_cursor(
-    FontSystem::new(),
-    Cursor::new_with_affinity(0, 9, After),
+    @moon_cosmic.FontSystem::new(),
+    @moon_cosmic.Cursor::new_with_affinity(0, 9, After),
     false,
   )
   inspect(horizontal_buf1.scroll().horizontal > 0.0F, content="true")
@@ -412,15 +438,15 @@ test "Buffer.shape_until_cursor scrolls to include target line and keeps x in vi
 
 ///|
 test "LayoutRun.highlight returns intersection width for cursor span" {
-  let attrs = AttrsList::new(Attrs::new())
-  let buffer = Buffer::new(Metrics::new(12.0F, 14.0F))
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
+  let buffer = @moon_cosmic.Buffer::new(@moon_cosmic.Metrics::new(12.0F, 14.0F))
     .set_text("ab", attrs, Basic)
     .set_size(Some(100.0F), None)
     .layout_all()
   let mut got = false
   for run in buffer.layout_runs() {
-    let start = Cursor::new_with_affinity(0, 0, After)
-    let end = Cursor::new_with_affinity(0, 1, Before)
+    let start = @moon_cosmic.Cursor::new_with_affinity(0, 0, After)
+    let end = @moon_cosmic.Cursor::new_with_affinity(0, 1, Before)
     if run.highlight(start, end) is Some((_, w)) {
       got = w >= 0.0F
     }

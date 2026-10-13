@@ -14,7 +14,7 @@
 
 ///|
 test "Cached: state machine semantics" {
-  let c0 : Cached[Int] = Empty
+  let c0 : @moon_cosmic.Cached[Int32] = Empty
   inspect(c0.is_unused(), content="true")
   inspect(c0.is_used(), content="false")
   inspect(c0.get() is None, content="true")

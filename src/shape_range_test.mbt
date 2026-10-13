@@ -81,7 +81,7 @@ fn mk_min_font_cmap4_single_for_shape_range(
 }
 
 ///|
-fn source_range_has_non_ws(text : String, start : Int, end : Int) -> Bool {
+fn source_range_has_non_ws(text : String, start : Int32, end : Int32) -> Bool {
   let s = if start < 0 {
     0
   } else if start > text.length() {
@@ -110,14 +110,14 @@ fn source_range_has_non_ws(text : String, start : Int, end : Int) -> Bool {
 ///|
 test "ShapeLine.build_with_font_system keeps space glyphs on whitespace source ranges" {
   let text = "Move the mouse to see the circle follow your cursor."
-  let font_system = FontSystem::new().load_font_data(
+  let font_system = @moon_cosmic.FontSystem::new().load_font_data(
     test_font_inter_regular_ttf(),
   )
-  let shape = ShapeLine::build_with_font_system(
-    ShapeLine::empty(),
+  let shape = @moon_cosmic.ShapeLine::build_with_font_system(
+    @moon_cosmic.ShapeLine::empty(),
     font_system,
     text,
-    AttrsList::new(Attrs::new()),
+    @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new()),
     Advanced,
     8,
   )
@@ -150,19 +150,26 @@ test "ShapeLine.build_with_font_system keeps space glyphs on whitespace source r
 ///|
 test "ShapeLine.build_with_font_system keeps visible ASCII renderable on physical cache path" {
   let text = "Move the mouse to see the circle follow your cursor."
-  let font_system = FontSystem::new().load_font_data(
+  let font_system = @moon_cosmic.FontSystem::new().load_font_data(
     test_font_inter_regular_ttf(),
   )
-  let shape = ShapeLine::build_with_font_system(
-    ShapeLine::empty(),
+  let shape = @moon_cosmic.ShapeLine::build_with_font_system(
+    @moon_cosmic.ShapeLine::empty(),
     font_system,
     text,
-    AttrsList::new(Attrs::new()),
+    @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new()),
     Advanced,
     8,
   )
-  let lines = layout_from_shape(text, shape, 18.0F, 18.0F, None, None)
-  let cache = SwashCache::new()
+  let lines = @moon_cosmic.layout_from_shape(
+    text,
+    shape,
+    18.0F,
+    18.0F,
+    None,
+    None,
+  )
+  let cache = @moon_cosmic.SwashCache::new()
   let mut bad = 0
   for line in lines {
     for glyph in line.glyphs {
@@ -181,14 +188,14 @@ test "ShapeLine.build_with_font_system keeps visible ASCII renderable on physica
 ///|
 test "ShapeLine.build_with_font_system emits non-inverted in-bounds source ranges" {
   let text = "office affine \u{05D0}\u{05D1}\u{05D2} test"
-  let font_system = FontSystem::new().load_font_data(
+  let font_system = @moon_cosmic.FontSystem::new().load_font_data(
     test_font_inter_regular_ttf(),
   )
-  let shape = ShapeLine::build_with_font_system(
-    ShapeLine::empty(),
+  let shape = @moon_cosmic.ShapeLine::build_with_font_system(
+    @moon_cosmic.ShapeLine::empty(),
     font_system,
     text,
-    AttrsList::new(Attrs::new()),
+    @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new()),
     Advanced,
     8,
   )
@@ -204,16 +211,16 @@ test "ShapeLine.build_with_font_system emits non-inverted in-bounds source range
 ///|
 test "ShapeLine.build_with_font_system assigns metadata by glyph start attrs" {
   let text = "abc"
-  let attrs = AttrsList::new(Attrs::with_metadata(7)).add_span(
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::with_metadata(7)).add_span(
     1,
     2,
-    Attrs::with_metadata(42),
+    @moon_cosmic.Attrs::with_metadata(42),
   )
-  let font_system = FontSystem::new().load_font_data(
+  let font_system = @moon_cosmic.FontSystem::new().load_font_data(
     test_font_inter_regular_ttf(),
   )
-  let shape = ShapeLine::build_with_font_system(
-    ShapeLine::empty(),
+  let shape = @moon_cosmic.ShapeLine::build_with_font_system(
+    @moon_cosmic.ShapeLine::empty(),
     font_system,
     text,
     attrs,
@@ -239,21 +246,21 @@ test "ShapeLine.build_with_font_system assigns metadata by glyph start attrs" {
 
 ///|
 test "ShapeLine.build_with_font_system preserves per-cluster starts on minimal cmap4 fixtures" {
-  let fs = FontSystem::new()
+  let fs = @moon_cosmic.FontSystem::new()
     .load_font_data(mk_min_font_cmap4_single_for_shape_range(b'\x00', b'\x41')) // A
     .load_font_data(mk_min_font_cmap4_single_for_shape_range(b'\x00', b'\x42')) // B
     .load_font_data(mk_min_font_cmap4_single_for_shape_range(b'\x00', b'\x43')) // C
-  let shape = ShapeLine::build_with_font_system(
-    ShapeLine::empty(),
+  let shape = @moon_cosmic.ShapeLine::build_with_font_system(
+    @moon_cosmic.ShapeLine::empty(),
     fs,
     "ABC",
-    AttrsList::new(Attrs::new()),
+    @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new()),
     Advanced,
     8,
   )
-  let mut font_at_a : Int? = None
-  let mut font_at_b : Int? = None
-  let mut font_at_c : Int? = None
+  let mut font_at_a : Int32? = None
+  let mut font_at_b : Int32? = None
+  let mut font_at_c : Int32? = None
   for g in shape.glyphs {
     if g.start == 0 {
       font_at_a = Some(g.font_id)
@@ -272,10 +279,10 @@ test "ShapeLine.build_with_font_system preserves per-cluster starts on minimal c
 
 ///|
 test "ShapeLine layout helpers: width/layout/layout_to_buffer" {
-  let shape = ShapeLine::build(
-    ShapeLine::empty(),
+  let shape = @moon_cosmic.ShapeLine::build(
+    @moon_cosmic.ShapeLine::empty(),
     "ab",
-    AttrsList::new(Attrs::new()),
+    @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new()),
     Basic,
     8,
   )
@@ -290,7 +297,7 @@ test "ShapeLine layout helpers: width/layout/layout_to_buffer" {
     Disabled,
   )
   inspect(lines.length(), content="1")
-  let lines2 : Array[LayoutLine] = []
+  let lines2 : Array[@moon_cosmic.LayoutLine] = []
   shape.layout_to_buffer(
     10.0F,
     Some(100.0F),
@@ -306,10 +313,10 @@ test "ShapeLine layout helpers: width/layout/layout_to_buffer" {
 
 ///|
 test "ShapeLine.layout applies ellipsize trimming semantics" {
-  let shape = ShapeLine::build(
-    ShapeLine::empty(),
+  let shape = @moon_cosmic.ShapeLine::build(
+    @moon_cosmic.ShapeLine::empty(),
     "a a a a a",
-    AttrsList::new(Attrs::new()),
+    @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new()),
     Basic,
     8,
   )

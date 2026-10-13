@@ -26,7 +26,7 @@ fn string_concat(a : String, b : String) -> String {
 }
 
 ///|
-fn substring(s : String, start : Int, end : Int) -> String {
+fn substring(s : String, start : Int32, end : Int32) -> String {
   let sb = StringBuilder(size_hint=(end - start) * 2)
   sb.write_view(s[:].view(start_offset=start, end_offset=end))
   sb.to_string()
@@ -205,8 +205,8 @@ fn ellipsis_glyph(
 fn take_prefix_indices(
   glyphs : Array[LayoutGlyph],
   max_w : Float,
-) -> Array[Int] {
-  let out : Array[Int] = []
+) -> Array[Int32] {
+  let out : Array[Int32] = []
   let mut w = 0.0F
   for p in glyphs.iter2() {
     let i = p.0
@@ -224,8 +224,8 @@ fn take_prefix_indices(
 fn take_suffix_indices(
   glyphs : Array[LayoutGlyph],
   max_w : Float,
-) -> Array[Int] {
-  let rev : Array[Int] = []
+) -> Array[Int32] {
+  let rev : Array[Int32] = []
   let mut w = 0.0F
   let mut i = glyphs.length()
   while i > 0 {
@@ -237,7 +237,7 @@ fn take_suffix_indices(
     w = w + g.w
     i = i - 1
   }
-  let out : Array[Int] = []
+  let out : Array[Int32] = []
   let mut j = rev.length()
   while j > 0 {
     out.push(rev[j - 1])
@@ -249,7 +249,7 @@ fn take_suffix_indices(
 ///|
 fn glyphs_from_indices(
   glyphs : Array[LayoutGlyph],
-  indices : Array[Int],
+  indices : Array[Int32],
 ) -> Array[LayoutGlyph] {
   let out : Array[LayoutGlyph] = []
   for idx in indices {
@@ -277,7 +277,7 @@ fn reposition_glyphs(
 ///|
 fn project_decorations(
   decorations : Array[DecorationSpan],
-  source_indices : Array[Int],
+  source_indices : Array[Int32],
 ) -> Array[DecorationSpan] {
   let out : Array[DecorationSpan] = []
   for decoration in decorations {
@@ -320,7 +320,7 @@ fn ellipsize_line(
   let text_w = nonneg(max_w - e_w)
   let glyphs = line.glyphs
   let out_glyphs : Array[LayoutGlyph] = []
-  let source_indices : Array[Int] = []
+  let source_indices : Array[Int32] = []
 
   match mode {
     End(_) => {
@@ -543,7 +543,7 @@ pub struct BufferLine {
   shape_opt : Cached[ShapeLine]
   layout_opt : Cached[Array[LayoutLine]]
   shaping : Shaping
-  metadata : Int?
+  metadata : Int32?
 }
 
 ///|
@@ -637,7 +637,7 @@ pub fn BufferLine::shape_opt(self : BufferLine) -> ShapeLine? {
 }
 
 ///|
-pub fn BufferLine::shape(self : BufferLine, tab_width : Int) -> BufferLine {
+pub fn BufferLine::shape(self : BufferLine, tab_width : Int32) -> BufferLine {
   if self.shape_opt.is_unused() {
     let (shape_opt, reused_opt) = self.shape_opt.take_unused()
     let reused = if reused_opt is Some(v) { v } else { ShapeLine::empty() }
@@ -662,7 +662,7 @@ pub fn BufferLine::shape(self : BufferLine, tab_width : Int) -> BufferLine {
 pub fn BufferLine::shape_with_font_system(
   self : BufferLine,
   font_system : FontSystem,
-  tab_width : Int,
+  tab_width : Int32,
 ) -> BufferLine {
   if self.shape_opt.is_unused() {
     let (shape_opt, reused_opt) = self.shape_opt.take_unused()
@@ -694,7 +694,7 @@ pub fn BufferLine::layout(
   wrap : Wrap,
   ellipsize : Ellipsize,
   match_mono_width : Float?,
-  tab_width : Int,
+  tab_width : Int32,
   hinting : Hinting,
 ) -> BufferLine {
   if self.layout_opt.is_unused() {
@@ -742,7 +742,7 @@ pub fn BufferLine::layout_with_font_system(
   wrap : Wrap,
   ellipsize : Ellipsize,
   match_mono_width : Float?,
-  tab_width : Int,
+  tab_width : Int32,
   hinting : Hinting,
 ) -> BufferLine {
   if self.layout_opt.is_unused() {
@@ -861,14 +861,14 @@ pub fn BufferLine::layout_runs(
 }
 
 ///|
-pub fn BufferLine::metadata(self : BufferLine) -> Int? {
+pub fn BufferLine::metadata(self : BufferLine) -> Int32? {
   self.metadata
 }
 
 ///|
 pub fn BufferLine::set_metadata(
   self : BufferLine,
-  metadata : Int,
+  metadata : Int32,
 ) -> BufferLine {
   { ..self, metadata: Some(metadata), }
 }
@@ -906,7 +906,7 @@ pub fn BufferLine::append(self : BufferLine, other : BufferLine) -> BufferLine {
 /// Split off new line at index. Returns (left, right).
 pub fn BufferLine::split_off(
   self : BufferLine,
-  index : Int,
+  index : Int32,
 ) -> (BufferLine, BufferLine) {
   let index = if index < 0 { 0 } else { index }
   let end = self.text.length()

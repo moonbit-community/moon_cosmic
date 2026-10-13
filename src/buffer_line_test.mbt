@@ -14,9 +14,9 @@
 
 ///|
 test "BufferLine.set_text returns changed flag" {
-  let defaults = Attrs::new()
-  let attrs = AttrsList::new(defaults)
-  let line0 = BufferLine::new("abc", Lf, attrs, Advanced)
+  let defaults = @moon_cosmic.Attrs::new()
+  let attrs = @moon_cosmic.AttrsList::new(defaults)
+  let line0 = @moon_cosmic.BufferLine::new("abc", Lf, attrs, Advanced)
   let (line1, changed1) = line0.set_text("abc", Lf, attrs)
   inspect(changed1, content="false")
   inspect(line1.text(), content="abc")
@@ -27,8 +27,8 @@ test "BufferLine.set_text returns changed flag" {
 
 ///|
 test "BufferLine.set_align returns changed only on value change" {
-  let attrs = AttrsList::new(Attrs::new())
-  let line0 = BufferLine::new("abc", Lf, attrs, Advanced)
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
+  let line0 = @moon_cosmic.BufferLine::new("abc", Lf, attrs, Advanced)
   let (line1, changed1) = line0.set_align(None)
   inspect(changed1, content="false")
   let (line2, changed2) = line1.set_align(Some(Center))
@@ -48,8 +48,8 @@ test "BufferLine.set_align returns changed only on value change" {
 
 ///|
 test "BufferLine.split_off follows upstream ending/align rules" {
-  let attrs = AttrsList::new(Attrs::new())
-  let line0 = BufferLine::new("hello", CrLf, attrs, Advanced)
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
+  let line0 = @moon_cosmic.BufferLine::new("hello", CrLf, attrs, Advanced)
   let (left, right) = line0.split_off(2)
   inspect(left.text(), content="he")
   inspect(left.ending().as_str(), content="")
@@ -59,8 +59,8 @@ test "BufferLine.split_off follows upstream ending/align rules" {
 
 ///|
 test "BufferLine.set_ending invalidates shaping cache" {
-  let attrs = AttrsList::new(Attrs::new())
-  let line0 = BufferLine::new("abc", Lf, attrs, Advanced)
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
+  let line0 = @moon_cosmic.BufferLine::new("abc", Lf, attrs, Advanced)
   let line1 = line0
     .shape(4)
     .layout(10.0F, Some(100.0F), None, None, None, 4, Disabled)
@@ -83,14 +83,18 @@ test "BufferLine.set_ending invalidates shaping cache" {
 
 ///|
 test "BufferLine.append concatenates text and shifts spans" {
-  let a0 = AttrsList::new(Attrs::new()).add_span(0, 1, Attrs::with_metadata(1))
-  let b0 = AttrsList::new(Attrs::with_metadata(9)).add_span(
+  let a0 = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new()).add_span(
     0,
     1,
-    Attrs::with_metadata(2),
+    @moon_cosmic.Attrs::with_metadata(1),
   )
-  let line0 = BufferLine::new("A", Lf, a0, Advanced)
-  let line1 = BufferLine::new("B", None, b0, Advanced)
+  let b0 = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::with_metadata(9)).add_span(
+    0,
+    1,
+    @moon_cosmic.Attrs::with_metadata(2),
+  )
+  let line0 = @moon_cosmic.BufferLine::new("A", Lf, a0, Advanced)
+  let line1 = @moon_cosmic.BufferLine::new("B", None, b0, Advanced)
   let out = line0.append(line1)
   inspect(out.text(), content="AB")
   inspect(out.ending().as_str(), content="")
@@ -100,8 +104,8 @@ test "BufferLine.append concatenates text and shifts spans" {
 
 ///|
 test "BufferLine.shape builds 1 glyph per code unit (tab uses tab_width cells)" {
-  let attrs = AttrsList::new(Attrs::new())
-  let line0 = BufferLine::new("a\tb", Lf, attrs, Advanced)
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
+  let line0 = @moon_cosmic.BufferLine::new("a\tb", Lf, attrs, Advanced)
   let line1 = line0.shape(4)
   if line1.shape_opt() is Some(shape) {
     inspect(shape.glyphs.length(), content="3")
@@ -115,8 +119,8 @@ test "BufferLine.shape builds 1 glyph per code unit (tab uses tab_width cells)" 
 
 ///|
 test "BufferLine.layout wraps words using whitespace segmentation" {
-  let attrs = AttrsList::new(Attrs::new())
-  let line0 = BufferLine::new("hello world", Lf, attrs, Advanced)
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
+  let line0 = @moon_cosmic.BufferLine::new("hello world", Lf, attrs, Advanced)
   let line1 = line0.layout(10.0F, Some(60.0F), Word, None, None, 4, Disabled)
   if line1.layout_opt() is Some(layout) {
     inspect(layout.length(), content="2")
@@ -131,8 +135,8 @@ test "BufferLine.layout wraps words using whitespace segmentation" {
 
 ///|
 test "BufferLine.layout: Align::Justified does not justify last visual line" {
-  let attrs = AttrsList::new(Attrs::new())
-  let line0 = BufferLine::new("a a a a a", Lf, attrs, Advanced)
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
+  let line0 = @moon_cosmic.BufferLine::new("a a a a a", Lf, attrs, Advanced)
   let (line0, _) = line0.set_align(Some(Justified))
   let line1 = line0.layout(10.0F, Some(60.0F), Word, None, None, 4, Disabled)
   if line1.layout_opt() is Some(layout) {
@@ -148,8 +152,8 @@ test "BufferLine.layout: Align::Justified does not justify last visual line" {
 
 ///|
 test "BufferLine.layout: Hinting::Enabled rounds advances" {
-  let attrs = AttrsList::new(Attrs::new())
-  let line0 = BufferLine::new("ab", Lf, attrs, Advanced)
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
+  let line0 = @moon_cosmic.BufferLine::new("ab", Lf, attrs, Advanced)
   let disabled = line0.layout(10.5F, None, None, None, None, 4, Disabled)
   let enabled = line0.layout(10.5F, None, None, None, None, 4, Enabled)
   if disabled.layout_opt() is Some(l0) && enabled.layout_opt() is Some(l1) {
@@ -162,8 +166,13 @@ test "BufferLine.layout: Hinting::Enabled rounds advances" {
 
 ///|
 test "BufferLine.layout: Align::Start follows paragraph direction in RTL lines" {
-  let attrs = AttrsList::new(Attrs::new())
-  let line0 = BufferLine::new("\u{05D0}\u{05D1}", Lf, attrs, Advanced)
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
+  let line0 = @moon_cosmic.BufferLine::new(
+    "\u{05D0}\u{05D1}",
+    Lf,
+    attrs,
+    Advanced,
+  )
   let (line1, _) = line0.set_align(Some(Start))
   let line2 = line1.layout(10.0F, Some(40.0F), None, None, None, 4, Disabled)
   if line2.shape_opt() is Some(shape) {
@@ -183,8 +192,13 @@ test "BufferLine.layout: Align::Start follows paragraph direction in RTL lines" 
 
 ///|
 test "BufferLine.layout: Align::End is opposite Start in RTL lines" {
-  let attrs = AttrsList::new(Attrs::new())
-  let line0 = BufferLine::new("\u{05D0}\u{05D1}", Lf, attrs, Advanced)
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
+  let line0 = @moon_cosmic.BufferLine::new(
+    "\u{05D0}\u{05D1}",
+    Lf,
+    attrs,
+    Advanced,
+  )
   let (line1, _) = line0.set_align(Some(End))
   let line2 = line1.layout(10.0F, Some(40.0F), None, None, None, 4, Disabled)
   if line2.layout_opt() is Some(layout) {
@@ -198,8 +212,8 @@ test "BufferLine.layout: Align::End is opposite Start in RTL lines" {
 
 ///|
 test "BufferLine.layout: whitespace-only word wrap keeps only final blank segment" {
-  let attrs = AttrsList::new(Attrs::new())
-  let line0 = BufferLine::new("   ", Lf, attrs, Advanced)
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
+  let line0 = @moon_cosmic.BufferLine::new("   ", Lf, attrs, Advanced)
   let line1 = line0.layout(10.0F, Some(5.0F), Word, None, None, 4, Disabled)
   if line1.layout_opt() is Some(layout) {
     inspect(layout.length(), content="1")
@@ -214,8 +228,8 @@ test "BufferLine.layout: whitespace-only word wrap keeps only final blank segmen
 
 ///|
 test "BufferLine.layout: whitespace-only word wrap keeps blanks when unbounded" {
-  let attrs = AttrsList::new(Attrs::new())
-  let line0 = BufferLine::new("   ", Lf, attrs, Advanced)
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
+  let line0 = @moon_cosmic.BufferLine::new("   ", Lf, attrs, Advanced)
   let line1 = line0.layout(10.0F, None, Word, None, None, 4, Disabled)
   if line1.layout_opt() is Some(layout) {
     inspect(layout.length(), content="1")
@@ -230,8 +244,8 @@ test "BufferLine.layout: whitespace-only word wrap keeps blanks when unbounded" 
 
 ///|
 test "BufferLine.layout: Ellipsize::End trims to one visual line within width" {
-  let attrs = AttrsList::new(Attrs::new())
-  let line0 = BufferLine::new("a a a a a", Lf, attrs, Advanced)
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
+  let line0 = @moon_cosmic.BufferLine::new("a a a a a", Lf, attrs, Advanced)
   let line1 = line0.layout(
     10.0F,
     Some(30.0F),
@@ -257,8 +271,8 @@ test "BufferLine.layout: Ellipsize::End trims to one visual line within width" {
 
 ///|
 test "BufferLine.layout: Ellipsize::Start puts ellipsis glyph at line start" {
-  let attrs = AttrsList::new(Attrs::new())
-  let line0 = BufferLine::new("a a a a a", Lf, attrs, Advanced)
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
+  let line0 = @moon_cosmic.BufferLine::new("a a a a a", Lf, attrs, Advanced)
   let line1 = line0.layout(
     10.0F,
     Some(30.0F),
@@ -280,9 +294,9 @@ test "BufferLine.layout: Ellipsize::Start puts ellipsis glyph at line start" {
 
 ///|
 test "BufferLine.layout: ellipsize keeps decoration spans mapped to visible glyphs" {
-  let decorated = Attrs::new().underline(Double)
-  let attrs = AttrsList::new(decorated)
-  let line0 = BufferLine::new("a a a a a", Lf, attrs, Advanced)
+  let decorated = @moon_cosmic.Attrs::new().underline(Double)
+  let attrs = @moon_cosmic.AttrsList::new(decorated)
+  let line0 = @moon_cosmic.BufferLine::new("a a a a a", Lf, attrs, Advanced)
   let line1 = line0.layout(
     10.0F,
     Some(30.0F),
@@ -309,9 +323,11 @@ test "BufferLine.layout: ellipsize keeps decoration spans mapped to visible glyp
 
 ///|
 test "BufferLine.set_attrs_list resets shaping cache when changed" {
-  let attrs0 = AttrsList::new(Attrs::new())
-  let attrs1 = AttrsList::new(Attrs::with_metadata(42))
-  let line0 = BufferLine::new("ab", Lf, attrs0, Advanced).shape(4)
+  let attrs0 = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
+  let attrs1 = @moon_cosmic.AttrsList::new(
+    @moon_cosmic.Attrs::with_metadata(42),
+  )
+  let line0 = @moon_cosmic.BufferLine::new("ab", Lf, attrs0, Advanced).shape(4)
   let (line1, changed) = line0.set_attrs_list(attrs1)
   inspect(changed, content="true")
   inspect(line1.shape_opt() is None, content="true")
@@ -319,8 +335,8 @@ test "BufferLine.set_attrs_list resets shaping cache when changed" {
 
 ///|
 test "BufferLine.metadata and into_text helpers" {
-  let attrs = AttrsList::new(Attrs::new())
-  let line0 = BufferLine::new("hello", None, attrs, Basic)
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
+  let line0 = @moon_cosmic.BufferLine::new("hello", None, attrs, Basic)
   let line1 = line0.set_metadata(7)
   inspect(line1.metadata() == Some(7), content="true")
   inspect(line1.into_text(), content="hello")
@@ -328,8 +344,8 @@ test "BufferLine.metadata and into_text helpers" {
 
 ///|
 test "BufferLine.layout_runs returns visible runs for a laid-out line" {
-  let attrs = AttrsList::new(Attrs::new())
-  let line = BufferLine::new("ab", None, attrs, Basic).layout(
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
+  let line = @moon_cosmic.BufferLine::new("ab", None, attrs, Basic).layout(
     10.0F,
     Some(100.0F),
     None,
@@ -338,7 +354,7 @@ test "BufferLine.layout_runs returns visible runs for a laid-out line" {
     4,
     Disabled,
   )
-  let runs : Array[LayoutRun] = []
+  let runs : Array[@moon_cosmic.LayoutRun] = []
   for run in line.layout_runs(None, 12.0F) {
     runs.push(run)
   }

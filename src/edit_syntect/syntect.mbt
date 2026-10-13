@@ -241,17 +241,17 @@ pub(all) enum TokenClass {
 
 ///|
 pub struct LineState {
-  block_comment_depth : Int
+  block_comment_depth : Int32
   markup_comment_open : Bool
   markup_tag_open : Bool
   ruby_block_comment_open : Bool
   shell_heredoc_delim_opt : String?
   shell_heredoc_strip_tabs : Bool
-  lua_long_eq_count_opt : Int?
+  lua_long_eq_count_opt : Int32?
   lua_long_is_comment : Bool
   string_delim_opt : Char?
   string_is_triple : Bool
-  raw_hash_count_opt : Int?
+  raw_hash_count_opt : Int32?
   markdown_fence_char_opt : Char?
   clike_preproc_continuation : Bool
 }
@@ -294,8 +294,8 @@ pub impl Eq for LineState with fn equal(self, other) {
 
 ///|
 pub struct TokenSpan {
-  start : Int
-  end : Int
+  start : Int32
+  end : Int32
   class : TokenClass
 }
 
@@ -317,7 +317,7 @@ pub struct SyntaxEditor {
 }
 
 ///|
-fn slice_string(s : String, start : Int, end : Int) -> String {
+fn slice_string(s : String, start : Int32, end : Int32) -> String {
   let sb = StringBuilder(size_hint=(end - start) * 2)
   sb.write_view(s[:].view(start_offset=start, end_offset=end))
   sb.to_string()
@@ -346,8 +346,8 @@ fn is_identifier_part(ch : Char) -> Bool {
 }
 
 ///|
-fn code_unit_offsets(_text : String, chars : Array[Char]) -> Array[Int] {
-  let offsets : Array[Int] = []
+fn code_unit_offsets(_text : String, chars : Array[Char]) -> Array[Int32] {
+  let offsets : Array[Int32] = []
   let mut pos = 0
   for ch in chars {
     offsets.push(pos)
@@ -357,7 +357,7 @@ fn code_unit_offsets(_text : String, chars : Array[Char]) -> Array[Int] {
 }
 
 ///|
-fn offset_at(text : String, offsets : Array[Int], char_i : Int) -> Int {
+fn offset_at(text : String, offsets : Array[Int32], char_i : Int32) -> Int32 {
   if char_i < 0 {
     0
   } else if char_i >= offsets.length() {
@@ -370,8 +370,8 @@ fn offset_at(text : String, offsets : Array[Int], char_i : Int) -> Int {
 ///|
 fn push_token(
   out : Array[TokenSpan],
-  start : Int,
-  end : Int,
+  start : Int32,
+  end : Int32,
   class : TokenClass,
 ) -> Unit {
   if end > start {
@@ -772,7 +772,7 @@ fn classify_identifier(word : String, syntax_name : String) -> TokenClass? {
 fn has_line_comment_prefix(
   syntax_name : String,
   chars : Array[Char],
-  i : Int,
+  i : Int32,
 ) -> Bool {
   if syntax_name == "python" ||
     syntax_name == "shell" ||
@@ -818,7 +818,7 @@ fn is_python_string_prefix_char(ch : Char) -> Bool {
 }
 
 ///|
-fn lua_long_bracket_open_count(chars : Array[Char], start : Int) -> Int? {
+fn lua_long_bracket_open_count(chars : Array[Char], start : Int32) -> Int32? {
   let n = chars.length()
   if start >= n || chars[start] != '[' {
     return None
@@ -837,8 +837,8 @@ fn lua_long_bracket_open_count(chars : Array[Char], start : Int) -> Int? {
 ///|
 fn lua_long_bracket_close(
   chars : Array[Char],
-  start : Int,
-  eq_count : Int,
+  start : Int32,
+  eq_count : Int32,
 ) -> Bool {
   let n = chars.length()
   if start >= n || chars[start] != ']' {
@@ -857,7 +857,7 @@ fn lua_long_bracket_close(
 }
 
 ///|
-fn rust_char_literal_end(chars : Array[Char], start : Int) -> Int? {
+fn rust_char_literal_end(chars : Array[Char], start : Int32) -> Int32? {
   let n = chars.length()
   if start + 2 >= n || chars[start] != '\'' {
     return None
@@ -893,7 +893,7 @@ fn rust_char_literal_end(chars : Array[Char], start : Int) -> Int? {
 }
 
 ///|
-fn markdown_first_non_whitespace(chars : Array[Char]) -> Int {
+fn markdown_first_non_whitespace(chars : Array[Char]) -> Int32 {
   let n = chars.length()
   let mut i = 0
   while i < n && chars[i].is_whitespace() {
@@ -903,7 +903,7 @@ fn markdown_first_non_whitespace(chars : Array[Char]) -> Int {
 }
 
 ///|
-fn line_starts_with(chars : Array[Char], start : Int, token : String) -> Bool {
+fn line_starts_with(chars : Array[Char], start : Int32, token : String) -> Bool {
   let token_chars = token.to_array()
   if start < 0 || start + token_chars.length() > chars.length() {
     return false
@@ -933,9 +933,9 @@ fn trim_leading_tabs(text : String) -> String {
 fn shell_heredoc_start(
   text : String,
   chars : Array[Char],
-  offsets : Array[Int],
-  start : Int,
-) -> (String, Bool, Int)? {
+  offsets : Array[Int32],
+  start : Int32,
+) -> (String, Bool, Int32)? {
   let n = chars.length()
   if start + 1 >= n || chars[start] != '<' || chars[start + 1] != '<' {
     return None
@@ -1008,7 +1008,7 @@ fn shell_heredoc_start(
 }
 
 ///|
-fn markdown_fence_char(chars : Array[Char], start : Int) -> Char? {
+fn markdown_fence_char(chars : Array[Char], start : Int32) -> Char? {
   if start + 2 >= chars.length() {
     return None
   }
@@ -2010,8 +2010,8 @@ fn attrs_for_token(
 fn push_text_span(
   rich_spans : Array[(String, @cosmic.Attrs)],
   text : String,
-  start : Int,
-  end : Int,
+  start : Int32,
+  end : Int32,
   attrs : @cosmic.Attrs,
 ) -> Unit {
   if end > start {
@@ -2305,14 +2305,14 @@ pub fn SyntaxEditor::set_auto_indent(
 }
 
 ///|
-pub fn SyntaxEditor::tab_width(self : SyntaxEditor) -> Int {
+pub fn SyntaxEditor::tab_width(self : SyntaxEditor) -> Int32 {
   self.editor.tab_width()
 }
 
 ///|
 pub fn SyntaxEditor::set_tab_width(
   self : SyntaxEditor,
-  tab_width : Int,
+  tab_width : Int32,
 ) -> SyntaxEditor {
   { ..self, editor: self.editor.set_tab_width(tab_width), }
 }
@@ -2374,7 +2374,7 @@ pub fn SyntaxEditor::apply_change(
 }
 
 ///|
-pub fn SyntaxEditor::cursor_position(self : SyntaxEditor) -> (Int, Int)? {
+pub fn SyntaxEditor::cursor_position(self : SyntaxEditor) -> (Int32, Int32)? {
   self.editor.cursor_position()
 }
 

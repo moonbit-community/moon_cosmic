@@ -14,7 +14,7 @@
 
 ///|
 test "Metrics.relative/scale" {
-  let m0 = Metrics::relative(10.0F, 1.5F)
+  let m0 = @moon_cosmic.Metrics::relative(10.0F, 1.5F)
   inspect(m0.font_size, content="10")
   inspect(m0.line_height, content="15")
   let m1 = m0.scale(2.0F)

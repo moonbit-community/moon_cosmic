@@ -14,15 +14,15 @@
 
 ///|
 test "Editor.selection_bounds: none/normal/line/word" {
-  let attrs = AttrsList::new(Attrs::new())
-  let buffer = Buffer::new(Metrics::new(12.0F, 14.0F)).set_text(
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
+  let buffer = @moon_cosmic.Buffer::new(@moon_cosmic.Metrics::new(12.0F, 14.0F)).set_text(
     "hello world\nfoo bar",
     attrs,
     Advanced,
   )
 
   // None
-  let editor0 = Editor::new(buffer)
+  let editor0 = @moon_cosmic.Editor::new(buffer)
   inspect(
     match editor0.selection_bounds() {
       None => true
@@ -33,8 +33,8 @@ test "Editor.selection_bounds: none/normal/line/word" {
 
   // Normal
   let editor1 = editor0
-    .set_cursor(Cursor::new(0, 2))
-    .set_selection(Normal(Cursor::new(0, 5)))
+    .set_cursor(@moon_cosmic.Cursor::new(0, 2))
+    .set_selection(Normal(@moon_cosmic.Cursor::new(0, 5)))
   match editor1.selection_bounds() {
     None => abort("expected selection bounds")
     Some((start, end)) => {
@@ -47,8 +47,8 @@ test "Editor.selection_bounds: none/normal/line/word" {
 
   // Line selection expands to full lines.
   let editor2 = editor0
-    .set_cursor(Cursor::new(1, 2))
-    .set_selection(Line(Cursor::new(0, 0)))
+    .set_cursor(@moon_cosmic.Cursor::new(1, 2))
+    .set_selection(Line(@moon_cosmic.Cursor::new(0, 0)))
   match editor2.selection_bounds() {
     None => abort("expected selection bounds")
     Some((start, end)) => {
@@ -61,8 +61,8 @@ test "Editor.selection_bounds: none/normal/line/word" {
 
   // Word selection expands to whole words.
   let editor3 = editor0
-    .set_cursor(Cursor::new(0, 8))
-    .set_selection(Word(Cursor::new(0, 1)))
+    .set_cursor(@moon_cosmic.Cursor::new(0, 8))
+    .set_selection(Word(@moon_cosmic.Cursor::new(0, 1)))
   match editor3.selection_bounds() {
     None => abort("expected selection bounds")
     Some((start, end)) => {

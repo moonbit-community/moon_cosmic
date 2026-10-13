@@ -42,8 +42,8 @@ pub fn LineEnding::default() -> LineEnding {
 ///|
 pub struct LineIter {
   string : String
-  start : Int
-  end : Int
+  start : Int32
+  end : Int32
 }
 
 ///|
@@ -52,18 +52,20 @@ pub fn LineIter::new(string : String) -> LineIter {
 }
 
 ///|
-fn is_cr(code : Int) -> Bool {
+fn is_cr(code : Int32) -> Bool {
   code == 13
 }
 
 ///|
-fn is_lf(code : Int) -> Bool {
+fn is_lf(code : Int32) -> Bool {
   code == 10
 }
 
 ///|
 /// Returns (start, end, ending) where [start,end) is the line content range.
-pub fn LineIter::next(self : LineIter) -> (LineIter, (Int, Int, LineEnding)?) {
+pub fn LineIter::next(
+  self : LineIter,
+) -> (LineIter, (Int32, Int32, LineEnding)?) {
   let start = self.start
   let len = self.end
   let mut i = start

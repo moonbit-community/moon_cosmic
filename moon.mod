@@ -6,8 +6,7 @@ import {
   "Milky2018/moon_swash@0.1.13",
   "Milky2018/moon_zeno@0.1.4",
   "Milky2018/moon_skrifa@0.1.11",
-  "moonbitlang/x@0.5.1",
-  "moonbit-community/harfbuzz@0.1.0",
+  "moonbitlang/x@0.5.5",
 }
 
 readme = "README.mbt.md"

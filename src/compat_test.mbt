@@ -15,63 +15,63 @@
 ///|
 test "LineBreak/Justify mapping" {
   inspect(
-    match line_break_to_wrap(NoWrap) {
+    match @moon_cosmic.line_break_to_wrap(NoWrap) {
       None => true
       _ => false
     },
     content="true",
   )
   inspect(
-    match line_break_to_wrap(AnyCharacter) {
+    match @moon_cosmic.line_break_to_wrap(AnyCharacter) {
       Glyph => true
       _ => false
     },
     content="true",
   )
   inspect(
-    match line_break_to_wrap(WordBoundary) {
+    match @moon_cosmic.line_break_to_wrap(WordBoundary) {
       WordOrGlyph => true
       _ => false
     },
     content="true",
   )
   inspect(
-    match justify_to_align(Left) {
+    match @moon_cosmic.justify_to_align(Left) {
       Left => true
       _ => false
     },
     content="true",
   )
   inspect(
-    match justify_to_align(Right) {
+    match @moon_cosmic.justify_to_align(Right) {
       Right => true
       _ => false
     },
     content="true",
   )
   inspect(
-    match justify_to_align(Center) {
+    match @moon_cosmic.justify_to_align(Center) {
       Center => true
       _ => false
     },
     content="true",
   )
   inspect(
-    match justify_to_align(Justified) {
+    match @moon_cosmic.justify_to_align(Justified) {
       Justified => true
       _ => false
     },
     content="true",
   )
   inspect(
-    match justify_to_align(Start) {
+    match @moon_cosmic.justify_to_align(Start) {
       Start => true
       _ => false
     },
     content="true",
   )
   inspect(
-    match justify_to_align(End) {
+    match @moon_cosmic.justify_to_align(End) {
       End => true
       _ => false
     },
@@ -81,8 +81,8 @@ test "LineBreak/Justify mapping" {
 
 ///|
 test "apply_align centers lines" {
-  let attrs = AttrsList::new(Attrs::new())
-  let line0 = BufferLine::new("hi", Lf, attrs, Advanced)
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
+  let line0 = @moon_cosmic.BufferLine::new("hi", Lf, attrs, Advanced)
   let (line1, _) = line0.set_align(Some(Center))
   let line2 = line1.layout(10.0F, Some(40.0F), None, None, None, 4, Disabled)
   if line2.layout_opt() is Some(layout) {
@@ -95,8 +95,8 @@ test "apply_align centers lines" {
 
 ///|
 test "Align::Justified does not justify the last line (upstream behavior)" {
-  let attrs = AttrsList::new(Attrs::new())
-  let line0 = BufferLine::new("a a", Lf, attrs, Advanced)
+  let attrs = @moon_cosmic.AttrsList::new(@moon_cosmic.Attrs::new())
+  let line0 = @moon_cosmic.BufferLine::new("a a", Lf, attrs, Advanced)
   let (line1, _) = line0.set_align(Some(Justified))
   let line2 = line1.layout(10.0F, Some(50.0F), None, None, None, 4, Disabled)
   if line2.layout_opt() is Some(layout) {

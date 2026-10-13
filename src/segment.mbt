@@ -16,21 +16,21 @@
 /// Compatibility wrappers for segmentation APIs.
 ///
 /// Implementations are hosted in the `linebreak` internal subpackage.
-pub fn word_indices_whitespace(s : String) -> Array[(Int, Int)] {
+pub fn word_indices_whitespace(s : String) -> Array[(Int32, Int32)] {
   @linebreak.word_indices_whitespace(s)
 }
 
 ///|
-pub fn word_indices_uax29(s : String) -> Array[(Int, Int)] {
+pub fn word_indices_uax29(s : String) -> Array[(Int32, Int32)] {
   @linebreak.word_indices_uax29(s)
 }
 
 ///|
-pub fn wrap_word_segments(s : String) -> Array[(Int, Int, Bool)] {
+pub fn wrap_word_segments(s : String) -> Array[(Int32, Int32, Bool)] {
   @linebreak.wrap_word_segments(s)
 }
 
 ///|
-pub fn grapheme_indices_uax29(s : String) -> Array[(Int, Int)] {
+pub fn grapheme_indices_uax29(s : String) -> Array[(Int32, Int32)] {
   @linebreak.grapheme_indices_uax29(s)
 }

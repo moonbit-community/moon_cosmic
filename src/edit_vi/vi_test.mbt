@@ -13,14 +13,14 @@
 // limitations under the License.
 
 ///|
-fn mk_vi(text : String) -> ViEditor {
+fn mk_vi(text : String) -> @edit_vi.ViEditor {
   let attrs_list = @cosmic.AttrsList::new(@cosmic.Attrs::new())
   let buffer = @cosmic.Buffer::new(@cosmic.Metrics::new(14.0, 20.0)).set_text(
     text,
     attrs_list,
     Advanced,
   )
-  ViEditor::new(@cosmic.Editor::new(buffer))
+  @edit_vi.ViEditor::new(@cosmic.Editor::new(buffer))
 }
 
 ///|

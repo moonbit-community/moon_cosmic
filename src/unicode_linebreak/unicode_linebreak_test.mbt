@@ -13,14 +13,14 @@
 // limitations under the License.
 
 ///|
-fn ulb_slice_string(s : String, start : Int, end : Int) -> String {
+fn ulb_slice_string(s : String, start : Int32, end : Int32) -> String {
   let sb = StringBuilder(size_hint=end - start)
   sb.write_view(s[:].view(start_offset=start, end_offset=end))
   sb.to_string()
 }
 
 ///|
-fn ulb_find_code_unit(s : String, code : Int) -> Int? {
+fn ulb_find_code_unit(s : String, code : Int32) -> Int32? {
   for i in 0..<s.length() {
     if s.code_unit_at(i).to_int() == code {
       return Some(i)
@@ -30,7 +30,7 @@ fn ulb_find_code_unit(s : String, code : Int) -> Int? {
 }
 
 ///|
-fn ulb_find_substring(text : String, pattern : String) -> Int? {
+fn ulb_find_substring(text : String, pattern : String) -> Int32? {
   let plen = pattern.length()
   if plen == 0 || plen > text.length() {
     return None
@@ -110,7 +110,7 @@ fn ulb_tokenize_ws(s : String) -> Array[String] {
 }
 
 ///|
-fn ulb_hex_digit(c : Int) -> Int? {
+fn ulb_hex_digit(c : Int32) -> Int32? {
   if c >= 48 && c <= 57 {
     Some(c - 48)
   } else if c >= 65 && c <= 70 {
@@ -123,7 +123,7 @@ fn ulb_hex_digit(c : Int) -> Int? {
 }
 
 ///|
-fn ulb_parse_hex(s : String) -> Int? {
+fn ulb_parse_hex(s : String) -> Int32? {
   if s.length() == 0 {
     return None
   }
@@ -139,7 +139,7 @@ fn ulb_parse_hex(s : String) -> Int? {
 }
 
 ///|
-fn ulb_codepoint_to_char(cp : Int) -> Char? {
+fn ulb_codepoint_to_char(cp : Int32) -> Char? {
   if cp < 0 || cp > 0x10FFFF {
     return None
   }
@@ -150,7 +150,7 @@ fn ulb_codepoint_to_char(cp : Int) -> Char? {
 }
 
 ///|
-fn ulb_codepoint_utf16_len(cp : Int) -> Int {
+fn ulb_codepoint_utf16_len(cp : Int32) -> Int32 {
   if cp > 0xFFFF {
     2
   } else {
@@ -159,7 +159,7 @@ fn ulb_codepoint_utf16_len(cp : Int) -> Int {
 }
 
 ///|
-fn ulb_build_text(codepoints : Array[Int]) -> String {
+fn ulb_build_text(codepoints : Array[Int32]) -> String {
   let sb = StringBuilder(size_hint=codepoints.length() * 2)
   for cp in codepoints {
     match ulb_codepoint_to_char(cp) {
@@ -171,7 +171,7 @@ fn ulb_build_text(codepoints : Array[Int]) -> String {
 }
 
 ///|
-fn ulb_array_eq_int(a : Array[Int], b : Array[Int]) -> Bool {
+fn ulb_array_eq_int(a : Array[Int32], b : Array[Int32]) -> Bool {
   if a.length() != b.length() {
     return false
   }
@@ -219,8 +219,8 @@ test "unicode_linebreak parity on upstream LineBreakTest vectors" {
     }
     // First token is the leading boundary marker.
     let mut ti = 1
-    let cps : Array[Int] = []
-    let expected : Array[Int] = []
+    let cps : Array[Int32] = []
+    let expected : Array[Int32] = []
     let mut utf16_offset = 0
     while ti + 1 < tokens.length() {
       let cp = match ulb_parse_hex(tokens[ti]) {
@@ -241,8 +241,8 @@ test "unicode_linebreak parity on upstream LineBreakTest vectors" {
     }
 
     let case_text = ulb_build_text(cps)
-    let actual_pairs = linebreaks(case_text)
-    let actual : Array[Int] = []
+    let actual_pairs = @unicode_linebreak.linebreaks(case_text)
+    let actual : Array[Int32] = []
     for pair in actual_pairs {
       actual.push(pair.0)
     }
@@ -251,8 +251,8 @@ test "unicode_linebreak parity on upstream LineBreakTest vectors" {
       mismatches = mismatches + 1
       println("unicode_linebreak mismatch line=\{line_no}")
       println("comment: \{comment}")
-      println("actual: \{@debug.to_string(actual)}")
-      println("expected: \{@debug.to_string(expected)}")
+      println("actual: \{Repr(actual)}")
+      println("expected: \{Repr(expected)}")
     }
     checked = checked + 1
   }

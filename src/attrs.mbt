@@ -18,7 +18,7 @@
 ///|
 /// Text color (ARGB packed, aligned with upstream).
 pub struct Color {
-  value : UInt
+  value : UInt32
 }
 
 ///|
@@ -163,7 +163,7 @@ pub impl Show for Family with fn output(self, logger) {
 ///|
 /// Font weight (1..=1000). This is a simplified stand-in for `fontdb::Weight`.
 pub struct Weight {
-  value : Int
+  value : Int32
 }
 
 ///|
@@ -172,12 +172,12 @@ pub struct Weight {
 /// This mirrors upstream `cosmic-text` CacheMetrics, enabling per-span metrics
 /// overrides (font size / line height) while keeping Attrs hashable.
 pub struct CacheMetrics {
-  font_size_bits : UInt
-  line_height_bits : UInt
+  font_size_bits : UInt32
+  line_height_bits : UInt32
 }
 
 ///|
-fn attrs_u32_from_be_bytes(b : Bytes) -> UInt {
+fn attrs_u32_from_be_bytes(b : Bytes) -> UInt32 {
   let b0 = if b.get(0) is Some(v) { v } else { 0x00 }
   let b1 = if b.get(1) is Some(v) { v } else { 0x00 }
   let b2 = if b.get(2) is Some(v) { v } else { 0x00 }
@@ -190,12 +190,12 @@ fn attrs_u32_from_be_bytes(b : Bytes) -> UInt {
 }
 
 ///|
-fn attrs_f32_from_bits(bits : UInt) -> Float {
+fn attrs_f32_from_bits(bits : UInt32) -> Float {
   Float::reinterpret_from_uint(bits)
 }
 
 ///|
-fn float_to_bits(v : Float) -> UInt {
+fn float_to_bits(v : Float) -> UInt32 {
   attrs_u32_from_be_bytes(Float::to_be_bytes(v))
 }
 
@@ -247,7 +247,7 @@ pub impl Show for CacheMetrics with fn output(self, logger) {
 }
 
 ///|
-pub fn Weight::new(value : Int) -> Weight {
+pub fn Weight::new(value : Int32) -> Weight {
   { value, }
 }
 
@@ -262,7 +262,7 @@ pub fn Weight::bold() -> Weight {
 }
 
 ///|
-pub fn Weight::value(self : Weight) -> Int {
+pub fn Weight::value(self : Weight) -> Int32 {
   self.value
 }
 
@@ -283,7 +283,7 @@ pub impl Show for Weight with fn output(self, logger) {
 
 ///|
 pub struct FeatureTag {
-  value : UInt
+  value : UInt32
 }
 
 ///|
@@ -292,12 +292,12 @@ pub fn FeatureTag::new(tag : String) -> FeatureTag {
 }
 
 ///|
-pub fn FeatureTag::from_tag(tag : UInt) -> FeatureTag {
+pub fn FeatureTag::from_tag(tag : UInt32) -> FeatureTag {
   { value: tag, }
 }
 
 ///|
-pub fn FeatureTag::as_tag(self : FeatureTag) -> UInt {
+pub fn FeatureTag::as_tag(self : FeatureTag) -> UInt32 {
   self.value
 }
 
@@ -314,11 +314,11 @@ pub impl Hash for FeatureTag with fn hash_combine(self, hasher) {
 ///|
 pub struct Feature {
   tag : FeatureTag
-  value : UInt
+  value : UInt32
 }
 
 ///|
-pub fn Feature::new(tag : FeatureTag, value : UInt) -> Feature {
+pub fn Feature::new(tag : FeatureTag, value : UInt32) -> Feature {
   { tag, value, }
 }
 
@@ -328,7 +328,7 @@ pub fn Feature::tag(self : Feature) -> FeatureTag {
 }
 
 ///|
-pub fn Feature::value(self : Feature) -> UInt {
+pub fn Feature::value(self : Feature) -> UInt32 {
   self.value
 }
 
@@ -362,7 +362,7 @@ pub fn FontFeatures::features(self : FontFeatures) -> Array[Feature] {
 pub fn FontFeatures::set(
   self : FontFeatures,
   tag : FeatureTag,
-  value : UInt,
+  value : UInt32,
 ) -> FontFeatures {
   let features = self.features
   features.push(Feature::new(tag, value))
@@ -408,16 +408,16 @@ pub impl Hash for FontFeatures with fn hash_combine(self, hasher) {
 
 ///|
 pub struct LetterSpacing {
-  bits : UInt
+  bits : UInt32
 }
 
 ///|
-fn letter_spacing_is_nan(bits : UInt) -> Bool {
+fn letter_spacing_is_nan(bits : UInt32) -> Bool {
   (bits & 0x7F800000U) == 0x7F800000U && (bits & 0x007FFFFFU) != 0U
 }
 
 ///|
-fn normalize_letter_spacing_bits(value : Float) -> UInt {
+fn normalize_letter_spacing_bits(value : Float) -> UInt32 {
   let bits = float_to_bits(value)
   if letter_spacing_is_nan(bits) {
     0x7FC00000U
@@ -591,7 +591,7 @@ pub impl Hash for GlyphDecorationData with fn hash_combine(self, hasher) {
 ///|
 pub struct Attrs {
   color_opt : Color?
-  metadata : Int
+  metadata : Int32
   family : Family
   weight : Weight
   stretch : @moon_swash.Stretch
@@ -609,7 +609,7 @@ pub fn Attrs::new() -> Attrs {
 }
 
 ///|
-pub fn Attrs::with_metadata(metadata : Int) -> Attrs {
+pub fn Attrs::with_metadata(metadata : Int32) -> Attrs {
   {
     color_opt: None,
     metadata,
@@ -626,7 +626,7 @@ pub fn Attrs::with_metadata(metadata : Int) -> Attrs {
 }
 
 ///|
-pub fn Attrs::metadata(self : Attrs) -> Int {
+pub fn Attrs::metadata(self : Attrs) -> Int32 {
   self.metadata
 }
 
@@ -850,8 +850,8 @@ pub impl Hash for Attrs with fn hash_combine(self, hasher) {
 
 ///|
 pub struct AttrsSpan {
-  start : Int
-  end : Int
+  start : Int32
+  end : Int32
   attrs : Attrs
 }
 
@@ -941,8 +941,8 @@ fn merge_adjacent_spans(spans : Array[AttrsSpan]) -> Array[AttrsSpan] {
 ///|
 pub fn AttrsList::add_span(
   self : AttrsList,
-  start : Int,
-  end : Int,
+  start : Int32,
+  end : Int32,
   attrs : Attrs,
 ) -> AttrsList {
   if end <= start {
@@ -989,7 +989,7 @@ pub fn AttrsList::add_span(
 }
 
 ///|
-pub fn AttrsList::get_span(self : AttrsList, pos : Int) -> Attrs {
+pub fn AttrsList::get_span(self : AttrsList, pos : Int32) -> Attrs {
   let mut found : Attrs? = None
   for span in self.spans {
     if pos >= span.start && pos < span.end {
@@ -1004,7 +1004,7 @@ pub fn AttrsList::get_span(self : AttrsList, pos : Int) -> Attrs {
 }
 
 ///|
-fn clamp_nonneg(v : Int) -> Int {
+fn clamp_nonneg(v : Int32) -> Int32 {
   if v < 0 {
     0
   } else {
@@ -1016,7 +1016,7 @@ fn clamp_nonneg(v : Int) -> Int {
 /// Splits spans at `index` and returns (left, right).
 pub fn AttrsList::split_off(
   self : AttrsList,
-  index : Int,
+  index : Int32,
 ) -> (AttrsList, AttrsList) {
   let index = clamp_nonneg(index)
   let left : Array[AttrsSpan] = []

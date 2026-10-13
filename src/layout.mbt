@@ -45,30 +45,30 @@ pub(all) enum Align {
 ///|
 /// A laid out glyph.
 pub struct LayoutGlyph {
-  start : Int
-  end : Int
+  start : Int32
+  end : Int32
   font_size : Float
-  font_id : Int
-  font_weight : Int
-  glyph_id : Int
+  font_id : Int32
+  font_weight : Int32
+  glyph_id : Int32
   x : Float
   y : Float
   w : Float
   /// BiDi embedding level (LTR if divisible by 2).
-  level : Int
+  level : Int32
   line_height_opt : Float?
   x_offset : Float
   y_offset : Float
   color_opt : Color?
-  metadata : Int
+  metadata : Int32
   cache_key_flags : CacheKeyFlags
 }
 
 ///|
 /// A span of consecutive glyphs sharing the same text decoration.
 pub struct DecorationSpan {
-  glyph_start : Int
-  glyph_end : Int
+  glyph_start : Int32
+  glyph_end : Int32
   data : GlyphDecorationData
   color_opt : Color?
   font_size : Float
@@ -77,16 +77,16 @@ pub struct DecorationSpan {
 ///|
 /// Convenience constructor (fills optional fields with defaults).
 pub fn LayoutGlyph::new(
-  start : Int,
-  end : Int,
+  start : Int32,
+  end : Int32,
   font_size : Float,
-  font_id : Int,
-  font_weight : Int,
-  glyph_id : Int,
+  font_id : Int32,
+  font_weight : Int32,
+  glyph_id : Int32,
   x : Float,
   y : Float,
   w : Float,
-  metadata : Int,
+  metadata : Int32,
 ) -> LayoutGlyph {
   {
     start,
@@ -111,8 +111,8 @@ pub fn LayoutGlyph::new(
 ///|
 /// A line of laid out glyphs.
 pub struct LayoutLine {
-  start : Int
-  end : Int
+  start : Int32
+  end : Int32
   w : Float
   max_ascent : Float
   max_descent : Float
@@ -131,7 +131,7 @@ pub(all) enum Ellipsize {
 
 ///|
 pub(all) enum EllipsizeHeightLimit {
-  Lines(Int)
+  Lines(Int32)
   Height(Float)
 }
 
@@ -139,8 +139,8 @@ pub(all) enum EllipsizeHeightLimit {
 /// A laid out glyph in physical/pixel coordinates, ready for rasterization.
 pub struct PhysicalGlyph {
   cache_key : CacheKey
-  x : Int
-  y : Int
+  x : Int32
+  y : Int32
 }
 
 ///|
@@ -166,7 +166,7 @@ pub fn LayoutGlyph::physical(
 }
 
 ///|
-fn float_from_int(v : Int) -> Float {
+fn float_from_int(v : Int32) -> Float {
   Float::from_double(v.to_double())
 }
 
@@ -194,7 +194,7 @@ fn glyph_layout_width(
 ///|
 fn push_decoration_for_layout_glyph(
   decorations : Array[DecorationSpan],
-  glyph_i : Int,
+  glyph_i : Int32,
   shape_glyph : ShapeGlyph,
   glyph_font_size : Float,
 ) -> Unit {
@@ -228,7 +228,7 @@ fn push_decoration_for_layout_glyph(
 }
 
 ///|
-fn max_int(a : Int, b : Int) -> Int {
+fn max_int(a : Int32, b : Int32) -> Int32 {
   if a > b {
     a
   } else {
@@ -239,7 +239,7 @@ fn max_int(a : Int, b : Int) -> Int {
 ///|
 
 ///|
-fn prefix_range_w(prefix : Array[Float], start : Int, end : Int) -> Float {
+fn prefix_range_w(prefix : Array[Float], start : Int32, end : Int32) -> Float {
   let s = if start < 0 { 0 } else { start }
   let e = if end < s { s } else { end }
   let a = if prefix.get(s) is Some(v) { v } else { 0.0F }
@@ -249,8 +249,8 @@ fn prefix_range_w(prefix : Array[Float], start : Int, end : Int) -> Float {
 
 ///|
 priv struct GlyphWrapSegment {
-  glyph_start : Int
-  glyph_end : Int
+  glyph_start : Int32
+  glyph_end : Int32
   blank : Bool
 }
 
@@ -322,8 +322,8 @@ fn build_glyph_wrap_segments(
 ///|
 fn build_layout_line_from_shape(
   shape : ShapeLine,
-  glyph_start : Int,
-  glyph_end : Int,
+  glyph_start : Int32,
+  glyph_end : Int32,
   default_font_size : Float,
   cell_w : Float,
 ) -> LayoutLine {
@@ -407,8 +407,8 @@ fn build_layout_line_from_shape(
 fn push_layout_line_from_shape(
   lines : Array[LayoutLine],
   shape : ShapeLine,
-  glyph_start : Int,
-  glyph_end : Int,
+  glyph_start : Int32,
+  glyph_end : Int32,
   font_size : Float,
   cell_w : Float,
 ) -> Unit {
@@ -425,8 +425,8 @@ fn push_layout_line_from_shape(
 ///|
 fn push_line(
   lines : Array[LayoutLine],
-  text_start : Int,
-  text_end : Int,
+  text_start : Int32,
+  text_end : Int32,
   glyph_w : Float,
 ) -> Unit {
   let len = text_end - text_start
@@ -468,8 +468,8 @@ fn push_line(
 ///|
 fn push_line_glyph_chunks(
   lines : Array[LayoutLine],
-  text_start : Int,
-  text_end : Int,
+  text_start : Int32,
+  text_end : Int32,
   glyph_w : Float,
   max_w : Float,
 ) -> Unit {
@@ -622,25 +622,25 @@ fn finalize_layout_lines(
 
 ///|
 priv struct WrapWordLayout {
-  glyph_start : Int
-  glyph_end : Int
+  glyph_start : Int32
+  glyph_end : Int32
   blank : Bool
   w : Float
 }
 
 ///|
 priv struct WrapSpanLayout {
-  level : Int
+  level : Int32
   words : Array[WrapWordLayout]
 }
 
 ///|
 priv struct VisualRangeLayout {
-  span_index : Int
-  start_word : Int
-  start_glyph : Int
-  end_word : Int
-  end_glyph : Int
+  span_index : Int32
+  start_word : Int32
+  start_glyph : Int32
+  end_word : Int32
+  end_glyph : Int32
 }
 
 ///|
@@ -687,11 +687,11 @@ fn build_wrap_spans_from_shape(
 fn add_visual_range(
   ranges : Array[VisualRangeLayout],
   cur_w : Float,
-  span_index : Int,
-  start_word : Int,
-  start_glyph : Int,
-  end_word : Int,
-  end_glyph : Int,
+  span_index : Int32,
+  start_word : Int32,
+  start_glyph : Int32,
+  end_word : Int32,
+  end_glyph : Int32,
   width : Float,
 ) -> Float {
   if start_word == end_word && start_glyph == end_glyph {
@@ -702,7 +702,11 @@ fn add_visual_range(
 }
 
 ///|
-fn reverse_runs(runs : Array[(Int, Int)], start : Int, end : Int) -> Unit {
+fn reverse_runs(
+  runs : Array[(Int32, Int32)],
+  start : Int32,
+  end : Int32,
+) -> Unit {
   if end <= start {
     return
   }
@@ -721,12 +725,12 @@ fn reverse_runs(runs : Array[(Int, Int)], start : Int, end : Int) -> Unit {
 fn reorder_visual_range_runs(
   spans : Array[WrapSpanLayout],
   ranges : Array[VisualRangeLayout],
-) -> Array[(Int, Int)] {
-  let out : Array[(Int, Int)] = []
+) -> Array[(Int32, Int32)] {
+  let out : Array[(Int32, Int32)] = []
   if ranges.length() == 0 {
     return out
   }
-  let levels : Array[Int] = []
+  let levels : Array[Int32] = []
   for r in ranges {
     levels.push(spans[r.span_index].level)
   }
@@ -797,8 +801,8 @@ fn build_layout_lines_from_visual_ranges(
     let glyphs : Array[LayoutGlyph] = []
     let decorations : Array[DecorationSpan] = []
     let mut x = 0.0F
-    let mut text_start : Int? = None
-    let mut text_end : Int? = None
+    let mut text_start : Int32? = None
+    let mut text_end : Int32? = None
     let mut max_line_height : Float? = None
     let mut max_ascent = 0.0F
     let mut max_descent = 0.0F
@@ -806,18 +810,18 @@ fn build_layout_lines_from_visual_ranges(
       shape : ShapeLine,
       spans : Array[WrapSpanLayout],
       ranges : Array[VisualRangeLayout],
-      ridx : Int,
+      ridx : Int32,
       glyphs : Array[LayoutGlyph],
       decorations : Array[DecorationSpan],
       x : Float,
-      text_start : Int?,
-      text_end : Int?,
+      text_start : Int32?,
+      text_end : Int32?,
       max_line_height : Float?,
       max_ascent : Float,
       max_descent : Float,
       font_size : Float,
       cell_w : Float,
-    ) -> (Float, Int?, Int?, Float?, Float, Float) {
+    ) -> (Float, Int32?, Int32?, Float?, Float, Float) {
       let mut x2 = x
       let mut ts = text_start
       let mut te = text_end

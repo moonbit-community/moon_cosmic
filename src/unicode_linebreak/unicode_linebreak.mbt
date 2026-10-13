@@ -14,13 +14,13 @@
 
 ///|
 /// Subpackage for word/grapheme/linebreak segmentation.
-fn is_ws(code : Int) -> Bool {
+fn is_ws(code : Int32) -> Bool {
   code == 32 || code == 9 || code == 10 || code == 13
 }
 
 ///|
-pub fn word_indices_whitespace(s : String) -> Array[(Int, Int)] {
-  let ranges : Array[(Int, Int)] = []
+pub fn word_indices_whitespace(s : String) -> Array[(Int32, Int32)] {
+  let ranges : Array[(Int32, Int32)] = []
   let len = s.length()
   let mut i = 0
   while i < len {
@@ -40,14 +40,14 @@ pub fn word_indices_whitespace(s : String) -> Array[(Int, Int)] {
 }
 
 ///|
-pub fn word_indices_uax29(s : String) -> Array[(Int, Int)] {
+pub fn word_indices_uax29(s : String) -> Array[(Int32, Int32)] {
   let chars = s.to_array()
   if chars.length() == 0 {
     return []
   }
   let analyze = @moon_swash.analyze(chars.iter())
   analyze.set_break_strength(Normal)
-  let offs : Array[Int] = []
+  let offs : Array[Int32] = []
   let mut pos = 0
   for ch in chars {
     offs.push(pos)
@@ -71,8 +71,8 @@ pub fn word_indices_uax29(s : String) -> Array[(Int, Int)] {
   }
   fn segment_contains_word_like(
     chars : Array[Char],
-    start_char_i : Int,
-    end_char_i : Int,
+    start_char_i : Int32,
+    end_char_i : Int32,
   ) -> Bool {
     if end_char_i < start_char_i {
       return false
@@ -85,7 +85,7 @@ pub fn word_indices_uax29(s : String) -> Array[(Int, Int)] {
     }
     false
   }
-  let ranges : Array[(Int, Int)] = []
+  let ranges : Array[(Int32, Int32)] = []
   let mut start_pos = 0
   let mut start_char_i = 0
   for i in 0..<chars.length() {
@@ -128,25 +128,25 @@ pub fn is_ligature_guard_pair(left : Char, right : Char) -> Bool {
 }
 
 ///|
-const LB_ALLOWED_BREAK_BIT : Int = 0x80
+const LB_ALLOWED_BREAK_BIT : Int32 = 0x80
 
 ///|
-const LB_MANDATORY_BREAK_BIT : Int = 0x40
+const LB_MANDATORY_BREAK_BIT : Int32 = 0x40
 
 ///|
-const LB_STATE_MASK : Int = 0x3F
+const LB_STATE_MASK : Int32 = 0x3F
 
 ///|
-const LB_ZWJ_CLASS : Int = 10
+const LB_ZWJ_CLASS : Int32 = 10
 
 ///|
-const LB_EOT_CLASS : Int = 43
+const LB_EOT_CLASS : Int32 = 43
 
 ///|
-const LB_SOT_STATE : Int = 44
+const LB_SOT_STATE : Int32 = 44
 
 ///|
-fn lb_class_index(ch : Char) -> Int {
+fn lb_class_index(ch : Char) -> Int32 {
   let cls = @moon_swash.CharInfo::from_char(ch).properties().line_break()
   match cls {
     BK => 0
@@ -199,10 +199,10 @@ fn lb_class_index(ch : Char) -> Int {
 
 ///|
 fn lb_push_break(
-  out : Array[(Int, BreakOpportunity)],
+  out : Array[(Int32, BreakOpportunity)],
   chars : Array[Char],
-  offs : Array[Int],
-  i : Int,
+  offs : Array[Int32],
+  i : Int32,
   is_mandatory : Bool,
 ) -> Unit {
   if i < chars.length() &&
@@ -216,7 +216,7 @@ fn lb_push_break(
 
 ///|
 /// Returns `(utf16_offset, break_opportunity)` pairs.
-pub fn linebreaks(s : String) -> Array[(Int, BreakOpportunity)] {
+pub fn linebreaks(s : String) -> Array[(Int32, BreakOpportunity)] {
   if false {
     try! (@fs.read_file_to_string("src/unicode_linebreak/LineBreakTest.txt")
     |> ignore)
@@ -225,18 +225,18 @@ pub fn linebreaks(s : String) -> Array[(Int, BreakOpportunity)] {
   if chars.length() == 0 {
     return [(0, Mandatory)]
   }
-  let offs : Array[Int] = []
+  let offs : Array[Int32] = []
   let mut pos = 0
   for ch in chars {
     offs.push(pos)
     pos = pos + ch.utf16_len()
   }
   offs.push(pos)
-  let classes : Array[Int] = []
+  let classes : Array[Int32] = []
   for ch in chars {
     classes.push(lb_class_index(ch))
   }
-  let out : Array[(Int, BreakOpportunity)] = []
+  let out : Array[(Int32, BreakOpportunity)] = []
   let mut state = LB_SOT_STATE
   let mut prev_is_zwj = false
   for i in 0..<chars.length() {
@@ -263,14 +263,14 @@ pub fn linebreaks(s : String) -> Array[(Int, BreakOpportunity)] {
 }
 
 ///|
-pub fn wrap_word_segments(s : String) -> Array[(Int, Int, Bool)] {
+pub fn wrap_word_segments(s : String) -> Array[(Int32, Int32, Bool)] {
   let chars = s.to_array()
   if chars.length() == 0 {
     return []
   }
 
-  let offs : Array[Int] = []
-  let lens : Array[Int] = []
+  let offs : Array[Int32] = []
+  let lens : Array[Int32] = []
   let mut pos = 0
   for ch in chars {
     offs.push(pos)
@@ -279,20 +279,20 @@ pub fn wrap_word_segments(s : String) -> Array[(Int, Int, Bool)] {
     pos = pos + len
   }
   fn emit_segment(
-    out : Array[(Int, Int, Bool)],
+    out : Array[(Int32, Int32, Bool)],
     chars : Array[Char],
-    offs : Array[Int],
-    lens : Array[Int],
-    start_char_i : Int,
-    end_char_i : Int,
-    start_word : Int,
-    end_pos : Int,
+    offs : Array[Int32],
+    lens : Array[Int32],
+    start_char_i : Int32,
+    end_char_i : Int32,
+    start_word : Int32,
+    end_pos : Int32,
   ) -> Unit {
     if end_pos <= start_word || end_char_i < start_char_i {
       return
     }
     let mut start_lb = end_pos
-    let mut ws_start_i : Int? = None
+    let mut ws_start_i : Int32? = None
     let mut k = end_char_i
     while k >= start_char_i {
       if chars[k].is_whitespace() {
@@ -319,7 +319,7 @@ pub fn wrap_word_segments(s : String) -> Array[(Int, Int, Bool)] {
     }
   }
 
-  let out : Array[(Int, Int, Bool)] = []
+  let out : Array[(Int32, Int32, Bool)] = []
   let breaks = linebreaks(s)
   let mut start_char_i = 0
   let mut start_word = 0
@@ -346,13 +346,13 @@ pub fn wrap_word_segments(s : String) -> Array[(Int, Int, Bool)] {
 }
 
 ///|
-pub fn grapheme_indices_uax29(s : String) -> Array[(Int, Int)] {
+pub fn grapheme_indices_uax29(s : String) -> Array[(Int32, Int32)] {
   let chars = s.to_array()
   if chars.length() == 0 {
     return []
   }
-  let offs : Array[Int] = []
-  let lens : Array[Int] = []
+  let offs : Array[Int32] = []
+  let lens : Array[Int32] = []
   let breaks : Array[@moon_swash.ClusterBreak] = []
   let pict : Array[Bool] = []
   let mut pos = 0
@@ -394,7 +394,7 @@ pub fn grapheme_indices_uax29(s : String) -> Array[(Int, Int)] {
   }
 
   fn should_break(
-    i : Int,
+    i : Int32,
     breaks : Array[@moon_swash.ClusterBreak],
     pict : Array[Bool],
   ) -> Bool {
@@ -468,7 +468,7 @@ pub fn grapheme_indices_uax29(s : String) -> Array[(Int, Int)] {
     true
   }
 
-  let ranges : Array[(Int, Int)] = []
+  let ranges : Array[(Int32, Int32)] = []
   let mut start = 0
   for i in 1..<chars.length() {
     if should_break(i, breaks, pict) {

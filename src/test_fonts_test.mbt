@@ -14,7 +14,7 @@
 
 ///|
 /// Embedded font data for tests (base64).
-fn base64_value(cu : UInt16) -> Int? {
+fn base64_value(cu : UInt16) -> Int32? {
   let c = cu.to_int()
   if c >= 65 && c <= 90 {
     Some(c - 65)

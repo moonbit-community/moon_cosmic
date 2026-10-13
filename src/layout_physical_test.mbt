@@ -14,7 +14,9 @@
 
 ///|
 test "LayoutGlyph::physical computes CacheKey subpixel bins" {
-  let g = LayoutGlyph::new(0, 1, 10.0F, 7, 400, 42, 1.125F, 2.75F, 0.0F, 0)
+  let g = @moon_cosmic.LayoutGlyph::new(
+    0, 1, 10.0F, 7, 400, 42, 1.125F, 2.75F, 0.0F, 0,
+  )
   let p = g.physical((0.0F, 0.0F), 1.0F)
   debug_inspect((p.x, p.y), content="(1, 2)")
   // 1.125 -> (1, One); 2.0 (truncated from 2.75) -> (2, Zero)
@@ -26,11 +28,24 @@ test "LayoutGlyph::physical computes CacheKey subpixel bins" {
 
 ///|
 test "layout_from_shape propagates font_weight into CacheKey" {
-  let attrs = Attrs::new().weight(Weight::bold())
-  let attrs_list = AttrsList::new(attrs)
+  let attrs = @moon_cosmic.Attrs::new().weight(@moon_cosmic.Weight::bold())
+  let attrs_list = @moon_cosmic.AttrsList::new(attrs)
   let text = "a"
-  let shape = ShapeLine::build(ShapeLine::empty(), text, attrs_list, Basic, 4)
-  let lines = layout_from_shape(text, shape, 10.0F, 1.0F, None, None)
+  let shape = @moon_cosmic.ShapeLine::build(
+    @moon_cosmic.ShapeLine::empty(),
+    text,
+    attrs_list,
+    Basic,
+    4,
+  )
+  let lines = @moon_cosmic.layout_from_shape(
+    text,
+    shape,
+    10.0F,
+    1.0F,
+    None,
+    None,
+  )
   let g = lines[0].glyphs[0]
   inspect(g.font_weight, content="700")
   let p = g.physical((0.0F, 0.0F), 1.0F)

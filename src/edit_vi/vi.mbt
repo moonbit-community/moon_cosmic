@@ -144,7 +144,7 @@ fn string_append_char(s : String, ch : Char) -> String {
 }
 
 ///|
-fn vi_digit_value(ch : Char) -> Int? {
+fn vi_digit_value(ch : Char) -> Int32? {
   if ch == '0' {
     Some(0)
   } else if ch == '1' {
@@ -171,7 +171,7 @@ fn vi_digit_value(ch : Char) -> Int? {
 }
 
 ///|
-fn vi_count_value(count_opt : Int?) -> Int {
+fn vi_count_value(count_opt : Int32?) -> Int32 {
   match count_opt {
     None => 1
     Some(v) => if v <= 0 { 1 } else { v }
@@ -182,7 +182,7 @@ fn vi_count_value(count_opt : Int?) -> Int {
 fn vi_repeat_motion(
   editor : @cosmic.Editor,
   motion : @cosmic.Motion,
-  count : Int,
+  count : Int32,
 ) -> @cosmic.Editor {
   let mut out = editor
   let mut i = 0
@@ -199,7 +199,7 @@ fn vi_repeat_put(
   selection : @cosmic.Selection,
   data : String,
   after : Bool,
-  count : Int,
+  count : Int32,
 ) -> @cosmic.Editor {
   let mut out = editor
   let mut i = 0
@@ -214,7 +214,7 @@ fn vi_repeat_put(
 fn vi_repeat_action(
   editor : @cosmic.Editor,
   action : @cosmic.Action,
-  count : Int,
+  count : Int32,
 ) -> @cosmic.Editor {
   let mut out = editor
   let mut i = 0
@@ -228,7 +228,7 @@ fn vi_repeat_action(
 ///|
 fn vi_apply_indent_lines(
   editor : @cosmic.Editor,
-  count : Int,
+  count : Int32,
   unindent : Bool,
 ) -> @cosmic.Editor {
   let cursor = editor.cursor()
@@ -271,7 +271,11 @@ fn string_pop_last_char(s : String) -> String {
 }
 
 ///|
-fn find_substring_forward(text : String, pattern : String, start : Int) -> Int? {
+fn find_substring_forward(
+  text : String,
+  pattern : String,
+  start : Int32,
+) -> Int32? {
   let plen = pattern.length()
   if plen == 0 || start < 0 || start > text.length() || plen > text.length() {
     return None
@@ -296,8 +300,8 @@ fn find_substring_forward(text : String, pattern : String, start : Int) -> Int? 
 fn find_substring_backward(
   text : String,
   pattern : String,
-  end_exclusive : Int,
-) -> Int? {
+  end_exclusive : Int32,
+) -> Int32? {
   let plen = pattern.length()
   if plen == 0 || plen > text.length() {
     return None
@@ -400,7 +404,7 @@ fn vi_find_in_line(
       }
     }
   } else {
-    let mut found_opt : Int? = None
+    let mut found_opt : Int32? = None
     for p in text.iter2() {
       let idx = p.0
       let ch = p.1
@@ -429,9 +433,9 @@ fn is_word_char(ch : Char) -> Bool {
 ///|
 fn find_word_bounds(
   text : String,
-  cursor_index : Int,
+  cursor_index : Int32,
   with_delims : Bool,
-) -> (Int, Int)? {
+) -> (Int32, Int32)? {
   if cursor_index < 0 || cursor_index >= text.length() {
     return None
   }
@@ -446,7 +450,7 @@ fn find_word_bounds(
     let mut start = idx
     let mut stop = end
 
-    let prevs : Array[(Int, Char)] = []
+    let prevs : Array[(Int32, Char)] = []
     for p0 in text.iter2() {
       if p0.0 >= idx {
         break
@@ -492,7 +496,7 @@ fn find_word_bounds(
 
       let mut with_start = start
       if !has_tail_space {
-        let prev_ws : Array[(Int, Char)] = []
+        let prev_ws : Array[(Int32, Char)] = []
         for p0 in text.iter2() {
           if p0.0 >= start {
             break
@@ -610,7 +614,7 @@ fn vi_select_in(
       break
     }
     let text = lines[start_line].text()
-    let prevs : Array[(Int, Char)] = []
+    let prevs : Array[(Int32, Char)] = []
     for p in text.iter2() {
       if p.0 >= start_index {
         break
@@ -824,8 +828,8 @@ fn vi_capture_current_line(
 ///|
 fn vi_capture_lines(
   editor : @cosmic.Editor,
-  start_line : Int,
-  count : Int,
+  start_line : Int32,
+  count : Int32,
 ) -> (@cosmic.Selection, String)? {
   let lines = editor.buffer().lines()
   if start_line < 0 || start_line >= lines.length() {
@@ -855,7 +859,7 @@ fn vi_capture_lines(
 ///|
 fn vi_delete_count_lines(
   editor : @cosmic.Editor,
-  count : Int,
+  count : Int32,
 ) -> (@cosmic.Editor, (@cosmic.Selection, String)?) {
   let cursor = editor.cursor()
   let lines = editor.buffer().lines()
@@ -915,19 +919,19 @@ pub struct ViEditor {
   pending_operator : ViOperator?
   passthrough : Bool
   history : Array[@cosmic.Change]
-  history_index : Int
+  history_index : Int32
   last_change_opt : @cosmic.Change?
-  save_pivot_opt : Int?
+  save_pivot_opt : Int32?
   changed : Bool
   search_opt : (String, Bool)?
   search_input_opt : String?
   search_input_forwards : Bool
-  pending_find_opt : (Bool, Bool, Int)?
+  pending_find_opt : (Bool, Bool, Int32)?
   last_find_opt : (Bool, Bool, Char)?
   pending_replace_char : Bool
   pending_text_object_opt : (ViOperator, Bool)?
   pending_g : Bool
-  pending_count_opt : Int?
+  pending_count_opt : Int32?
   pending_register_prefix : Bool
   active_register_opt : Char?
   registers : Array[(Char, @cosmic.Selection, String)]
@@ -1023,7 +1027,7 @@ pub fn ViEditor::escape(self : ViEditor) -> ViEditor {
 }
 
 ///|
-fn vi_eval_changed(history_index : Int, save_pivot_opt : Int?) -> Bool {
+fn vi_eval_changed(history_index : Int32, save_pivot_opt : Int32?) -> Bool {
   match save_pivot_opt {
     Some(pivot) => history_index != pivot
     None => history_index != 0

@@ -20,9 +20,9 @@
 /// but are trimmed from the returned paragraph text.
 pub struct BidiParagraphs {
   text : String
-  ranges : Array[(Int, Int)]
-  cursor : Int
-  pos : Int
+  ranges : Array[(Int32, Int32)]
+  cursor : Int32
+  pos : Int32
 }
 
 ///|
@@ -39,8 +39,8 @@ fn bidi_paragraphs_is_ascii_fast_path(text : String) -> Bool {
 }
 
 ///|
-fn bidi_paragraphs_ascii_ranges(text : String) -> Array[(Int, Int)] {
-  let ranges : Array[(Int, Int)] = []
+fn bidi_paragraphs_ascii_ranges(text : String) -> Array[(Int32, Int32)] {
+  let ranges : Array[(Int32, Int32)] = []
   let len = text.length()
   let mut start = 0
   for p in text.iter2() {
@@ -58,12 +58,12 @@ fn bidi_paragraphs_ascii_ranges(text : String) -> Array[(Int, Int)] {
 }
 
 ///|
-fn bidi_paragraphs_ranges(text : String) -> Array[(Int, Int)] {
+fn bidi_paragraphs_ranges(text : String) -> Array[(Int32, Int32)] {
   if bidi_paragraphs_is_ascii_fast_path(text) {
     return bidi_paragraphs_ascii_ranges(text)
   }
 
-  let ranges : Array[(Int, Int)] = []
+  let ranges : Array[(Int32, Int32)] = []
   let info = BidiInfo::new(text)
   for para in info.paragraphs() {
     ranges.push((para.range_start(), para.range_end()))
@@ -73,7 +73,7 @@ fn bidi_paragraphs_ranges(text : String) -> Array[(Int, Int)] {
 
 ///|
 fn bidi_paragraphs_trim_trailing_b_separator(para : String) -> String {
-  let mut last : (Int, Char)? = None
+  let mut last : (Int32, Char)? = None
   for p in para.iter2() {
     last = Some((p.0, p.1))
   }
