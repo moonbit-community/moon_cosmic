@@ -28,7 +28,7 @@ fn string_concat(a : String, b : String) -> String {
 ///|
 fn substring(s : String, start : Int32, end : Int32) -> String {
   let sb = StringBuilder(size_hint=(end - start) * 2)
-  sb.write_view(s[:].view(start_offset=start, end_offset=end))
+  sb.write_view(s[:].clamped_view(start~, end~))
   sb.to_string()
 }
 

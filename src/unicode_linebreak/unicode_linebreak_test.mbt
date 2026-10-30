@@ -15,7 +15,7 @@
 ///|
 fn ulb_slice_string(s : String, start : Int32, end : Int32) -> String {
   let sb = StringBuilder(size_hint=end - start)
-  sb.write_view(s[:].view(start_offset=start, end_offset=end))
+  sb.write_view(s[:].clamped_view(start~, end~))
   sb.to_string()
 }
 

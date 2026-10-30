@@ -204,9 +204,7 @@ fn deleted_text(buffer : Buffer, start : Cursor, end : Cursor) -> String {
     let first = lines[start_line]
     let first_text = first.text()
     let a = clamp(start.index, 0, first_text.length())
-    sb.write_view(
-      first_text[:].view(start_offset=a, end_offset=first_text.length()),
-    )
+    sb.write_view(first_text[:].clamped_view(start=a, end=first_text.length()))
     sb.write_string(first.ending().as_str())
     for i in (start_line + 1)..<end_line {
       let l = lines[i]
@@ -216,7 +214,7 @@ fn deleted_text(buffer : Buffer, start : Cursor, end : Cursor) -> String {
     let last = lines[end_line]
     let last_text = last.text()
     let b = clamp(end.index, 0, last_text.length())
-    sb.write_view(last_text[:].view(start_offset=0, end_offset=b))
+    sb.write_view(last_text[:].clamped_view(start=0, end=b))
     sb.to_string()
   }
 }
@@ -617,7 +615,7 @@ pub fn Editor::copy_selection(self : Editor) -> String? {
         {
           let text = lines[start.line].text()
           sb.write_view(
-            text[:].view(start_offset=start.index, end_offset=text.length()),
+            text[:].clamped_view(start=start.index, end=text.length()),
           )
           sb.write_string("\n")
         }
@@ -629,7 +627,7 @@ pub fn Editor::copy_selection(self : Editor) -> String? {
         // Last line.
         {
           let text = lines[end.line].text()
-          sb.write_view(text[:].view(start_offset=0, end_offset=end.index))
+          sb.write_view(text[:].clamped_view(start=0, end=end.index))
         }
         Some(sb.to_string())
       }

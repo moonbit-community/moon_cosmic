@@ -266,7 +266,7 @@ fn string_pop_last_char(s : String) -> String {
     last = p.0
   }
   let sb = StringBuilder(size_hint=last)
-  sb.write_view(s[:].view(start_offset=0, end_offset=last))
+  sb.write_view(s[:].clamped_view(start=0, end=last))
   sb.to_string()
 }
 
