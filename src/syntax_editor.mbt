@@ -150,7 +150,7 @@ fn normalize_extension(extension : String) -> String {
   let lower = ascii_lower(extension)
   if lower.length() > 0 && lower.code_unit_at(0) == 46 {
     let sb = StringBuilder(size_hint=lower.length() - 1)
-    sb.write_view(lower[:].view(start_offset=1, end_offset=lower.length()))
+    sb.write_view(lower[:].clamped_view(start=1, end=lower.length()))
     sb.to_string()
   } else {
     lower
@@ -319,7 +319,7 @@ pub struct SyntaxEditor {
 ///|
 fn syntax_slice_string(s : String, start : Int32, end : Int32) -> String {
   let sb = StringBuilder(size_hint=(end - start) * 2)
-  sb.write_view(s[:].view(start_offset=start, end_offset=end))
+  sb.write_view(s[:].clamped_view(start~, end~))
   sb.to_string()
 }
 

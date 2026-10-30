@@ -18,17 +18,17 @@ pub struct CachedLine {
 }
 
 pub struct LineState {
-  block_comment_depth : Int
+  block_comment_depth : Int32
   markup_comment_open : Bool
   markup_tag_open : Bool
   ruby_block_comment_open : Bool
   shell_heredoc_delim_opt : String?
   shell_heredoc_strip_tabs : Bool
-  lua_long_eq_count_opt : Int?
+  lua_long_eq_count_opt : Int32?
   lua_long_is_comment : Bool
   string_delim_opt : Char?
   string_is_triple : Bool
-  raw_hash_count_opt : Int?
+  raw_hash_count_opt : Int32?
   markdown_fence_char_opt : Char?
   clike_preproc_continuation : Bool
 }
@@ -51,7 +51,7 @@ pub fn SyntaxEditor::background_color(Self) -> @moon_cosmic.Color
 pub fn SyntaxEditor::copy_selection(Self) -> String?
 pub fn SyntaxEditor::cursor(Self) -> @moon_cosmic.Cursor
 pub fn SyntaxEditor::cursor_color(Self) -> @moon_cosmic.Color
-pub fn SyntaxEditor::cursor_position(Self) -> (Int, Int)?
+pub fn SyntaxEditor::cursor_position(Self) -> (Int32, Int32)?
 pub fn SyntaxEditor::delete_range(Self, @moon_cosmic.Cursor, @moon_cosmic.Cursor) -> Self
 pub fn SyntaxEditor::delete_selection(Self) -> (Self, Bool)
 pub fn SyntaxEditor::editor(Self) -> @moon_cosmic.Editor
@@ -67,11 +67,11 @@ pub fn SyntaxEditor::set_auto_indent(Self, Bool) -> Self
 pub fn SyntaxEditor::set_cursor(Self, @moon_cosmic.Cursor) -> Self
 pub fn SyntaxEditor::set_editor(Self, @moon_cosmic.Editor) -> Self
 pub fn SyntaxEditor::set_selection(Self, @moon_cosmic.Selection) -> Self
-pub fn SyntaxEditor::set_tab_width(Self, Int) -> Self
+pub fn SyntaxEditor::set_tab_width(Self, Int32) -> Self
 pub fn SyntaxEditor::start_change(Self) -> Self
 pub fn SyntaxEditor::syntax_by_extension(Self, String) -> Self
 pub fn SyntaxEditor::syntax_name(Self) -> String
-pub fn SyntaxEditor::tab_width(Self) -> Int
+pub fn SyntaxEditor::tab_width(Self) -> Int32
 pub fn SyntaxEditor::theme(Self) -> SyntaxTheme
 pub fn SyntaxEditor::update_theme(Self, String) -> (Self, Bool)
 
@@ -109,8 +109,8 @@ pub(all) enum TokenClass {
 }
 
 pub struct TokenSpan {
-  start : Int
-  end : Int
+  start : Int32
+  end : Int32
   class : TokenClass
 }
 

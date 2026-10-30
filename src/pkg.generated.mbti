@@ -11,11 +11,11 @@ import {
 }
 
 // Values
-pub const CACHE_KEY_FLAG_DISABLE_HINTING : UInt = 2
+pub const CACHE_KEY_FLAG_DISABLE_HINTING : UInt32 = 2
 
-pub const CACHE_KEY_FLAG_FAKE_ITALIC : UInt = 1
+pub const CACHE_KEY_FLAG_FAKE_ITALIC : UInt32 = 1
 
-pub const CACHE_KEY_FLAG_PIXEL_FONT : UInt = 4
+pub const CACHE_KEY_FLAG_PIXEL_FONT : UInt32 = 4
 
 pub fn apply_align(String, Array[LayoutLine], Float, Align) -> Array[LayoutLine]
 
@@ -25,7 +25,7 @@ pub fn cosmic_text_version() -> String
 
 pub fn floorf(Float) -> Float
 
-pub fn grapheme_indices_uax29(String) -> Array[(Int, Int)]
+pub fn grapheme_indices_uax29(String) -> Array[(Int32, Int32)]
 
 pub fn justify_to_align(Justify) -> Align
 
@@ -41,11 +41,11 @@ pub fn roundf(Float) -> Float
 
 pub fn truncf(Float) -> Float
 
-pub fn word_indices_uax29(String) -> Array[(Int, Int)]
+pub fn word_indices_uax29(String) -> Array[(Int32, Int32)]
 
-pub fn word_indices_whitespace(String) -> Array[(Int, Int)]
+pub fn word_indices_whitespace(String) -> Array[(Int32, Int32)]
 
-pub fn wrap_word_segments(String) -> Array[(Int, Int, Bool)]
+pub fn wrap_word_segments(String) -> Array[(Int32, Int32, Bool)]
 
 // Errors
 
@@ -59,10 +59,10 @@ pub(all) enum Action {
   Delete
   Indent
   Unindent
-  Click(Int, Int)
-  DoubleClick(Int, Int)
-  TripleClick(Int, Int)
-  Drag(Int, Int)
+  Click(Int32, Int32)
+  DoubleClick(Int32, Int32)
+  TripleClick(Int32, Int32)
+  Drag(Int32, Int32)
   Scroll(Float)
 }
 
@@ -89,19 +89,19 @@ pub(all) enum Align {
 
 pub struct Attrs {
   color_opt : Color?
-  metadata : Int
+  metadata : Int32
   family : Family
   weight : Weight
   stretch : @moon_swash.Stretch
   style : @moon_swash.Style
-  cache_key_flags : UInt
+  cache_key_flags : UInt32
   metrics_opt : CacheMetrics?
   letter_spacing_opt : LetterSpacing?
   font_features : FontFeatures
   text_decoration : TextDecoration
 }
-pub fn Attrs::cache_key_flags(Self, UInt) -> Self
-pub fn Attrs::cache_key_flags_value(Self) -> UInt
+pub fn Attrs::cache_key_flags(Self, UInt32) -> Self
+pub fn Attrs::cache_key_flags_value(Self) -> UInt32
 pub fn Attrs::color(Self, Color) -> Self
 pub fn Attrs::color_opt_value(Self) -> Color?
 pub fn Attrs::compatible(Self, Self) -> Bool
@@ -110,11 +110,11 @@ pub fn Attrs::family(Self, Family) -> Self
 pub fn Attrs::family_value(Self) -> Family
 pub fn Attrs::font_features(Self, FontFeatures) -> Self
 pub fn Attrs::font_features_value(Self) -> FontFeatures
-pub fn Attrs::hash(Self) -> Int
+pub fn Attrs::hash(Self) -> Int32
 pub fn Attrs::hash_combine(Self, Hasher) -> Unit
 pub fn Attrs::letter_spacing(Self, Float) -> Self
 pub fn Attrs::letter_spacing_opt(Self) -> Float?
-pub fn Attrs::metadata(Self) -> Int
+pub fn Attrs::metadata(Self) -> Int32
 pub fn Attrs::metrics(Self, Metrics) -> Self
 pub fn Attrs::metrics_opt(Self) -> Metrics?
 pub fn Attrs::new() -> Self
@@ -133,7 +133,7 @@ pub fn Attrs::underline(Self, UnderlineStyle) -> Self
 pub fn Attrs::underline_color(Self, Color) -> Self
 pub fn Attrs::weight(Self, Weight) -> Self
 pub fn Attrs::weight_value(Self) -> Weight
-pub fn Attrs::with_metadata(Int) -> Self
+pub fn Attrs::with_metadata(Int32) -> Self
 pub impl Eq for Attrs
 pub impl Hash for Attrs
 
@@ -141,27 +141,27 @@ pub struct AttrsList {
   defaults : Attrs
   spans : Array[AttrsSpan]
 }
-pub fn AttrsList::add_span(Self, Int, Int, Attrs) -> Self
+pub fn AttrsList::add_span(Self, Int32, Int32, Attrs) -> Self
 pub fn AttrsList::defaults(Self) -> Attrs
 pub fn AttrsList::eq(Self, Self) -> Bool
 pub fn AttrsList::equal(Self, Self) -> Bool
-pub fn AttrsList::get_span(Self, Int) -> Attrs
-pub fn AttrsList::hash(Self) -> Int
+pub fn AttrsList::get_span(Self, Int32) -> Attrs
+pub fn AttrsList::hash(Self) -> Int32
 pub fn AttrsList::hash_combine(Self, Hasher) -> Unit
 pub fn AttrsList::new(Attrs) -> Self
 pub fn AttrsList::not_equal(Self, Self) -> Bool
 pub fn AttrsList::spans_iter(Self) -> Array[AttrsSpan]
-pub fn AttrsList::split_off(Self, Int) -> (Self, Self)
+pub fn AttrsList::split_off(Self, Int32) -> (Self, Self)
 pub impl Eq for AttrsList
 pub impl Hash for AttrsList
 
 pub struct AttrsSpan {
-  start : Int
-  end : Int
+  start : Int32
+  end : Int32
   attrs : Attrs
 }
 pub fn AttrsSpan::equal(Self, Self) -> Bool
-pub fn AttrsSpan::hash(Self) -> Int
+pub fn AttrsSpan::hash(Self) -> Int32
 pub fn AttrsSpan::hash_combine(Self, Hasher) -> Unit
 pub fn AttrsSpan::not_equal(Self, Self) -> Bool
 pub impl Eq for AttrsSpan
@@ -170,22 +170,22 @@ pub impl Hash for AttrsSpan
 pub struct BidiInfo {
   text : String
   original_classes : Array[@moon_swash.BidiClass]
-  levels : Array[Int]
+  levels : Array[Int32]
   paragraphs : Array[ParagraphInfo]
 }
-pub fn BidiInfo::adjusted_levels(Self) -> Array[Int]
-pub fn BidiInfo::levels(Self) -> Array[Int]
+pub fn BidiInfo::adjusted_levels(Self) -> Array[Int32]
+pub fn BidiInfo::levels(Self) -> Array[Int32]
 pub fn BidiInfo::new(String) -> Self
-pub fn BidiInfo::new_with_para_level(String, Int?) -> Self
+pub fn BidiInfo::new_with_para_level(String, Int32?) -> Self
 pub fn BidiInfo::paragraphs(Self) -> Array[ParagraphInfo]
 pub fn BidiInfo::rtl(Self) -> Bool
 pub fn BidiInfo::text(Self) -> String
 
 pub struct BidiParagraphs {
   text : String
-  ranges : Array[(Int, Int)]
-  cursor : Int
-  pos : Int
+  ranges : Array[(Int32, Int32)]
+  cursor : Int32
+  pos : Int32
 }
 pub fn BidiParagraphs::iter(Self) -> Iter[String]
 pub fn BidiParagraphs::new(String) -> Self
@@ -201,16 +201,16 @@ pub struct Buffer {
   wrap : Wrap
   ellipsize : Ellipsize
   monospace_width : Float?
-  tab_width : Int
+  tab_width : Int32
   hinting : Hinting
   dirty_relayout : Bool
   dirty_tab_shape : Bool
   dirty_text_set : Bool
   dirty_scroll : Bool
 }
-pub fn Buffer::cursor_motion(Self, Cursor, Int?, Motion) -> (Cursor, Int?)?
-pub fn Buffer::draw(Self, FontSystem, SwashCache, Color, (Int, Int, UInt, UInt, Color) -> Unit) -> (Self, SwashCache)
-pub fn Buffer::draw_with_font_system(Self, FontSystem, SwashCache, Color, (Int, Int, UInt, UInt, Color) -> Unit) -> (Self, SwashCache)
+pub fn Buffer::cursor_motion(Self, Cursor, Int32?, Motion) -> (Cursor, Int32?)?
+pub fn Buffer::draw(Self, FontSystem, SwashCache, Color, (Int32, Int32, UInt32, UInt32, Color) -> Unit) -> (Self, SwashCache)
+pub fn Buffer::draw_with_font_system(Self, FontSystem, SwashCache, Color, (Int32, Int32, UInt32, UInt32, Color) -> Unit) -> (Self, SwashCache)
 pub fn Buffer::ellipsize(Self) -> Ellipsize
 pub fn Buffer::hinting(Self) -> Hinting
 pub fn Buffer::hit(Self, Float, Float) -> Cursor?
@@ -218,8 +218,8 @@ pub fn Buffer::layout_all(Self) -> Self
 pub fn Buffer::layout_all_with_font_system(Self, FontSystem) -> Self
 pub fn Buffer::layout_cursor(Self, FontSystem, Cursor) -> LayoutCursor?
 pub fn Buffer::layout_runs(Self) -> Iter[LayoutRun]
-pub fn Buffer::line_layout(Self, FontSystem, Int) -> Array[LayoutLine]?
-pub fn Buffer::line_shape(Self, FontSystem, Int) -> ShapeLine?
+pub fn Buffer::line_layout(Self, FontSystem, Int32) -> Array[LayoutLine]?
+pub fn Buffer::line_shape(Self, FontSystem, Int32) -> ShapeLine?
 pub fn Buffer::lines(Self) -> Array[BufferLine]
 pub fn Buffer::metrics(Self) -> Metrics
 pub fn Buffer::new(Metrics) -> Self
@@ -235,7 +235,7 @@ pub fn Buffer::set_redraw(Self, Bool) -> Self
 pub fn Buffer::set_rich_text(Self, Array[(String, Attrs)], Attrs, Shaping, Align?) -> Self
 pub fn Buffer::set_scroll(Self, Scroll) -> Self
 pub fn Buffer::set_size(Self, Float?, Float?) -> Self
-pub fn Buffer::set_tab_width(Self, Int) -> Self
+pub fn Buffer::set_tab_width(Self, Int32) -> Self
 pub fn Buffer::set_text(Self, String, AttrsList, Shaping) -> Self
 pub fn Buffer::set_wrap(Self, Wrap) -> Self
 pub fn Buffer::shape_all_with_font_system(Self, FontSystem) -> Self
@@ -252,18 +252,18 @@ pub struct BufferLine {
   shape_opt : Cached[ShapeLine]
   layout_opt : Cached[Array[LayoutLine]]
   shaping : Shaping
-  metadata : Int?
+  metadata : Int32?
 }
 pub fn BufferLine::align(Self) -> Align?
 pub fn BufferLine::append(Self, Self) -> Self
 pub fn BufferLine::attrs_list(Self) -> AttrsList
 pub fn BufferLine::ending(Self) -> LineEnding
 pub fn BufferLine::into_text(Self) -> String
-pub fn BufferLine::layout(Self, Float, Float?, Wrap, Ellipsize, Float?, Int, Hinting) -> Self
+pub fn BufferLine::layout(Self, Float, Float?, Wrap, Ellipsize, Float?, Int32, Hinting) -> Self
 pub fn BufferLine::layout_opt(Self) -> Array[LayoutLine]?
 pub fn BufferLine::layout_runs(Self, Float?, Float) -> Iter[LayoutRun]
-pub fn BufferLine::layout_with_font_system(Self, FontSystem, Float, Float?, Wrap, Ellipsize, Float?, Int, Hinting) -> Self
-pub fn BufferLine::metadata(Self) -> Int?
+pub fn BufferLine::layout_with_font_system(Self, FontSystem, Float, Float?, Wrap, Ellipsize, Float?, Int32, Hinting) -> Self
+pub fn BufferLine::metadata(Self) -> Int32?
 pub fn BufferLine::new(String, LineEnding, AttrsList, Shaping) -> Self
 pub fn BufferLine::reset(Self) -> Self
 pub fn BufferLine::reset_layout(Self) -> Self
@@ -271,30 +271,30 @@ pub fn BufferLine::reset_shaping(Self) -> Self
 pub fn BufferLine::set_align(Self, Align?) -> (Self, Bool)
 pub fn BufferLine::set_attrs_list(Self, AttrsList) -> (Self, Bool)
 pub fn BufferLine::set_ending(Self, LineEnding) -> Self
-pub fn BufferLine::set_metadata(Self, Int) -> Self
+pub fn BufferLine::set_metadata(Self, Int32) -> Self
 pub fn BufferLine::set_text(Self, String, LineEnding, AttrsList) -> (Self, Bool)
-pub fn BufferLine::shape(Self, Int) -> Self
+pub fn BufferLine::shape(Self, Int32) -> Self
 pub fn BufferLine::shape_opt(Self) -> ShapeLine?
-pub fn BufferLine::shape_with_font_system(Self, FontSystem, Int) -> Self
-pub fn BufferLine::split_off(Self, Int) -> (Self, Self)
+pub fn BufferLine::shape_with_font_system(Self, FontSystem, Int32) -> Self
+pub fn BufferLine::split_off(Self, Int32) -> (Self, Self)
 pub fn BufferLine::text(Self) -> String
 
 pub struct CacheKey {
-  font_id : Int
-  glyph_id : Int
-  font_size_bits : UInt
+  font_id : Int32
+  glyph_id : Int32
+  font_size_bits : UInt32
   x_bin : SubpixelBin
   y_bin : SubpixelBin
-  font_weight : Int
-  flags : UInt
+  font_weight : Int32
+  flags : UInt32
 }
 pub fn CacheKey::equal(Self, Self) -> Bool
 pub fn CacheKey::has_disable_hinting(Self) -> Bool
 pub fn CacheKey::has_fake_italic(Self) -> Bool
 pub fn CacheKey::has_pixel_font(Self) -> Bool
-pub fn CacheKey::hash(Self) -> Int
+pub fn CacheKey::hash(Self) -> Int32
 pub fn CacheKey::hash_combine(Self, Hasher) -> Unit
-pub fn CacheKey::new(Int, Int, Float, (Float, Float), Int, UInt) -> (Self, Int, Int)
+pub fn CacheKey::new(Int32, Int32, Float, (Float, Float), Int32, UInt32) -> (Self, Int32, Int32)
 pub fn CacheKey::not_equal(Self, Self) -> Bool
 pub fn CacheKey::output(Self, &Logger) -> Unit
 pub fn CacheKey::to_string(Self) -> String
@@ -305,13 +305,13 @@ pub impl Hash for CacheKey
 pub impl Show for CacheKey
 
 pub struct CacheMetrics {
-  font_size_bits : UInt
-  line_height_bits : UInt
+  font_size_bits : UInt32
+  line_height_bits : UInt32
 }
 pub fn CacheMetrics::equal(Self, Self) -> Bool
 pub fn CacheMetrics::font_size(Self) -> Float
 pub fn CacheMetrics::from_metrics(Metrics) -> Self
-pub fn CacheMetrics::hash(Self) -> Int
+pub fn CacheMetrics::hash(Self) -> Int32
 pub fn CacheMetrics::hash_combine(Self, Hasher) -> Unit
 pub fn CacheMetrics::line_height(Self) -> Float
 pub fn CacheMetrics::not_equal(Self, Self) -> Bool
@@ -357,14 +357,14 @@ pub(all) struct ChangeItem {
 pub fn ChangeItem::reverse(Self) -> Self
 
 pub struct Color {
-  value : UInt
+  value : UInt32
 }
 pub fn Color::a(Self) -> Byte
 pub fn Color::as_rgba(Self) -> (Byte, Byte, Byte, Byte)
 pub fn Color::b(Self) -> Byte
 pub fn Color::equal(Self, Self) -> Bool
 pub fn Color::g(Self) -> Byte
-pub fn Color::hash(Self) -> Int
+pub fn Color::hash(Self) -> Int32
 pub fn Color::hash_combine(Self, Hasher) -> Unit
 pub fn Color::not_equal(Self, Self) -> Bool
 pub fn Color::r(Self) -> Byte
@@ -374,13 +374,13 @@ pub impl Eq for Color
 pub impl Hash for Color
 
 pub struct Cursor {
-  line : Int
-  index : Int
+  line : Int32
+  index : Int32
   affinity : Affinity
 }
 pub fn Cursor::equal(Self, Self) -> Bool
-pub fn Cursor::new(Int, Int) -> Self
-pub fn Cursor::new_with_affinity(Int, Int, Affinity) -> Self
+pub fn Cursor::new(Int32, Int32) -> Self
+pub fn Cursor::new_with_affinity(Int32, Int32, Affinity) -> Self
 pub fn Cursor::not_equal(Self, Self) -> Bool
 pub impl Eq for Cursor
 
@@ -389,7 +389,7 @@ pub struct DecorationMetrics {
   thickness : Float
 }
 pub fn DecorationMetrics::equal(Self, Self) -> Bool
-pub fn DecorationMetrics::hash(Self) -> Int
+pub fn DecorationMetrics::hash(Self) -> Int32
 pub fn DecorationMetrics::hash_combine(Self, Hasher) -> Unit
 pub fn DecorationMetrics::new(Float, Float) -> Self
 pub fn DecorationMetrics::not_equal(Self, Self) -> Bool
@@ -397,8 +397,8 @@ pub impl Eq for DecorationMetrics
 pub impl Hash for DecorationMetrics
 
 pub struct DecorationSpan {
-  glyph_start : Int
-  glyph_end : Int
+  glyph_start : Int32
+  glyph_end : Int32
   data : GlyphDecorationData
   color_opt : Color?
   font_size : Float
@@ -407,7 +407,7 @@ pub struct DecorationSpan {
 pub struct Editor {
   buffer : Buffer
   cursor : Cursor
-  cursor_x_opt : Int?
+  cursor_x_opt : Int32?
   selection : Selection
   cursor_moved : Bool
   auto_indent : Bool
@@ -419,7 +419,7 @@ pub fn Editor::auto_indent(Self) -> Bool
 pub fn Editor::buffer(Self) -> Buffer
 pub fn Editor::copy_selection(Self) -> String?
 pub fn Editor::cursor(Self) -> Cursor
-pub fn Editor::cursor_position(Self) -> (Int, Int)?
+pub fn Editor::cursor_position(Self) -> (Int32, Int32)?
 pub fn Editor::delete_range(Self, Cursor, Cursor) -> Self
 pub fn Editor::delete_selection(Self) -> (Self, Bool)
 pub fn Editor::editor(Self) -> Self
@@ -434,9 +434,9 @@ pub fn Editor::set_auto_indent(Self, Bool) -> Self
 pub fn Editor::set_cursor(Self, Cursor) -> Self
 pub fn Editor::set_editor(Self, Self) -> Self
 pub fn Editor::set_selection(Self, Selection) -> Self
-pub fn Editor::set_tab_width(Self, Int) -> Self
+pub fn Editor::set_tab_width(Self, Int32) -> Self
 pub fn Editor::start_change(Self) -> Self
-pub fn Editor::tab_width(Self) -> Int
+pub fn Editor::tab_width(Self) -> Int32
 pub impl Edit for Editor
 
 pub(all) enum Ellipsize {
@@ -447,7 +447,7 @@ pub(all) enum Ellipsize {
 }
 
 pub(all) enum EllipsizeHeightLimit {
-  Lines(Int)
+  Lines(Int32)
   Height(Float)
 }
 
@@ -484,7 +484,7 @@ pub(all) enum Family {
   FangSong
 }
 pub fn Family::equal(Self, Self) -> Bool
-pub fn Family::hash(Self) -> Int
+pub fn Family::hash(Self) -> Int32
 pub fn Family::hash_combine(Self, Hasher) -> Unit
 pub fn Family::not_equal(Self, Self) -> Bool
 pub fn Family::output(Self, &Logger) -> Unit
@@ -495,25 +495,25 @@ pub impl Show for Family
 
 pub struct Feature {
   tag : FeatureTag
-  value : UInt
+  value : UInt32
 }
 pub fn Feature::equal(Self, Self) -> Bool
-pub fn Feature::hash(Self) -> Int
+pub fn Feature::hash(Self) -> Int32
 pub fn Feature::hash_combine(Self, Hasher) -> Unit
-pub fn Feature::new(FeatureTag, UInt) -> Self
+pub fn Feature::new(FeatureTag, UInt32) -> Self
 pub fn Feature::not_equal(Self, Self) -> Bool
 pub fn Feature::tag(Self) -> FeatureTag
-pub fn Feature::value(Self) -> UInt
+pub fn Feature::value(Self) -> UInt32
 pub impl Eq for Feature
 pub impl Hash for Feature
 
 pub struct FeatureTag {
-  value : UInt
+  value : UInt32
 }
-pub fn FeatureTag::as_tag(Self) -> UInt
+pub fn FeatureTag::as_tag(Self) -> UInt32
 pub fn FeatureTag::equal(Self, Self) -> Bool
-pub fn FeatureTag::from_tag(UInt) -> Self
-pub fn FeatureTag::hash(Self) -> Int
+pub fn FeatureTag::from_tag(UInt32) -> Self
+pub fn FeatureTag::hash(Self) -> Int32
 pub fn FeatureTag::hash_combine(Self, Hasher) -> Unit
 pub fn FeatureTag::new(String) -> Self
 pub fn FeatureTag::not_equal(Self, Self) -> Bool
@@ -523,11 +523,11 @@ pub impl Hash for FeatureTag
 type FontCachedCodepointSupportInfo
 
 pub struct FontEntry {
-  id : Int
+  id : Int32
   family_name : String
   postscript_name : String
   source_data : Bytes
-  source_index : Int
+  source_index : Int32
   font : @moon_swash.FontRef
   charmap_proxy : @moon_swash.CharmapProxy
   attributes : @moon_swash.Attributes
@@ -538,12 +538,12 @@ pub fn FontEntry::attributes(Self) -> @moon_swash.Attributes
 pub fn FontEntry::charmap_proxy(Self) -> @moon_swash.CharmapProxy
 pub fn FontEntry::family_name(Self) -> String
 pub fn FontEntry::font(Self) -> @moon_swash.FontRef
-pub fn FontEntry::id(Self) -> Int
+pub fn FontEntry::id(Self) -> Int32
 pub fn FontEntry::is_monospace(Self) -> Bool
 pub fn FontEntry::not_emoji(Self) -> Bool
 pub fn FontEntry::postscript_name(Self) -> String
 pub fn FontEntry::source_data(Self) -> Bytes
-pub fn FontEntry::source_index(Self) -> Int
+pub fn FontEntry::source_index(Self) -> Int32
 
 pub struct FontFeatures {
   features : Array[Feature]
@@ -552,11 +552,11 @@ pub fn FontFeatures::disable(Self, FeatureTag) -> Self
 pub fn FontFeatures::enable(Self, FeatureTag) -> Self
 pub fn FontFeatures::equal(Self, Self) -> Bool
 pub fn FontFeatures::features(Self) -> Array[Feature]
-pub fn FontFeatures::hash(Self) -> Int
+pub fn FontFeatures::hash(Self) -> Int32
 pub fn FontFeatures::hash_combine(Self, Hasher) -> Unit
 pub fn FontFeatures::new() -> Self
 pub fn FontFeatures::not_equal(Self, Self) -> Bool
-pub fn FontFeatures::set(Self, FeatureTag, UInt) -> Self
+pub fn FontFeatures::set(Self, FeatureTag, UInt32) -> Self
 pub impl Eq for FontFeatures
 pub impl Hash for FontFeatures
 
@@ -567,7 +567,7 @@ pub struct FontMatchAttrs {
   style : @moon_swash.Style
 }
 pub fn FontMatchAttrs::equal(Self, Self) -> Bool
-pub fn FontMatchAttrs::hash(Self) -> Int
+pub fn FontMatchAttrs::hash(Self) -> Int32
 pub fn FontMatchAttrs::hash_combine(Self, Hasher) -> Unit
 pub fn FontMatchAttrs::not_equal(Self, Self) -> Bool
 pub impl Eq for FontMatchAttrs
@@ -576,29 +576,29 @@ pub impl Hash for FontMatchAttrs
 pub struct FontSystem {
   locale : String
   fonts : Array[FontEntry]
-  font_matches_cache : @hashmap.HashMap[FontMatchAttrs, Array[Int]]
-  codepoint_support_cache : @hashmap.HashMap[Int, FontCachedCodepointSupportInfo]
+  font_matches_cache : @hashmap.HashMap[FontMatchAttrs, Array[Int32]]
+  codepoint_support_cache : @hashmap.HashMap[Int32, FontCachedCodepointSupportInfo]
   shape_context : @shape.ShapeContext
   shape_run_cache : ShapeRunCache
   // private fields
 }
 pub fn FontSystem::clear_fallback_profile(Self) -> Self
 pub fn FontSystem::clear_fallback_warning_handler(Self) -> Self
-pub fn FontSystem::count_supported_codepoints(Self, Int, Array[UInt]) -> Int
-pub fn FontSystem::font_matches(Self, Attrs) -> Array[Int]
-pub fn FontSystem::font_matches_for_script(Self, Attrs, @moon_swash.Script) -> Array[Int]
-pub fn FontSystem::font_matches_for_scripts(Self, Attrs, Array[@moon_swash.Script]) -> Array[Int]
-pub fn FontSystem::font_matches_for_scripts_with_codepoints(Self, Attrs, Array[@moon_swash.Script], Array[UInt]) -> Array[Int]
+pub fn FontSystem::count_supported_codepoints(Self, Int32, Array[UInt32]) -> Int32
+pub fn FontSystem::font_matches(Self, Attrs) -> Array[Int32]
+pub fn FontSystem::font_matches_for_script(Self, Attrs, @moon_swash.Script) -> Array[Int32]
+pub fn FontSystem::font_matches_for_scripts(Self, Attrs, Array[@moon_swash.Script]) -> Array[Int32]
+pub fn FontSystem::font_matches_for_scripts_with_codepoints(Self, Attrs, Array[@moon_swash.Script], Array[UInt32]) -> Array[Int32]
 pub fn FontSystem::fonts(Self) -> Array[FontEntry]
-pub fn FontSystem::get_font(Self, Int) -> @moon_swash.FontRef?
-pub fn FontSystem::get_font_entry(Self, Int) -> FontEntry?
+pub fn FontSystem::get_font(Self, Int32) -> @moon_swash.FontRef?
+pub fn FontSystem::get_font_entry(Self, Int32) -> FontEntry?
 pub fn FontSystem::load_font_data(Self, Bytes) -> Self
 pub fn FontSystem::locale(Self) -> String
 pub fn FontSystem::new() -> Self
 pub fn FontSystem::new_with_locale(String) -> Self
-pub fn FontSystem::resolve(Self, Attrs) -> Int?
-pub fn FontSystem::resolve_for_codepoint(Self, Attrs, UInt) -> Int?
-pub fn FontSystem::select_family(Self, Family) -> Int?
+pub fn FontSystem::resolve(Self, Attrs) -> Int32?
+pub fn FontSystem::resolve_for_codepoint(Self, Attrs, UInt32) -> Int32?
+pub fn FontSystem::select_family(Self, Family) -> Int32?
 pub fn FontSystem::set_fallback_profile(Self, FallbackProfile) -> Self
 pub fn FontSystem::set_fallback_warning_handler(Self, (String) -> Unit) -> Self
 
@@ -609,7 +609,7 @@ pub struct GlyphDecorationData {
   ascent : Float
 }
 pub fn GlyphDecorationData::equal(Self, Self) -> Bool
-pub fn GlyphDecorationData::hash(Self) -> Int
+pub fn GlyphDecorationData::hash(Self) -> Int32
 pub fn GlyphDecorationData::hash_combine(Self, Hasher) -> Unit
 pub fn GlyphDecorationData::not_equal(Self, Self) -> Bool
 pub impl Eq for GlyphDecorationData
@@ -630,39 +630,39 @@ pub(all) enum Justify {
 }
 
 pub struct LayoutCursor {
-  line : Int
-  layout : Int
-  glyph : Int
+  line : Int32
+  layout : Int32
+  glyph : Int32
 }
 pub fn LayoutCursor::equal(Self, Self) -> Bool
-pub fn LayoutCursor::new(Int, Int, Int) -> Self
+pub fn LayoutCursor::new(Int32, Int32, Int32) -> Self
 pub fn LayoutCursor::not_equal(Self, Self) -> Bool
 pub impl Eq for LayoutCursor
 
 pub struct LayoutGlyph {
-  start : Int
-  end : Int
+  start : Int32
+  end : Int32
   font_size : Float
-  font_id : Int
-  font_weight : Int
-  glyph_id : Int
+  font_id : Int32
+  font_weight : Int32
+  glyph_id : Int32
   x : Float
   y : Float
   w : Float
-  level : Int
+  level : Int32
   line_height_opt : Float?
   x_offset : Float
   y_offset : Float
   color_opt : Color?
-  metadata : Int
-  cache_key_flags : UInt
+  metadata : Int32
+  cache_key_flags : UInt32
 }
-pub fn LayoutGlyph::new(Int, Int, Float, Int, Int, Int, Float, Float, Float, Int) -> Self
+pub fn LayoutGlyph::new(Int32, Int32, Float, Int32, Int32, Int32, Float, Float, Float, Int32) -> Self
 pub fn LayoutGlyph::physical(Self, (Float, Float), Float) -> PhysicalGlyph
 
 pub struct LayoutLine {
-  start : Int
-  end : Int
+  start : Int32
+  end : Int32
   w : Float
   max_ascent : Float
   max_descent : Float
@@ -672,7 +672,7 @@ pub struct LayoutLine {
 }
 
 pub struct LayoutRun {
-  line_i : Int
+  line_i : Int32
   line_y : Float
   line_top : Float
   line_height : Float
@@ -687,18 +687,18 @@ pub fn LayoutRun::highlight(Self, Cursor, Cursor) -> (Float, Float)?
 pub struct LegacyRenderer {
   font_system : FontSystem
   cache : SwashCache
-  callback : (Int, Int, UInt, UInt, Color) -> Unit
+  callback : (Int32, Int32, UInt32, UInt32, Color) -> Unit
 }
 pub fn LegacyRenderer::glyph(Self, PhysicalGlyph, Color) -> Unit
-pub fn LegacyRenderer::new(FontSystem, SwashCache, (Int, Int, UInt, UInt, Color) -> Unit) -> Self
-pub fn LegacyRenderer::rectangle(Self, Int, Int, UInt, UInt, Color) -> Unit
+pub fn LegacyRenderer::new(FontSystem, SwashCache, (Int32, Int32, UInt32, UInt32, Color) -> Unit) -> Self
+pub fn LegacyRenderer::rectangle(Self, Int32, Int32, UInt32, UInt32, Color) -> Unit
 pub impl Renderer for LegacyRenderer
 
 pub struct LetterSpacing {
-  bits : UInt
+  bits : UInt32
 }
 pub fn LetterSpacing::equal(Self, Self) -> Bool
-pub fn LetterSpacing::hash(Self) -> Int
+pub fn LetterSpacing::hash(Self) -> Int32
 pub fn LetterSpacing::hash_combine(Self, Hasher) -> Unit
 pub fn LetterSpacing::new(Float) -> Self
 pub fn LetterSpacing::not_equal(Self, Self) -> Bool
@@ -724,24 +724,24 @@ pub fn LineEnding::default() -> Self
 
 pub struct LineIter {
   string : String
-  start : Int
-  end : Int
+  start : Int32
+  end : Int32
 }
 pub fn LineIter::new(String) -> Self
-pub fn LineIter::next(Self) -> (Self, (Int, Int, LineEnding)?)
+pub fn LineIter::next(Self) -> (Self, (Int32, Int32, LineEnding)?)
 
 pub struct LineState {
-  block_comment_depth : Int
+  block_comment_depth : Int32
   markup_comment_open : Bool
   markup_tag_open : Bool
   ruby_block_comment_open : Bool
   shell_heredoc_delim_opt : String?
   shell_heredoc_strip_tabs : Bool
-  lua_long_eq_count_opt : Int?
+  lua_long_eq_count_opt : Int32?
   lua_long_is_comment : Bool
   string_delim_opt : Char?
   string_is_triple : Bool
-  raw_hash_count_opt : Int?
+  raw_hash_count_opt : Int32?
   markdown_fence_char_opt : Char?
   clike_preproc_continuation : Bool
 }
@@ -773,42 +773,42 @@ pub(all) enum Motion {
   ParagraphEnd
   PageUp
   PageDown
-  Vertical(Int)
+  Vertical(Int32)
   PreviousWord
   NextWord
   LeftWord
   RightWord
   BufferStart
   BufferEnd
-  GotoLine(Int)
+  GotoLine(Int32)
 }
 pub fn Motion::equal(Self, Self) -> Bool
 pub fn Motion::not_equal(Self, Self) -> Bool
 pub impl Eq for Motion
 
 pub struct ParagraphInfo {
-  range_start : Int
-  range_end : Int
-  level : Int
+  range_start : Int32
+  range_end : Int32
+  level : Int32
 }
 pub fn ParagraphInfo::is_rtl(Self) -> Bool
-pub fn ParagraphInfo::level(Self) -> Int
-pub fn ParagraphInfo::range_end(Self) -> Int
-pub fn ParagraphInfo::range_start(Self) -> Int
+pub fn ParagraphInfo::level(Self) -> Int32
+pub fn ParagraphInfo::range_end(Self) -> Int32
+pub fn ParagraphInfo::range_start(Self) -> Int32
 
 pub struct PhysicalGlyph {
   cache_key : CacheKey
-  x : Int
-  y : Int
+  x : Int32
+  y : Int32
 }
 
 pub struct Scroll {
-  line : Int
+  line : Int32
   vertical : Float
   horizontal : Float
 }
 pub fn Scroll::default() -> Self
-pub fn Scroll::new(Int, Float, Float) -> Self
+pub fn Scroll::new(Int32, Float, Float) -> Self
 
 pub(all) enum Selection {
   None
@@ -821,27 +821,27 @@ pub fn Selection::not_equal(Self, Self) -> Bool
 pub impl Eq for Selection
 
 pub struct ShapeGlyph {
-  start : Int
-  end : Int
+  start : Int32
+  end : Int32
   x_advance : Float
   y_advance : Float
   x_offset : Float
   y_offset : Float
   ascent : Float
   descent : Float
-  font_id : Int
-  font_weight : Int
-  glyph_id : Int
+  font_id : Int32
+  font_weight : Int32
+  glyph_id : Int32
   color_opt : Color?
-  metadata : Int
-  cache_key_flags : UInt
+  metadata : Int32
+  cache_key_flags : UInt32
   text_decoration : TextDecoration
   underline_metrics : DecorationMetrics
   strikethrough_metrics : DecorationMetrics
-  level : Int
+  level : Int32
   metrics_opt : Metrics?
 }
-pub fn ShapeGlyph::new(Int, Int, Float, Float, Float, Float, Int, Int, Int) -> Self
+pub fn ShapeGlyph::new(Int32, Int32, Float, Float, Float, Float, Int32, Int32, Int32) -> Self
 pub fn ShapeGlyph::width(Self, Float) -> Float
 pub fn ShapeGlyph::with_ascent_descent(Self, Float, Float) -> Self
 
@@ -850,8 +850,8 @@ pub struct ShapeLine {
   rtl : Bool
   glyphs : Array[ShapeGlyph]
 }
-pub fn ShapeLine::build(Self, String, AttrsList, Shaping, Int) -> Self
-pub fn ShapeLine::build_with_font_system(Self, FontSystem, String, AttrsList, Shaping, Int) -> Self
+pub fn ShapeLine::build(Self, String, AttrsList, Shaping, Int32) -> Self
+pub fn ShapeLine::build_with_font_system(Self, FontSystem, String, AttrsList, Shaping, Int32) -> Self
 pub fn ShapeLine::empty() -> Self
 pub fn ShapeLine::layout(Self, Float, Float?, Wrap, Ellipsize, Align?, Float?, Hinting) -> Array[LayoutLine]
 pub fn ShapeLine::layout_to_buffer(Self, Float, Float?, Wrap, Ellipsize, Align?, Array[LayoutLine], Float?, Hinting) -> Unit
@@ -875,10 +875,10 @@ pub impl Show for ShapeRunCache
 pub struct ShapeRunKey {
   text : String
   default_attrs : Attrs
-  attrs_spans : Array[(Int, Int, Attrs)]
+  attrs_spans : Array[(Int32, Int32, Attrs)]
 }
 pub fn ShapeRunKey::equal(Self, Self) -> Bool
-pub fn ShapeRunKey::hash(Self) -> Int
+pub fn ShapeRunKey::hash(Self) -> Int32
 pub fn ShapeRunKey::hash_combine(Self, Hasher) -> Unit
 pub fn ShapeRunKey::new(String, AttrsList) -> Self
 pub fn ShapeRunKey::not_equal(Self, Self) -> Bool
@@ -898,9 +898,9 @@ pub enum SubpixelBin {
 }
 pub fn SubpixelBin::as_float(Self) -> Float
 pub fn SubpixelBin::equal(Self, Self) -> Bool
-pub fn SubpixelBin::hash(Self) -> Int
+pub fn SubpixelBin::hash(Self) -> Int32
 pub fn SubpixelBin::hash_combine(Self, Hasher) -> Unit
-pub fn SubpixelBin::new(Float) -> (Int, Self)
+pub fn SubpixelBin::new(Float) -> (Int32, Self)
 pub fn SubpixelBin::not_equal(Self, Self) -> Bool
 pub fn SubpixelBin::output(Self, &Logger) -> Unit
 pub fn SubpixelBin::to_repr(Self) -> @debug.Repr
@@ -920,7 +920,7 @@ pub fn SwashCache::get_image_uncached(Self, FontSystem, CacheKey) -> @scale.Imag
 pub fn SwashCache::get_outline_commands(Self, FontSystem, CacheKey) -> (Array[@moon_zeno.Vector], Array[@moon_zeno.Verb])?
 pub fn SwashCache::get_outline_commands_uncached(Self, FontSystem, CacheKey) -> (Array[@moon_zeno.Vector], Array[@moon_zeno.Verb])?
 pub fn SwashCache::new() -> Self
-pub fn SwashCache::with_pixels(Self, FontSystem, CacheKey, Color, (Int, Int, Color) -> Unit) -> Unit
+pub fn SwashCache::with_pixels(Self, FontSystem, CacheKey, Color, (Int32, Int32, Color) -> Unit) -> Unit
 
 pub struct SyntaxEditor {
   editor : Editor
@@ -936,7 +936,7 @@ pub fn SyntaxEditor::background_color(Self) -> Color
 pub fn SyntaxEditor::copy_selection(Self) -> String?
 pub fn SyntaxEditor::cursor(Self) -> Cursor
 pub fn SyntaxEditor::cursor_color(Self) -> Color
-pub fn SyntaxEditor::cursor_position(Self) -> (Int, Int)?
+pub fn SyntaxEditor::cursor_position(Self) -> (Int32, Int32)?
 pub fn SyntaxEditor::delete_range(Self, Cursor, Cursor) -> Self
 pub fn SyntaxEditor::delete_selection(Self) -> (Self, Bool)
 pub fn SyntaxEditor::editor(Self) -> Editor
@@ -952,11 +952,11 @@ pub fn SyntaxEditor::set_auto_indent(Self, Bool) -> Self
 pub fn SyntaxEditor::set_cursor(Self, Cursor) -> Self
 pub fn SyntaxEditor::set_editor(Self, Editor) -> Self
 pub fn SyntaxEditor::set_selection(Self, Selection) -> Self
-pub fn SyntaxEditor::set_tab_width(Self, Int) -> Self
+pub fn SyntaxEditor::set_tab_width(Self, Int32) -> Self
 pub fn SyntaxEditor::start_change(Self) -> Self
 pub fn SyntaxEditor::syntax_by_extension(Self, String) -> Self
 pub fn SyntaxEditor::syntax_name(Self) -> String
-pub fn SyntaxEditor::tab_width(Self) -> Int
+pub fn SyntaxEditor::tab_width(Self) -> Int32
 pub fn SyntaxEditor::theme(Self) -> SyntaxTheme
 pub fn SyntaxEditor::update_theme(Self, String) -> (Self, Bool)
 pub impl Edit for SyntaxEditor
@@ -996,7 +996,7 @@ pub struct TextDecoration {
 }
 pub fn TextDecoration::equal(Self, Self) -> Bool
 pub fn TextDecoration::has_decoration(Self) -> Bool
-pub fn TextDecoration::hash(Self) -> Int
+pub fn TextDecoration::hash(Self) -> Int32
 pub fn TextDecoration::hash_combine(Self, Hasher) -> Unit
 pub fn TextDecoration::new() -> Self
 pub fn TextDecoration::not_equal(Self, Self) -> Bool
@@ -1012,8 +1012,8 @@ pub(all) enum TokenClass {
 }
 
 pub struct TokenSpan {
-  start : Int
-  end : Int
+  start : Int32
+  end : Int32
   class : TokenClass
 }
 
@@ -1023,7 +1023,7 @@ pub(all) enum UnderlineStyle {
   Double
 }
 pub fn UnderlineStyle::equal(Self, Self) -> Bool
-pub fn UnderlineStyle::hash(Self) -> Int
+pub fn UnderlineStyle::hash(Self) -> Int32
 pub fn UnderlineStyle::hash_combine(Self, Hasher) -> Unit
 pub fn UnderlineStyle::not_equal(Self, Self) -> Bool
 pub impl Eq for UnderlineStyle
@@ -1035,18 +1035,18 @@ pub struct ViEditor {
   pending_operator : ViOperator?
   passthrough : Bool
   history : Array[Change]
-  history_index : Int
-  save_pivot_opt : Int?
+  history_index : Int32
+  save_pivot_opt : Int32?
   changed : Bool
   search_opt : (String, Bool)?
   search_input_opt : String?
   search_input_forwards : Bool
-  pending_find_opt : (Bool, Bool, Int)?
+  pending_find_opt : (Bool, Bool, Int32)?
   last_find_opt : (Bool, Bool, Char)?
   pending_replace_char : Bool
   pending_text_object_opt : (ViOperator, Bool)?
   pending_g : Bool
-  pending_count_opt : Int?
+  pending_count_opt : Int32?
   pending_register_prefix : Bool
   active_register_opt : Char?
   registers : Array[(Char, Selection, String)]
@@ -1058,7 +1058,7 @@ pub fn ViEditor::auto_indent(Self) -> Bool
 pub fn ViEditor::changed(Self) -> Bool
 pub fn ViEditor::copy_selection(Self) -> String?
 pub fn ViEditor::cursor(Self) -> Cursor
-pub fn ViEditor::cursor_position(Self) -> (Int, Int)?
+pub fn ViEditor::cursor_position(Self) -> (Int32, Int32)?
 pub fn ViEditor::delete_range(Self, Cursor, Cursor) -> Self
 pub fn ViEditor::delete_selection(Self) -> (Self, Bool)
 pub fn ViEditor::editor(Self) -> Editor
@@ -1078,9 +1078,9 @@ pub fn ViEditor::set_cursor(Self, Cursor) -> Self
 pub fn ViEditor::set_editor(Self, Editor) -> Self
 pub fn ViEditor::set_passthrough(Self, Bool) -> Self
 pub fn ViEditor::set_selection(Self, Selection) -> Self
-pub fn ViEditor::set_tab_width(Self, Int) -> Self
+pub fn ViEditor::set_tab_width(Self, Int32) -> Self
 pub fn ViEditor::start_change(Self) -> Self
-pub fn ViEditor::tab_width(Self) -> Int
+pub fn ViEditor::tab_width(Self) -> Int32
 pub fn ViEditor::undo(Self) -> Self
 pub impl Edit for ViEditor
 
@@ -1102,18 +1102,18 @@ pub(all) enum ViOperator {
 }
 
 pub struct Weight {
-  value : Int
+  value : Int32
 }
 pub fn Weight::bold() -> Self
 pub fn Weight::equal(Self, Self) -> Bool
-pub fn Weight::hash(Self) -> Int
+pub fn Weight::hash(Self) -> Int32
 pub fn Weight::hash_combine(Self, Hasher) -> Unit
-pub fn Weight::new(Int) -> Self
+pub fn Weight::new(Int32) -> Self
 pub fn Weight::normal() -> Self
 pub fn Weight::not_equal(Self, Self) -> Bool
 pub fn Weight::output(Self, &Logger) -> Unit
 pub fn Weight::to_string(Self) -> String
-pub fn Weight::value(Self) -> Int
+pub fn Weight::value(Self) -> Int32
 pub impl Eq for Weight
 pub impl Hash for Weight
 pub impl Show for Weight
@@ -1126,7 +1126,7 @@ pub(all) enum Wrap {
 }
 
 // Type aliases
-pub type CacheKeyFlags = UInt
+pub type CacheKeyFlags = UInt32
 
 // Traits
 pub(open) trait Edit {
@@ -1138,8 +1138,8 @@ pub(open) trait Edit {
   fn set_selection(Self, Selection) -> Self
   fn auto_indent(Self) -> Bool
   fn set_auto_indent(Self, Bool) -> Self
-  fn tab_width(Self) -> Int
-  fn set_tab_width(Self, Int) -> Self
+  fn tab_width(Self) -> Int32
+  fn set_tab_width(Self, Int32) -> Self
   fn start_change(Self) -> Self
   fn finish_change(Self) -> (Self, Change?)
   fn copy_selection(Self) -> String?
@@ -1147,11 +1147,11 @@ pub(open) trait Edit {
   fn delete_range(Self, Cursor, Cursor) -> Self
   fn insert_string(Self, String, AttrsList?) -> Self
   fn apply_change(Self, Change) -> (Self, Bool)
-  fn cursor_position(Self) -> (Int, Int)?
+  fn cursor_position(Self) -> (Int32, Int32)?
   fn action(Self, Action) -> Self
 }
 
 pub(open) trait Renderer {
-  fn rectangle(Self, Int, Int, UInt, UInt, Color) -> Unit
+  fn rectangle(Self, Int32, Int32, UInt32, UInt32, Color) -> Unit
   fn glyph(Self, PhysicalGlyph, Color) -> Unit
 }

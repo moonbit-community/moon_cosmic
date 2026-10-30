@@ -219,7 +219,7 @@ fn slice_text_utf16(text : String, start : Int32, end : Int32) -> String {
   let e = clamp_text_index(end, text_len)
   let to = if e < s { s } else { e }
   let sb = StringBuilder(size_hint=(to - s) * 2)
-  sb.write_view(text[:].view(start_offset=s, end_offset=to))
+  sb.write_view(text[:].clamped_view(start=s, end=to))
   sb.to_string()
 }
 
