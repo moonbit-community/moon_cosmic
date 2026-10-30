@@ -16,8 +16,8 @@ pub struct ViEditor {
   pending_operator : ViOperator?
   passthrough : Bool
   history : Array[@moon_cosmic.Change]
-  history_index : Int
-  save_pivot_opt : Int?
+  history_index : Int32
+  save_pivot_opt : Int32?
   changed : Bool
   search_opt : (String, Bool)?
   search_input_opt : String?
